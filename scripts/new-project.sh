@@ -35,13 +35,16 @@ read -r -p "계속할까요? 되돌릴 수 없습니다. [y/N] " CONFIRM
 
 echo "→ 이름 치환"
 # .env는 비밀값이 있으므로 건드리지 않는다.
-FILES=$(git ls-files '*.md' '*.ts' '*.tsx' '*.py' '*.yml' '*.yaml' '*.json' '.env.example' 2>/dev/null || true)
+#
+# 파일 목록은 NUL 구분으로 읽는다. 한글 등 ASCII 밖 이름이 섞이면
+# `git ls-files`가 경로를 따옴표로 감싸 escape해서 내보내므로, 그대로 쓰면 그 파일들이 건너뛰어진다.
 # 값은 환경 변수로 넘긴다. 치환문에 직접 넣으면 특수문자가 정규식으로 해석된다.
-for f in $FILES; do
+while IFS= read -r -d '' f; do
   [ -f "$f" ] || continue
   DISPLAY_NAME="$DISPLAY_NAME" SLUG="$SLUG" perl -pi -e \
     's/\QAX Chat Starter\E/$ENV{DISPLAY_NAME}/g; s/\Qax-chat-starter\E/$ENV{SLUG}/g' "$f"
-done
+done < <(git -c core.quotepath=false ls-files -z \
+  '*.md' '*.ts' '*.tsx' '*.py' '*.yml' '*.yaml' '*.json' '.env.example' 2>/dev/null)
 
 echo "→ .env 준비"
 [ -f .env ] || cp .env.example .env
