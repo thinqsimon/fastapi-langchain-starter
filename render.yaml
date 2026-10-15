@@ -1,0 +1,32 @@
+# Render Blueprint — 백엔드만 올린다(DB는 Supabase, 프론트엔드는 Vercel).
+# 대시보드에서 "New > Blueprint"로 이 파일을 선택하면 서비스가 만들어진다.
+services:
+  - type: web
+    name: ax-chat-starter-api
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: "pip install uv && uv sync --locked"
+    # 마이그레이션은 서버 시작 전에 적용한다(배포마다 스키마가 맞춰진다).
+    preDeployCommand: "uv run alembic upgrade head"
+    startCommand: "uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: "3.13"
+      # 아래 값들은 Render 대시보드에서 직접 입력한다(sync: false = 저장소에 담지 않음).
+      - key: DATABASE_URL
+        sync: false # Supabase 연결 문자열 (포트 6543 풀러 권장)
+      - key: JWT_SECRET_KEY
+        sync: false # openssl rand -hex 32
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false # 예: ["https://내앱.vercel.app"]
+      - key: LLM_PROVIDER
+        value: openai
+      - key: LLM_MODEL
+        value: gpt-4o-mini

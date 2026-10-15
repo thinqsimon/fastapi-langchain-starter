@@ -191,31 +191,65 @@ git push origin main
 로컬과 CI는 **같은 스크립트**(`scripts/verify.sh`, `scripts/e2e.sh`)를 실행합니다.
 테스트가 실패하면 배포는 실행되지 않습니다.
 
-### 배포 (Render)
+### 배포 (Supabase + Render + Vercel)
 
-배포 대상은 **Render**입니다. 아래 설정이 끝나기 전까지 Deploy 워크플로는 건너뜁니다
-(아무것도 배포하지 않았는데 초록불이 켜지는 것을 막기 위함입니다).
+무료 플랜 조건을 따져 셋으로 나눴습니다. 이유는 [ADR-0004](../decisions/ADR-0004-deployment.md)에 있습니다.
 
-**GitHub에 등록할 값** — Settings → Secrets and variables → Actions
+| 역할 | 서비스 | 왜 |
+|---|---|---|
+| DB | Supabase | 만료 기한이 없고 pgvector를 기본 지원합니다 |
+| 백엔드 | Render | FastAPI 배포가 단순합니다 |
+| 프론트엔드 | Vercel | Next.js에 최적이고 중지되지 않습니다 |
+
+#### 1단계 · Supabase (DB)
+
+1. 프로젝트를 만듭니다.
+2. Project Settings → Database → **Connection string**에서 연결 문자열을 복사합니다.
+   연결 수를 아끼기 위해 **Connection pooling(포트 6543)** 주소를 권장합니다.
+3. 드라이버에 맞게 앞부분을 바꿉니다.
+   ```
+   postgresql+psycopg://postgres.<ref>:<비밀번호>@<호스트>:6543/postgres
+   ```
+4. (RAG를 쓸 때만) SQL Editor에서 `create extension if not exists vector;`
+
+#### 2단계 · Render (백엔드)
+
+1. New → **Blueprint**를 고르고 이 저장소를 선택합니다. 루트의 `render.yaml`을 읽어 서비스를 만듭니다.
+2. 대시보드에서 아래 환경 변수를 입력합니다(`sync: false`로 표시된 값들입니다).
+
+   | 이름 | 값 |
+   |---|---|
+   | `DATABASE_URL` | 1단계에서 만든 Supabase 주소 |
+   | `JWT_SECRET_KEY` | `openssl rand -hex 32` 결과 |
+   | `OPENAI_API_KEY` | 실제 키 |
+   | `CORS_ORIGINS` | 프론트엔드 주소 (예: `["https://내앱.vercel.app"]`) |
+
+3. 배포되면 `https://<서비스명>.onrender.com/health`가 `{"status":"ok"}`를 돌려줘야 합니다.
+
+> 마이그레이션은 배포할 때마다 자동으로 적용됩니다(`render.yaml`의 `preDeployCommand`).
+
+#### 3단계 · Vercel (프론트엔드)
+
+1. 저장소를 import하고 **Root Directory를 `frontend`로** 지정합니다.
+2. 환경 변수 `NEXT_PUBLIC_API_BASE_URL`에 2단계의 Render 주소를 넣습니다.
+3. 배포 후 Render의 `CORS_ORIGINS`에 Vercel 주소를 넣고 백엔드를 재배포합니다.
+
+#### 4단계 · GitHub Actions 연결
+
+Settings → Secrets and variables → Actions
 
 | 종류 | 이름 | 값 |
 |---|---|---|
 | Variable | `DEPLOY_TARGET` | `render` |
-| Variable | `BACKEND_URL` | 배포된 백엔드 주소 |
-| Secret | `RENDER_DEPLOY_HOOK_URL` | Render 서비스의 Deploy Hook 주소 |
+| Variable | `BACKEND_URL` | `https://<서비스명>.onrender.com` |
+| Secret | `RENDER_DEPLOY_HOOK_URL` | Render → Settings → Deploy Hook 주소 |
 
-**Render에 등록할 환경 변수**
+이 값들이 없으면 Deploy 워크플로는 **건너뜁니다**. 배포하지 않았는데 초록불이 켜지는 것을 막기 위함입니다.
 
-| 이름 | 값 |
-|---|---|
-| `APP_ENV` | `production` |
-| `DATABASE_URL` | Render PostgreSQL의 Internal Database URL |
-| `JWT_SECRET_KEY` | `openssl rand -hex 32` 결과 |
-| `OPENAI_API_KEY` | 실제 키 |
-| `CORS_ORIGINS` | 프론트엔드 주소 (예: `["https://내앱.onrender.com"]`) |
-
-> 운영에서는 기본 `JWT_SECRET_KEY`나 LLM 키 누락을 **설정 단계에서 막습니다**.
-> 값이 빠지면 서버가 아예 뜨지 않으니, 배포가 실패하면 먼저 환경 변수를 확인하세요.
+> **무료 플랜 주의**
+> - Render 백엔드는 15분간 요청이 없으면 중지되고, 다시 깨어나는 데 약 1분 걸립니다.
+>   **발표 시연 전에 미리 한 번 호출해 깨워 두세요.**
+> - Supabase는 7일간 사용이 없으면 일시정지됩니다. 데이터는 남아 있고 대시보드에서 복구합니다.
 
 ---
 

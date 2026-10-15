@@ -1,6 +1,6 @@
 # 배포 게이트: main의 CI가 모두 성공했을 때만 실행된다.
-# 배포 대상이 정해지기 전에는 "초록불인데 실제로는 배포되지 않는" 상태를 피하려고
-# 저장소 변수 DEPLOY_TARGET이 설정됐을 때만 동작한다(미설정 시 job 자체가 건너뛰어짐).
+# 배포 대상이 설정되기 전에는 job 자체가 건너뛰어진다
+# ("배포하지 않았는데 초록불"을 막기 위함).
 name: Deploy
 
 on:
@@ -19,11 +19,22 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      # TODO(CD-01): DEPLOY_TARGET에 맞춰 실제 배포 단계를 채운다.
-      - name: Deploy
+      # Render가 저장소를 직접 가져가 빌드한다(마이그레이션은 preDeployCommand에서 적용).
+      - name: 백엔드 배포 요청 (Render)
         run: |
-          echo "배포 대상: ${{ vars.DEPLOY_TARGET }}"
-          echo "실제 배포 명령은 CD-01에서 추가한다."
+          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
+            echo "::error::RENDER_DEPLOY_HOOK_URL 시크릿이 없습니다. docs/guides/usage.md ⑦ 참고"
+            exit 1
+          fi
+          curl --fail --silent --show-error "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+
+      # 프론트엔드는 Vercel이 GitHub 연동으로 자동 배포한다(여기서는 아무것도 하지 않는다).
 
       - name: 배포 확인 (health check)
-        run: curl --fail --retry 10 --retry-delay 10 "${{ vars.BACKEND_URL }}/health"
+        run: |
+          echo "Render 빌드를 기다립니다…"
+          sleep 60
+          curl --fail --silent --show-error --retry 20 --retry-delay 15 --retry-all-errors \
+            "${{ vars.BACKEND_URL }}/health"
+          echo ""
+          echo "✓ ${{ vars.BACKEND_URL }} 정상"
