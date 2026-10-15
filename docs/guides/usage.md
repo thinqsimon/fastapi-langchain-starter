@@ -270,6 +270,11 @@ New → Web Service → **Public Git Repository**에 저장소 주소를 넣고 
 
 Settings → Secrets and variables → Actions
 
+> **어느 저장소인지 확인하세요.** 변수와 시크릿은 **저장소마다 따로** 관리됩니다.
+> 비슷한 이름의 저장소가 여럿이면 엉뚱한 곳에 넣기 쉽고, 그러면 Deploy가 계속 건너뛰어집니다.
+> 주소로 바로 들어가는 편이 안전합니다:
+> `https://github.com/<소유자>/<저장소>/settings/secrets/actions`
+
 | 종류 | 이름 | 값 |
 |---|---|---|
 | Variable | `DEPLOY_TARGET` | `render` |
@@ -277,6 +282,12 @@ Settings → Secrets and variables → Actions
 | Secret | `RENDER_DEPLOY_HOOK_URL` | Render → Settings → Deploy Hook 주소 |
 
 이 값들이 없으면 Deploy 워크플로는 **건너뜁니다**. 배포하지 않았는데 초록불이 켜지는 것을 막기 위함입니다.
+
+등록했는데도 계속 건너뛴다면 순서대로 확인하세요.
+
+1. 저장소가 맞는가 (위 경고 참고)
+2. `DEPLOY_TARGET`이 **Variables** 탭에 있는가 (Secrets 탭이 아님)
+3. 이름의 철자와 대소문자가 정확한가
 
 > **무료 플랜 주의**
 > - Render 백엔드는 15분간 요청이 없으면 중지되고, 다시 깨어나는 데 약 1분 걸립니다.
