@@ -156,3 +156,38 @@ def test_logout_invalidates_refresh_token(api_client: TestClient) -> None:
 
     res = api_client.post("/api/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
     assert res.status_code == 401
+
+
+def test_inactive_user_cannot_login(api_client: TestClient, db_session) -> None:
+    """비활성 계정은 비밀번호가 맞아도 로그인되지 않는다."""
+    from app.domain.auth.models import User
+
+    signup(api_client)
+    user = db_session.query(User).filter(User.email == SIGNUP["email"]).one()
+    user.is_active = False
+    db_session.commit()
+
+    res = api_client.post(
+        "/api/auth/login",
+        json={"email": SIGNUP["email"], "password": SIGNUP["password"]},
+    )
+
+    assert res.status_code == 401
+
+
+def test_token_with_non_uuid_subject_is_rejected(api_client: TestClient) -> None:
+    """토큰은 유효해도 sub이 사용자 ID 형식이 아니면 거부한다."""
+    from app.core.security import create_access_token
+
+    forged = create_access_token("not-a-uuid")
+
+    res = api_client.get("/api/auth/me", headers={"Authorization": f"Bearer {forged}"})
+
+    assert res.status_code == 401
+
+
+def test_logout_with_unknown_token_is_still_ok(api_client: TestClient) -> None:
+    """이미 만료·폐기된 토큰으로 로그아웃해도 오류를 내지 않는다(멱등)."""
+    res = api_client.post("/api/auth/logout", json={"refresh_token": "already-gone"})
+
+    assert res.status_code == 204

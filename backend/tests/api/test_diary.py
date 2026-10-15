@@ -135,3 +135,18 @@ def test_weekly_review_without_entries_is_not_found(
     res = api_client.get("/api/diary/weekly", headers=headers)
 
     assert res.status_code == 404
+
+
+def test_draft_from_empty_conversation_is_not_found(
+    api_client: TestClient, headers: dict[str, str]
+) -> None:
+    """대화는 있지만 메시지가 없으면 초안을 만들 수 없다."""
+    conversation_id = api_client.post(
+        "/api/conversations", json={"title": "빈 대화"}, headers=headers
+    ).json()["id"]
+
+    res = api_client.post(
+        "/api/diary/draft", json={"conversation_id": conversation_id}, headers=headers
+    )
+
+    assert res.status_code == 404

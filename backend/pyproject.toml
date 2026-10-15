@@ -33,6 +33,7 @@ dev = [
     "mypy>=2.4.0",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
     "ruff>=0.17.0",
 ]
 
@@ -58,6 +59,8 @@ check_untyped_defs = true
 testpaths = ["tests"]
 pythonpath = ["src"]
 asyncio_mode = "auto"
+# 커버리지가 떨어지면 게이트에서 막는다. 올라가면 기준도 함께 올린다.
+addopts = "--cov=app --cov-report=term-missing --cov-fail-under=90"
 
 # 계층 규칙을 기계적으로 강제한다 (docs/conventions.md 참고)
 [tool.importlinter]

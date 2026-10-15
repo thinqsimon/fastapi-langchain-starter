@@ -49,16 +49,3 @@ class RefreshTokenRepository:
     def revoke(self, token: RefreshToken) -> None:
         token.revoked_at = datetime.now(UTC)
         self.db.flush()
-
-    def revoke_all_for_user(self, user_id: uuid.UUID) -> None:
-        """토큰 재사용이 감지됐을 때처럼 사용자의 세션을 전부 끊는다."""
-        tokens = self.db.scalars(
-            select(RefreshToken).where(
-                RefreshToken.user_id == user_id,
-                RefreshToken.revoked_at.is_(None),
-            )
-        )
-        now = datetime.now(UTC)
-        for token in tokens:
-            token.revoked_at = now
-        self.db.flush()

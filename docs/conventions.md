@@ -42,3 +42,10 @@ event: error   data: {"code": "LLM_ERROR", "message": "..."}
 - OpenAI는 `stream_usage=True`를 줘야 스트리밍에서도 사용량이 온다
 - 단가는 `llm/pricing.py`의 기본 표를 쓰고, `.env`의 `LLM_PRICE_*_PER_1M`로 덮어쓸 수 있다
 - 표에 없는 모델은 비용 0으로 계산하고 경고만 남긴다(사용량 조회가 실패하지 않도록)
+
+## 테스트
+- 커버리지 90% 미만이면 게이트에서 막는다(`pyproject.toml`의 `--cov-fail-under`)
+- 테스트는 실제 LLM을 부르지 않는다. `LLM_PROVIDER=fake`가 CI·E2E 설정에 박혀 있는지 테스트로 검사한다
+- 새 모델을 만들면 `app/models.py`에 import한다. 빠뜨리면 등록 검사 테스트가 실패한다
+- DB가 필요한 테스트는 트랜잭션을 열고 끝나면 되돌린다(`db_session` 픽스처). 데이터가 남지 않는다
+- 브라우저 흐름은 `./scripts/e2e.sh`(Playwright). 단위 테스트가 놓친 실제 결함을 여기서 여러 번 잡았다

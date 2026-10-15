@@ -205,7 +205,7 @@
         "CI에서 실 LLM 호출 없음"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "OPT-RAG",
