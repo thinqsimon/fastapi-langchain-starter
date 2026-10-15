@@ -1,4 +1,10 @@
-# 로컬 개발용 인프라. 실행: docker compose up -d db
+# 로컬 개발용 인프라.
+#
+#   docker compose up -d db              DB만 (기본 개발 방식)
+#   docker compose --profile full up     DB + 백엔드 + 프론트엔드 전체
+#
+# 전체 실행은 "준비물 없이 한 번에 띄워 보고 싶을 때" 씁니다.
+# 평소 개발은 DB만 컨테이너로 띄우고 앱은 로컬에서 실행하는 편이 빠릅니다.
 services:
   db:
     image: pgvector/pgvector:pg17
@@ -16,6 +22,34 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  backend:
+    profiles: [full]
+    build: ./backend
+    environment:
+      # 컨테이너끼리는 서비스 이름으로 통신한다(localhost가 아님).
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}
+      APP_ENV: local
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-only-insecure-secret-key-change-me}
+      LLM_PROVIDER: ${LLM_PROVIDER:-fake}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      CORS_ORIGINS: '["http://localhost:3000"]'
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    profiles: [full]
+    build: ./frontend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
 
 volumes:
   db_data:

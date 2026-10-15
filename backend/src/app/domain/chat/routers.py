@@ -27,7 +27,12 @@ def _service(db: DbSession) -> ChatService:
     return ChatService(db)
 
 
-@router.post("", response_model=ConversationRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=ConversationRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="대화 만들기",
+)
 def create_conversation(
     payload: ConversationCreate, current_user: CurrentUser, db: DbSession
 ) -> ConversationRead:
@@ -35,13 +40,18 @@ def create_conversation(
     return ConversationRead.model_validate(conversation)
 
 
-@router.get("", response_model=list[ConversationRead])
+@router.get("", response_model=list[ConversationRead], summary="내 대화 목록")
 def list_conversations(current_user: CurrentUser, db: DbSession) -> list[ConversationRead]:
     conversations = _service(db).list_conversations(current_user.id)
     return [ConversationRead.model_validate(item) for item in conversations]
 
 
-@router.get("/{conversation_id}", response_model=ConversationDetail)
+@router.get(
+    "/{conversation_id}",
+    response_model=ConversationDetail,
+    summary="대화 상세(메시지 포함)",
+    responses={404: {"description": "없거나 내 대화가 아님"}},
+)
 def get_conversation(
     conversation_id: uuid.UUID, current_user: CurrentUser, db: DbSession
 ) -> ConversationDetail:
@@ -75,7 +85,17 @@ def list_messages(
     return [MessageRead.model_validate(item) for item in messages]
 
 
-@router.post("/{conversation_id}/stream")
+@router.post(
+    "/{conversation_id}/stream",
+    summary="메시지 보내고 응답 스트리밍 받기",
+    description=(
+        "`text/event-stream`으로 응답합니다.\n\n"
+        "- `event: token` — 생성된 조각\n"
+        "- `event: done` — 완료(이 시점에 이력이 저장됩니다)\n"
+        "- `event: error` — 실패 사유\n\n"
+        "Swagger에서는 스트리밍이 잘 보이지 않으니 curl로 확인하세요."
+    ),
+)
 async def stream_message(
     conversation_id: uuid.UUID,
     payload: MessageCreate,
