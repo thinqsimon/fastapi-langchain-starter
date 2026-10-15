@@ -9,8 +9,10 @@ Fork하면 인증, 대화 이력, LLM 스트리밍, 토큰 사용량 집계, CI/
 사용자 → Next.js → FastAPI → PostgreSQL / LangChain → LLM API → SSE 스트리밍 응답
 ```
 
-**배포된 샘플 서비스:** https://diary-coach.onrender.com ([API 문서](https://diary-coach.onrender.com/docs))
-무료 플랜이라 15분간 요청이 없으면 중지됩니다. 첫 요청은 깨어나는 데 약 1분 걸립니다.
+**배포된 샘플 서비스:** https://fastapi-langchain-starter-delta.vercel.app
+· 백엔드 API: https://diary-coach.onrender.com ([문서](https://diary-coach.onrender.com/docs))
+
+무료 플랜이라 백엔드는 15분간 요청이 없으면 중지됩니다. 첫 요청은 깨어나는 데 약 1분 걸립니다.
 
 ## 무엇이 들어 있나
 

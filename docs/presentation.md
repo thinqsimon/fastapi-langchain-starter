@@ -31,7 +31,9 @@ PDF·PowerPoint로 내려받을 수 있습니다.)
 ## 발표 전 채워야 할 자리표시자
 
 - [ ] 표지의 `[팀원 이름]`
-- [x] 10번 슬라이드의 배포 URL → `https://diary-coach.onrender.com` (2026-10-15 배포 완료)
+- [x] 10번 슬라이드의 배포 URL (2026-10-15 배포 완료)
+  - 프론트엔드: https://fastapi-langchain-starter-delta.vercel.app
+  - 백엔드: https://diary-coach.onrender.com
 - [ ] 9번 슬라이드의 테스트 개수(현재 83개 기준, 변동 시 갱신)
 
 ## 시연 체크리스트
