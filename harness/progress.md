@@ -154,3 +154,64 @@
 **다음 할 일**
 - [TBD] 강의 제공 LLM API 키, 배포 대상
 - 다음 기능: CI-01(GitHub Actions 확인) → TEST-01 → SAMPLE-01/02 → CD-01
+
+---
+
+## 2026-10-15 · 세션 6 · CI-01 · SAMPLE-01/02 · OPT-USAGE · DOC-01/03 · TEST-01
+
+**한 일**
+- CI-01: CI에 브라우저 E2E job 추가. Deploy는 `DEPLOY_TARGET`이 설정됐을 때만 실행
+  (배포하지 않았는데 초록불이 켜지던 상태 제거)
+- SAMPLE-01/02: 배움일기 코치 완성(코치 프롬프트, 구조화 출력, DiaryEntry, 화면·스토어)
+- OPT-USAGE: 스트리밍 응답의 usage_metadata로 토큰 수 기록, 단가표와 비용 추정, 헤더 배지
+- DOC-01: README와 사용·운영 가이드. 모든 명령을 실제 실행해 출력까지 확인
+- DOC-03: 트러블슈팅 보고서, 발표 자료 15장(Artifact), 시연 체크리스트
+- TEST-01: 커버리지 96%(90% 미만이면 게이트 차단), 미검증 경로 보강, 테스트 90개
+- 실제 OpenAI 키로 스트리밍·일기 초안 생성 확인
+
+**막힌 점**
+- 문제: `.env.example` 수정이 권한 규칙에 막힘
+  - 원인: `.claude/settings.json`의 `Edit(./.env.*)`가 비밀이 아닌 예시 파일까지 차단
+  - 해결: 사용자 승인 후 `.env`·`.env.local`·`.env.production`만 차단하도록 좁힘
+  - 재발방지: 차단 규칙은 실제 비밀 파일만 정확히 지정한다
+- 문제: 가짜 LLM이 구조화 출력을 지원하지 않아 일기 기능 테스트 불가
+  - 해결: `FakeChatModel.with_structured_output`을 추가해 스키마 필드를 채운 더미 반환
+- 문제: 저장 직후 입력칸을 비우는 처리가 사용자의 다음 입력과 겹쳐 글이 지워짐
+  - 원인: 목록 갱신보다 초기화가 늦게 도착
+  - 해결: 목록을 먼저 읽고 나서 비움. 스트리밍 말풍선에 `data-pending` 표시로 테스트가 저장 완료를 기다리게 함
+- 문제: E2E 선택자가 Next.js의 route announcer(`role="alert"`)와 충돌
+  - 해결: 화면 요소로 범위를 좁힘. `frontend/CLAUDE.md`에 규칙으로 기록
+
+## 2026-10-15 · 세션 7 · CD-01 배포 (Supabase + Render + Vercel)
+
+**한 일**
+- 무료 플랜 조건 조사 후 배포 구성 변경(ADR-0004): Render 무료 DB는 30일 후 만료되어
+  제출 이후 산출물이 죽는다 → DB만 Supabase로 분리
+- Supabase 연결, 마이그레이션 적용(테이블 5개), 운영 환경 전 과정 확인
+- 배포 주소
+  - 프론트엔드: https://fastapi-langchain-starter-delta.vercel.app
+  - 백엔드: https://diary-coach.onrender.com
+
+**막힌 점**
+- 문제: 환경 변수 수정 후 서버가 `SettingsError: error parsing value for field "CORS_ORIGINS"`로 죽음
+  - 원인: pydantic-settings가 list[str]을 JSON으로만 해석. 대시보드 입력에서 대괄호·따옴표를 빠뜨리기 쉽다
+  - 해결: `NoDecode` + 검증기로 JSON 배열과 쉼표 구분을 모두 수용, 틀렸을 때 고치는 방법 안내
+  - 재발방지: 회귀 테스트 4개 추가
+- 문제: 루트 경로 404와 "No open ports detected" 경고
+  - 원인: 배포 플랫폼이 포트 확인용으로 `/`를 호출하는데 라우트가 없었음
+  - 해결: 서비스 정보를 돌려주는 루트 라우트 추가
+- 문제: `.env`를 Supabase로 바꾸자 테스트·E2E가 운영 DB를 사용
+  - 해결: `TEST_DATABASE_URL`로 분리. 테스트 DB가 원격이면 실패하는 안전장치 추가
+- 문제: 저장소 소유자가 아닌 계정이라 Render에서 GitHub 연결 불가
+  - 원인: GitHub 앱은 계정 단위 설치라 협업자 권한으로는 설치할 수 없다
+  - 해결: Public Git Repository 방식으로 생성. 자동 배포는 Deploy Hook으로 대체
+  - 사용 가이드에 방법 A/B로 나눠 기록
+
+**알려진 사항**
+- Public Git Repository 방식은 push해도 Render가 자동 배포하지 않는다.
+  GitHub Secret `RENDER_DEPLOY_HOOK_URL` 등록 전까지는 Manual Deploy가 필요하다
+
+**다음 할 일**
+- [사용자] GitHub에 `RENDER_DEPLOY_HOOK_URL`(Secret), `DEPLOY_TARGET`·`BACKEND_URL`(Variable) 등록
+- DOC-02: 다른 사람이 문서만 보고 실행해 보는 검증
+- 선택: OPT-RAG, OPT-DOCKER
