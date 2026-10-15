@@ -79,5 +79,5 @@ forbidden_modules = ["app.domain"]
 name = "domain 계층: routers -> services -> repositories -> models"
 type = "layers"
 layers = ["routers", "services", "repositories", "models"]
-containers = ["app.domain.auth", "app.domain.chat", "app.domain.usage"]
+containers = ["app.domain.auth", "app.domain.chat", "app.domain.diary", "app.domain.usage"]
 exhaustive = false

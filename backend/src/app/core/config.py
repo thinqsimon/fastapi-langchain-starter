@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     LLM_BASE_URL: str | None = None
     LLM_TEMPERATURE: float = 0.3
 
+    # 공급자 표준 키 이름도 받아들인다. LLM_API_KEY가 비어 있으면 이 값을 쓴다.
+    OPENAI_API_KEY: str = ""
+    ANTHROPIC_API_KEY: str = ""
+    GOOGLE_API_KEY: str = ""
+
     RAG_ENABLED: bool = False
 
     model_config = SettingsConfigDict(
@@ -43,6 +48,22 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @property
+    def llm_api_key(self) -> str:
+        """실제로 사용할 LLM 키.
+
+        `LLM_API_KEY`를 우선하고, 없으면 공급자 표준 이름(OPENAI_API_KEY 등)을 쓴다.
+        """
+        if self.LLM_API_KEY:
+            return self.LLM_API_KEY
+
+        by_provider = {
+            "openai": self.OPENAI_API_KEY,
+            "anthropic": self.ANTHROPIC_API_KEY,
+            "google_genai": self.GOOGLE_API_KEY,
+        }
+        return by_provider.get(self.LLM_PROVIDER, "")
 
     @model_validator(mode="after")
     def _reject_insecure_production_settings(self) -> "Settings":
@@ -59,7 +80,7 @@ class Settings(BaseSettings):
                 "`openssl rand -hex 32`로 만든 값을 넣으세요."
             )
 
-        if self.LLM_PROVIDER != "fake" and not self.LLM_API_KEY:
+        if self.LLM_PROVIDER != "fake" and not self.llm_api_key:
             raise ValueError("운영 환경에는 LLM_API_KEY가 필요합니다.")
 
         return self

@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
@@ -17,7 +18,17 @@ export function AppHeader() {
 
     return (
         <header className="flex items-center justify-between border-b px-6 py-3">
-            <span className="font-semibold">AX Chat Starter</span>
+            <div className="flex items-center gap-6">
+                <span className="font-semibold">배움일기 코치</span>
+                <nav className="flex gap-4 text-sm">
+                    <Link href="/chat" className="hover:underline">
+                        채팅
+                    </Link>
+                    <Link href="/diary" className="hover:underline">
+                        일기
+                    </Link>
+                </nav>
+            </div>
             <div className="flex items-center gap-3">
                 <span className="text-sm text-muted-foreground">{user?.display_name}</span>
                 <Button variant="outline" size="sm" onClick={handleLogout}>

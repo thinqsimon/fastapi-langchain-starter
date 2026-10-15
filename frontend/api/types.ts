@@ -38,3 +38,24 @@ export type Message = {
 }
 
 export type ConversationDetail = Conversation & { messages: Message[] }
+
+export type DiaryEntry = {
+    id: string
+    entry_date: string
+    learned: string
+    difficult: string
+    next_plan: string
+    created_at: string
+    updated_at: string
+}
+
+export type DiaryDraft = Pick<DiaryEntry, "learned" | "difficult" | "next_plan">
+
+export type WeeklyReview = {
+    week_start: string
+    week_end: string
+    entry_count: number
+    grown: string
+    repeated_difficulty: string
+    suggestion: string
+}

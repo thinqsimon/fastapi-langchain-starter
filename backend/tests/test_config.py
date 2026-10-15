@@ -26,7 +26,22 @@ def test_production_requires_llm_api_key() -> None:
             JWT_SECRET_KEY=STRONG_SECRET,
             LLM_PROVIDER="openai",
             LLM_API_KEY="",
+            # 개발자 .env에 키가 있어도 결과가 달라지지 않도록 대체 키까지 비운다.
+            OPENAI_API_KEY="",
         )
+
+
+def test_provider_standard_key_is_used_as_fallback() -> None:
+    """LLM_API_KEY 대신 OPENAI_API_KEY만 넣어도 동작한다."""
+    settings = Settings(LLM_PROVIDER="openai", LLM_API_KEY="", OPENAI_API_KEY="sk-from-env")
+
+    assert settings.llm_api_key == "sk-from-env"
+
+
+def test_explicit_llm_api_key_wins() -> None:
+    settings = Settings(LLM_PROVIDER="openai", LLM_API_KEY="sk-explicit", OPENAI_API_KEY="sk-env")
+
+    assert settings.llm_api_key == "sk-explicit"
 
 
 def test_production_accepts_strong_settings() -> None:

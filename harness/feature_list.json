@@ -179,7 +179,7 @@
         "실패 시 merge/배포 차단"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "CD-01",
@@ -256,7 +256,7 @@
         "대화 → 일기 초안 생성·저장 API"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "SAMPLE-02",
@@ -269,7 +269,7 @@
         "주간 회고 요약 표시"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "DOC-01",

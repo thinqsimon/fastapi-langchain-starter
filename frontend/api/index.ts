@@ -2,4 +2,5 @@
 export { errorMessage, httpClient, tokenStorage } from "./client"
 export * as authApi from "./auth"
 export * as chatApi from "./chat"
-export type { ApiErrorBody, Conversation, ConversationDetail, Message, TokenPair, User } from "./types"
+export * as diaryApi from "./diary"
+export type { ApiErrorBody, Conversation, ConversationDetail, DiaryDraft, DiaryEntry, Message, TokenPair, User, WeeklyReview } from "./types"

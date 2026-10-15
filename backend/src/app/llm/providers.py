@@ -16,7 +16,7 @@ def get_chat_model() -> BaseChatModel:
     return init_chat_model(
         settings.LLM_MODEL,
         model_provider=settings.LLM_PROVIDER,
-        api_key=settings.LLM_API_KEY or None,
+        api_key=settings.llm_api_key or None,
         base_url=settings.LLM_BASE_URL or None,
         temperature=settings.LLM_TEMPERATURE,
     )
