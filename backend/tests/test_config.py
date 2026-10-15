@@ -55,3 +55,16 @@ def test_local_allows_development_defaults() -> None:
     settings = Settings(APP_ENV="local", JWT_SECRET_KEY="change-me", LLM_API_KEY="")
 
     assert settings.APP_ENV == "local"
+
+
+def test_blank_optional_values_are_treated_as_unset() -> None:
+    """`.env`에 `LLM_PRICE_INPUT_PER_1M=`처럼 비워 둬도 서버가 떠야 한다."""
+    settings = Settings(
+        LLM_BASE_URL="",
+        LLM_PRICE_INPUT_PER_1M="",
+        LLM_PRICE_OUTPUT_PER_1M="",
+    )
+
+    assert settings.LLM_BASE_URL is None
+    assert settings.LLM_PRICE_INPUT_PER_1M is None
+    assert settings.LLM_PRICE_OUTPUT_PER_1M is None

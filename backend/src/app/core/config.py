@@ -8,7 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # src/app/core/config.py → parents[4] = 저장소 루트
@@ -52,6 +52,22 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @field_validator(
+        "LLM_BASE_URL",
+        "LLM_PRICE_INPUT_PER_1M",
+        "LLM_PRICE_OUTPUT_PER_1M",
+        mode="before",
+    )
+    @classmethod
+    def _blank_means_unset(cls, value: object) -> object:
+        """`.env`에 `KEY=`처럼 비워 둔 값을 '설정하지 않음'으로 본다.
+
+        이게 없으면 비워 둔 숫자 설정에서 파싱 오류가 나서 서버가 아예 뜨지 않는다.
+        """
+        if isinstance(value, str) and value.strip() == "":
+            return None
+        return value
 
     @property
     def llm_api_key(self) -> str:
