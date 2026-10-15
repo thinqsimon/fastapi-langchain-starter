@@ -11,7 +11,14 @@
       "Bash(git diff:*)",
       "Bash(git log:*)"
     ],
-    "deny": ["Read(./.env)", "Read(./.env.*)", "Edit(./.env)", "Edit(./.env.*)"]
+    "deny": [
+      "Read(./.env)",
+      "Edit(./.env)",
+      "Read(./.env.local)",
+      "Edit(./.env.local)",
+      "Read(./.env.production)",
+      "Edit(./.env.production)"
+    ]
   },
   "hooks": {
     "PreToolUse": [

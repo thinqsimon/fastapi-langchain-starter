@@ -4,7 +4,18 @@
 set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 work="$(mktemp -d)"
-trap 'rm -rf "$work"' EXIT
+
+# 개발용 DB(5432)와 겹치지 않게 전용 포트를 쓴다.
+export POSTGRES_PORT="${FORK_VERIFY_DB_PORT:-55432}"
+export DATABASE_URL="postgresql+psycopg://app:app@localhost:${POSTGRES_PORT}/app"
+
+cleanup() {
+  if [ -d "$work/kit" ] && command -v docker > /dev/null 2>&1; then
+    (cd "$work/kit" && docker compose down -v --remove-orphans > /dev/null 2>&1) || true
+  fi
+  rm -rf "$work"
+}
+trap cleanup EXIT
 
 echo "→ clone to $work"
 git clone -q "$repo" "$work/kit"
