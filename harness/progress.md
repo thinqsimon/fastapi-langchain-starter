@@ -215,3 +215,39 @@
 - [사용자] GitHub에 `RENDER_DEPLOY_HOOK_URL`(Secret), `DEPLOY_TARGET`·`BACKEND_URL`(Variable) 등록
 - DOC-02: 다른 사람이 문서만 보고 실행해 보는 검증
 - 선택: OPT-RAG, OPT-DOCKER
+
+---
+
+## 2026-10-15 · 세션 8 · 요구사항 점검과 선택 구현 완료
+
+**한 일**
+- `docs/update/requirements-checklist.md`: 과제 문서 2건의 전 항목을 실제 실행으로 검증해 기록
+- 선택 구현 4건 완료
+  - Swagger 고도화: 인증 절차·에러 형식 설명, 태그 그룹, 엔드포인트 요약
+  - Docker Compose 전체 스택: `--profile full`(기본은 DB만 유지), Dockerfile 2개
+  - `scripts/new-project.sh`: 이름 치환·샘플앱 제거·남은 참조 안내
+  - RAG 모듈: pgvector 기반 저장·검색, `RAG_ENABLED`로 on/off (ADR-0005)
+- 테스트 90 → 103개, 커버리지 96%
+
+**막힌 점**
+- 문제: 생성 스크립트가 한글 이름 문서를 전부 건너뜀
+  - 원인: `git ls-files`가 ASCII 밖 경로를 escape된 따옴표 문자열로 출력
+  - 해결: `-z`(NUL 구분)로 읽도록 변경. 재검증에서 옛 이름 0건 확인
+  - 재발방지: 파일 목록은 항상 NUL 구분으로 읽는다
+- 문제: 치환 결과에 백슬래시가 섞임
+  - 원인: 치환문에 `\Q`(quotemeta)를 써서 공백까지 escape
+  - 해결: 값을 환경 변수로 넘기고 패턴 쪽에만 `\Q` 사용
+- 문제: `langchain-postgres` 의존성 해결 실패
+  - 해결: 이미 있는 `pgvector` + SQLAlchemy로 직접 구현. 의존성이 줄고 코드도 짧아짐
+- 문제: `DeterministicFakeEmbedding`이 numpy를 요구
+  - 해결: 해시 기반 결정적 임베딩을 직접 구현. 무작위가 아니라 **검색 순서까지 검증 가능**해짐
+- 문제: 테스트에서 RAG 라우터가 등록되지 않음
+  - 원인: import 시점에 선택 기능을 판단해 설정 변경이 반영되지 않음
+  - 해결: `build_api_router()`로 호출 시점에 구성하도록 구조 변경
+
+**확인된 안전장치**
+설정 누락 검사와 모델 등록 검사가 새 설정 4개와 새 테이블 1개의 누락을 실제로 잡아냈다.
+
+**다음 할 일**
+- DOC-02: 팀원이 README만 보고 실행해 보기 (사람 필요)
+- 발표 표지의 팀원 이름 채우기
