@@ -36,10 +36,11 @@ read -r -p "계속할까요? 되돌릴 수 없습니다. [y/N] " CONFIRM
 echo "→ 이름 치환"
 # .env는 비밀값이 있으므로 건드리지 않는다.
 FILES=$(git ls-files '*.md' '*.ts' '*.tsx' '*.py' '*.yml' '*.yaml' '*.json' '.env.example' 2>/dev/null || true)
+# 값은 환경 변수로 넘긴다. 치환문에 직접 넣으면 특수문자가 정규식으로 해석된다.
 for f in $FILES; do
   [ -f "$f" ] || continue
-  perl -pi -e "s/AX Chat Starter/\Q$DISPLAY_NAME\E/g" "$f"
-  perl -pi -e "s/ax-chat-starter/$SLUG/g" "$f"
+  DISPLAY_NAME="$DISPLAY_NAME" SLUG="$SLUG" perl -pi -e \
+    's/\QAX Chat Starter\E/$ENV{DISPLAY_NAME}/g; s/\Qax-chat-starter\E/$ENV{SLUG}/g' "$f"
 done
 
 echo "→ .env 준비"
