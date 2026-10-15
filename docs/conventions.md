@@ -7,7 +7,10 @@
 
 ## API
 - prefix `/api`, 리소스는 복수형 (`/api/conversations`)
-- 에러 응답: `{"error": {"code": "NOT_FOUND", "message": "..."}}`
+- 에러 응답: `{"error": {"code": "NOT_FOUND", "message": "..."}}` — 검증 실패 시 `details: [{"field", "message"}]` 추가
+- 에러 코드: `BAD_REQUEST` `UNAUTHORIZED` `FORBIDDEN` `NOT_FOUND` `CONFLICT` `VALIDATION_ERROR` `LLM_ERROR` `INTERNAL_ERROR`
+- 모든 응답에 `X-Request-ID` 헤더. 클라이언트가 보내면 그 값을 쓰고 없으면 서버가 발급하며, 같은 값이 로그에 붙는다
+- 500 응답은 내부 메시지를 노출하지 않는다. 원인은 서버 로그(`unhandled_error`)에서 request_id로 찾는다
 - 인증: `Authorization: Bearer <access>`; refresh는 `POST /api/auth/refresh`
 
 ## SSE 이벤트 (CHAT-02에서 확정)

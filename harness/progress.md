@@ -44,3 +44,36 @@
 **다음 할 일**
 - [TBD] 강의 제공 LLM API 종류·키, 배포 대상, 팀 구성
 - 다음 기능: SETUP-01(설계 문서 확정) → BE-01 → DB-01 → AUTH-01
+
+---
+
+## 2026-10-15 · 세션 3 · SETUP-01, BE-01 공통 예외 처리·로깅
+
+**한 일**
+- SETUP-01: 기존 설계 문서(docs/plans/01·02)의 acceptance를 독립 검증 → passes=true
+- BE-01 구현
+  - `core/exceptions.py`: 에러 응답 형식을 `{"error":{"code","message","details?"}}`로 통일.
+    `AppError` 하위 예외, 입력값 검증(422, 필드별 details), Starlette HTTP 예외, 미처리 예외(500) 4개 핸들러
+  - `core/logging.py`: request_id contextvar + 필터, 핸들러 이름으로 중복 등록 방지(pytest caplog 보존)
+  - `core/middleware.py`: `RequestContextMiddleware` — request_id 발급/전달, `X-Request-ID` 응답 헤더, 접근 로그
+  - 500 응답은 내부 메시지를 숨기고 서버 로그에만 스택을 남김
+  - `tests/api/test_exceptions.py` 8개 추가 (총 11개 통과)
+  - `docs/conventions.md`에 에러 코드 목록·request_id 규칙 추가
+
+**막힌 점**
+- 문제: uvicorn 접근 로그가 우리 접근 로그와 같은 요청을 두 줄로 출력
+  - 원인: `uvicorn.access` 로거를 루트로 전파시켜 둬서 미들웨어 로그와 중복
+  - 해결: `uvicorn.access`는 propagate=False로 끄고 접근 로그는 미들웨어가 전담
+  - 재발방지: 로깅 설정을 `setup_logging()` 한 곳에서만 수정
+- 문제: 주석 한 줄이 100자를 넘겨 verify 실패
+  - 원인: 긴 한글 주석
+  - 재발방지: 게이트가 잡아주므로 커밋 전 `./scripts/verify.sh` 필수
+
+**알려진 사항(후속)**
+- 미처리 예외 시 스택이 2회 기록된다(우리 핸들러 1회 + uvicorn의 "Exception in ASGI application" 1회).
+  Starlette가 500 응답 생성 후 예외를 다시 올리는 구조 때문. 동작에는 문제 없어 후속 과제로 남김
+- 산출물 템플릿 1번의 ②아키텍처·④요청 흐름은 `docs/architecture.md`에 있고, 02 문서로의 통합은 DOC-01에서 마무리
+
+**다음 할 일**
+- [TBD] 강의 제공 LLM API 종류·키, 배포 대상, 팀 구성, GitHub 원격 저장소
+- 다음 기능: DB-01(users·refresh_tokens 모델·마이그레이션) → AUTH-01 → FE-01

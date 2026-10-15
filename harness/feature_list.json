@@ -18,7 +18,7 @@
         "포함/제외 기능과 '유지/변경' 기준이 모듈별로 명시됨"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "SETUP-02",
@@ -59,7 +59,7 @@
         "예외 핸들러 테스트 존재"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "DB-01",
