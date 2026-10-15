@@ -282,7 +282,7 @@
         "docs/guides/ 작성"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "DOC-02",
