@@ -224,6 +224,8 @@ git push origin main
 
 #### 2단계 · Render (백엔드)
 
+**방법 A — Blueprint (권장).** GitHub 저장소를 연결할 수 있을 때 씁니다.
+
 1. New → **Blueprint**를 고르고 이 저장소를 선택합니다. 루트의 `render.yaml`을 읽어 서비스를 만듭니다.
 2. 대시보드에서 아래 환경 변수를 입력합니다(`sync: false`로 표시된 값들입니다).
 
@@ -237,6 +239,26 @@ git push origin main
 3. 배포되면 `https://<서비스명>.onrender.com/health`가 `{"status":"ok"}`를 돌려줘야 합니다.
 
 > 마이그레이션은 배포할 때마다 자동으로 적용됩니다(`render.yaml`의 `preDeployCommand`).
+
+**방법 B — Public Git Repository.** 저장소 소유자가 아닌 계정으로 작업할 때 씁니다.
+GitHub 앱은 계정 단위로 설치되므로, 협업자 권한만으로는 저장소를 연결할 수 없습니다.
+
+New → Web Service → **Public Git Repository**에 저장소 주소를 넣고 아래를 입력합니다.
+
+| 항목 | 값 |
+|---|---|
+| Root Directory | `backend` |
+| Build Command | `pip install uv && uv sync --locked` |
+| Start Command | `uv run alembic upgrade head && uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Health Check Path | `/health` |
+| Instance Type | **Free** (기본값이 유료이니 반드시 바꿉니다) |
+| Region | Singapore |
+
+환경 변수는 방법 A와 같고, 여기에 `APP_ENV=production`, `PYTHON_VERSION=3.13`,
+`LLM_PROVIDER=openai`, `LLM_MODEL=gpt-4o-mini`를 더합니다.
+
+> 이 방법은 Render의 자동 배포를 쓰지 않습니다. 대신 GitHub Actions가 CI 통과 후
+> Deploy Hook을 직접 호출하므로, `main`에 push하면 동일하게 배포됩니다.
 
 #### 3단계 · Vercel (프론트엔드)
 

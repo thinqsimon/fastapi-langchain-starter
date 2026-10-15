@@ -27,6 +27,20 @@ def create_app() -> FastAPI:
 
     register_exception_handlers(app)
 
+    @app.get("/", tags=["system"])
+    def root() -> dict[str, str]:
+        """루트에 무엇이 있는지 알려 준다.
+
+        배포 환경(Render 등)이 포트 확인용으로 `/`를 호출하는데, 라우트가 없으면
+        404가 쌓이고 "No open ports detected" 경고가 난다.
+        """
+        return {
+            "service": settings.APP_NAME,
+            "status": "ok",
+            "docs": "/docs",
+            "health": "/health",
+        }
+
     @app.get("/health", tags=["system"])
     def health() -> dict[str, str]:
         return {"status": "ok"}

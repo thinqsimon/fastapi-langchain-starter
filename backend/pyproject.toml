@@ -23,7 +23,9 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["uv_build>=0.12.5,<0.13.0"]
+# 범위를 좁게 박으면 배포 환경의 uv가 조금만 새 버전이어도 경고·실패가 난다.
+# (Render에서 uv 0.13.1이 쓰이며 경고가 났다.)
+requires = ["uv_build>=0.12.5,<0.15.0"]
 build-backend = "uv_build"
 
 [dependency-groups]

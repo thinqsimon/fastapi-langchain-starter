@@ -1,8 +1,12 @@
 # Render Blueprint — 백엔드만 올린다(DB는 Supabase, 프론트엔드는 Vercel).
 # 대시보드에서 "New > Blueprint"로 이 파일을 선택하면 서비스가 만들어진다.
+#
+# 참고: 2026-10-15 현재 운영 서비스는 Blueprint가 아니라 대시보드에서 직접 만들었다
+# (저장소 소유자가 아닌 계정으로 작업해 GitHub 연결이 불가능했다 → Public Git Repository 사용).
+# 이 파일은 같은 설정을 코드로 남겨 둔 것으로, GitHub 연결이 가능해지면 Blueprint로 전환한다.
 services:
   - type: web
-    name: ax-chat-starter-api
+    name: diary-coach
     runtime: python
     plan: free
     region: singapore
