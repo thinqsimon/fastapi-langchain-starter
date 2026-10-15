@@ -100,7 +100,7 @@
         "로그아웃 시 토큰 삭제"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "FE-02",
@@ -113,7 +113,7 @@
         "공통 Button/Input/Toast(shadcn)"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "CHAT-01",

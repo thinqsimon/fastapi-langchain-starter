@@ -30,3 +30,9 @@ event: error   data: {"code": "LLM_ERROR", "message": "..."}
 - 주의: `updated_at` 자동 갱신은 ORM을 거친 UPDATE에만 적용된다. 대량/raw SQL UPDATE에서는 직접 넣는다
 - 사용자는 삭제하지 않고 `is_active=false`로 둔다(대화 이력 보존). 토큰은 사용자 삭제 시 CASCADE
 - 리프레시 토큰은 원문이 아니라 SHA-256 해시로 저장한다
+
+## 프론트엔드
+- 토큰은 localStorage에 저장하고 `api/client.ts`의 인터셉터가 주입한다
+- 401을 받으면 리프레시로 한 번만 재발급 후 원요청을 재시도한다(동시 요청은 한 번만 호출)
+- 보호가 필요한 화면은 `app/(main)/` 아래에 둔다(`RequireAuth`가 감싼다)
+- E2E: `./scripts/e2e.sh` (백엔드 :8010, 프론트 :3100 전용 포트. 개발 서버와 겹치지 않음)

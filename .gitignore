@@ -34,3 +34,8 @@ yarn-error.log*
 .idea/
 logs/
 .claude/settings.local.json
+
+# Playwright
+/frontend/test-results/
+/frontend/playwright-report/
+/frontend/blob-report/

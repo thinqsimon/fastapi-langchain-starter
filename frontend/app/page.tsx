@@ -1,14 +1,20 @@
-import Link from "next/link"
+"use client"
 
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+
+import { useAuthStore } from "@/store/auth"
+
+/** 로그인 상태에 따라 채팅 또는 로그인 화면으로 보낸다. */
 export default function Home() {
-    return (
-        <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
-            <h1 className="text-2xl font-bold">AX Chat Starter</h1>
-            <nav className="flex gap-4 underline">
-                <Link href="/sign-in">로그인</Link>
-                <Link href="/sign-up">회원가입</Link>
-                <Link href="/chat">채팅</Link>
-            </nav>
-        </main>
-    )
+    const router = useRouter()
+    const isLoading = useAuthStore((state) => state.isLoading)
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+
+    useEffect(() => {
+        if (isLoading) return
+        router.replace(isAuthenticated ? "/chat" : "/sign-in")
+    }, [isLoading, isAuthenticated, router])
+
+    return <p className="p-8 text-sm text-muted-foreground">불러오는 중…</p>
 }
