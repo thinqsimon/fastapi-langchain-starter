@@ -126,7 +126,7 @@
         "다른 사용자 대화 접근 시 404"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "LLM-01",
@@ -140,7 +140,7 @@
         "fake 공급자로 테스트 통과"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "CHAT-02",
@@ -153,7 +153,7 @@
         "스트림 종료 후 assistant 메시지 DB 저장"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "FE-03",

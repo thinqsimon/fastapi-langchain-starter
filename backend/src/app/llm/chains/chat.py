@@ -1,0 +1,40 @@
+"""대화 체인. 서비스 계층은 이 모듈만 호출하고 LangChain 세부는 모른다."""
+
+from collections.abc import AsyncIterator, Sequence
+
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+
+from app.core.exceptions import LLMError
+from app.llm.prompts.chat import build_chat_prompt
+from app.llm.providers import get_chat_model
+
+# (role, content) 형태의 대화 이력
+HistoryItem = tuple[str, str]
+
+
+def _to_messages(history: Sequence[HistoryItem]) -> list[BaseMessage]:
+    messages: list[BaseMessage] = []
+    for role, content in history:
+        if role == "assistant":
+            messages.append(AIMessage(content=content))
+        else:
+            messages.append(HumanMessage(content=content))
+    return messages
+
+
+async def stream_reply(
+    user_input: str,
+    history: Sequence[HistoryItem] = (),
+    system_prompt: str | None = None,
+) -> AsyncIterator[str]:
+    """응답을 토큰 단위로 흘려보낸다. 실패하면 LLMError로 바꿔 던진다."""
+    prompt = build_chat_prompt(system_prompt) if system_prompt else build_chat_prompt()
+    chain = prompt | get_chat_model()
+
+    try:
+        async for chunk in chain.astream({"input": user_input, "history": _to_messages(history)}):
+            text = chunk.content
+            if text:
+                yield text if isinstance(text, str) else str(text)
+    except Exception as exc:  # 공급자별 예외가 제각각이라 한 곳에서 묶는다.
+        raise LLMError("LLM 응답을 받지 못했습니다.") from exc

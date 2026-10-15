@@ -5,5 +5,6 @@
 
 from app.core.database import Base
 from app.domain.auth.models import RefreshToken, User
+from app.domain.chat.models import Conversation, Message
 
-__all__ = ["Base", "RefreshToken", "User"]
+__all__ = ["Base", "Conversation", "Message", "RefreshToken", "User"]

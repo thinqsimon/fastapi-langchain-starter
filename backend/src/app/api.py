@@ -3,6 +3,8 @@
 from fastapi import APIRouter
 
 from app.domain.auth.routers import router as auth_router
+from app.domain.chat.routers import router as chat_router
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(auth_router)
+api_router.include_router(chat_router)
