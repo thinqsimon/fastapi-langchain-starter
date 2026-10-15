@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-api_router = APIRouter(prefix="/api")
+from app.domain.auth.routers import router as auth_router
 
-# 예) from app.domain.auth.routers import router as auth_router
-#     api_router.include_router(auth_router)
+api_router = APIRouter(prefix="/api")
+api_router.include_router(auth_router)

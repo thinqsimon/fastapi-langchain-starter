@@ -87,7 +87,7 @@
         "API 테스트 존재"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "FE-01",

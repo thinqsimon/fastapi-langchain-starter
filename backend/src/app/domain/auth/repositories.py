@@ -1,1 +1,64 @@
-"""auth 도메인 - repositories 계층 (구현 예정: harness/feature_list.json 참고)."""
+"""auth 도메인 - 데이터 접근 계층. SQLAlchemy 쿼리만 둔다."""
+
+import uuid
+from datetime import UTC, datetime
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.domain.auth.models import RefreshToken, User
+
+
+class UserRepository:
+    def __init__(self, db: Session) -> None:
+        self.db = db
+
+    def get_by_email(self, email: str) -> User | None:
+        return self.db.scalar(select(User).where(User.email == email))
+
+    def get_by_id(self, user_id: uuid.UUID) -> User | None:
+        return self.db.get(User, user_id)
+
+    def create(self, email: str, password_hash: str, display_name: str) -> User:
+        user = User(email=email, password_hash=password_hash, display_name=display_name)
+        self.db.add(user)
+        self.db.flush()
+        return user
+
+
+class RefreshTokenRepository:
+    def __init__(self, db: Session) -> None:
+        self.db = db
+
+    def create(self, user_id: uuid.UUID, token_hash: str, expires_at: datetime) -> RefreshToken:
+        token = RefreshToken(user_id=user_id, token_hash=token_hash, expires_at=expires_at)
+        self.db.add(token)
+        self.db.flush()
+        return token
+
+    def get_usable(self, token_hash: str) -> RefreshToken | None:
+        """폐기되지 않고 아직 만료되지 않은 토큰만 돌려준다."""
+        return self.db.scalar(
+            select(RefreshToken).where(
+                RefreshToken.token_hash == token_hash,
+                RefreshToken.revoked_at.is_(None),
+                RefreshToken.expires_at > datetime.now(UTC),
+            )
+        )
+
+    def revoke(self, token: RefreshToken) -> None:
+        token.revoked_at = datetime.now(UTC)
+        self.db.flush()
+
+    def revoke_all_for_user(self, user_id: uuid.UUID) -> None:
+        """토큰 재사용이 감지됐을 때처럼 사용자의 세션을 전부 끊는다."""
+        tokens = self.db.scalars(
+            select(RefreshToken).where(
+                RefreshToken.user_id == user_id,
+                RefreshToken.revoked_at.is_(None),
+            )
+        )
+        now = datetime.now(UTC)
+        for token in tokens:
+            token.revoked_at = now
+        self.db.flush()
