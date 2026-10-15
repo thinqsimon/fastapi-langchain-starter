@@ -1,0 +1,313 @@
+{
+  "project": "AX Chat Starter (챗봇형 AI 서비스 스타터킷)",
+  "sample_app": "AI 배움일기 코치",
+  "rules": [
+    "한 세션에 미완료 기능 1개만 진행한다",
+    "passes는 acceptance를 모두 확인하고 ./scripts/verify.sh가 통과한 뒤에만 true로 바꾼다",
+    "항목을 삭제하거나 acceptance를 완화하지 않는다(변경 시 사용자 승인)"
+  ],
+  "features": [
+    {
+      "id": "SETUP-01",
+      "phase": 1,
+      "owner": "docs-writer",
+      "title": "스타터킷 범위·디렉터리 구조·재사용 기준 설계",
+      "requirement": "필수1",
+      "acceptance": [
+        "docs/plans/01·02 작성",
+        "포함/제외 기능과 '유지/변경' 기준이 모듈별로 명시됨"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "SETUP-02",
+      "phase": 1,
+      "owner": "backend-dev",
+      "title": "모노레포 뼈대·하네스·/health",
+      "requirement": "필수2",
+      "acceptance": [
+        "make verify 통과",
+        "GET /health → {\"status\":\"ok\"}"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": true
+    },
+    {
+      "id": "SETUP-03",
+      "phase": 1,
+      "owner": "backend-dev",
+      "title": "환경 변수 분리와 .env.example",
+      "requirement": "필수8",
+      "acceptance": [
+        ".env.example에 모든 설정 키 존재",
+        "config.py가 단일 진입점",
+        "비밀 값은 git에 없음"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": true
+    },
+    {
+      "id": "BE-01",
+      "phase": 2,
+      "owner": "backend-dev",
+      "title": "공통 예외 처리·로깅",
+      "requirement": "필수5",
+      "acceptance": [
+        "AppError 하위 예외가 {error:{code,message}}로 응답",
+        "미처리 예외는 500 + 스택 로그",
+        "예외 핸들러 테스트 존재"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "DB-01",
+      "phase": 2,
+      "owner": "backend-dev",
+      "title": "users·refresh_tokens 모델과 첫 Alembic 마이그레이션",
+      "requirement": "필수3",
+      "acceptance": [
+        "alembic upgrade head 성공",
+        "alembic check로 모델-마이그레이션 일치"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "AUTH-01",
+      "phase": 2,
+      "owner": "backend-dev",
+      "title": "JWT 회원가입·로그인·리프레시·내 정보",
+      "requirement": "필수4",
+      "acceptance": [
+        "POST /api/auth/signup, /login, /refresh, GET /api/auth/me",
+        "토큰 없이 /me 접근 시 401",
+        "중복 이메일 409",
+        "API 테스트 존재"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "FE-01",
+      "phase": 2,
+      "owner": "frontend-dev",
+      "title": "로그인·회원가입 화면과 인증 상태",
+      "requirement": "필수6",
+      "acceptance": [
+        "가입→로그인→보호 페이지 이동",
+        "로그아웃 시 토큰 삭제"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "FE-02",
+      "phase": 2,
+      "owner": "frontend-dev",
+      "title": "공통 컴포넌트·API 클라이언트(401 시 refresh)",
+      "requirement": "필수6",
+      "acceptance": [
+        "access 만료 시 자동 재발급 후 재요청",
+        "공통 Button/Input/Toast(shadcn)"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "CHAT-01",
+      "phase": 3,
+      "owner": "backend-dev",
+      "title": "conversations·messages 모델과 대화 이력 API",
+      "requirement": "주제",
+      "acceptance": [
+        "대화 생성·목록·삭제·메시지 조회",
+        "다른 사용자 대화 접근 시 404"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "LLM-01",
+      "phase": 3,
+      "owner": "llm-engineer",
+      "title": "LangChain 연동 모듈(프롬프트 템플릿·공급자 교체)",
+      "requirement": "필수7",
+      "acceptance": [
+        "LLM_PROVIDER/LLM_MODEL만 바꿔 공급자 교체",
+        "프롬프트는 llm/prompts에 템플릿으로 관리",
+        "fake 공급자로 테스트 통과"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "CHAT-02",
+      "phase": 3,
+      "owner": "llm-engineer",
+      "title": "SSE 스트리밍 응답",
+      "requirement": "주제",
+      "acceptance": [
+        "POST /api/chat/{id}/stream이 text/event-stream으로 토큰 전송",
+        "스트림 종료 후 assistant 메시지 DB 저장"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "FE-03",
+      "phase": 3,
+      "owner": "frontend-dev",
+      "title": "채팅 화면(스트리밍 표시·대화 목록 사이드바)",
+      "requirement": "주제",
+      "acceptance": [
+        "토큰이 실시간으로 표시",
+        "새로고침 후 이력 복원"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "CI-01",
+      "phase": 3,
+      "owner": "reviewer",
+      "title": "GitHub Actions CI(빌드·테스트 게이트)",
+      "requirement": "필수9",
+      "acceptance": [
+        "PR·push마다 verify.sh 실행",
+        "실패 시 merge/배포 차단"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "CD-01",
+      "phase": 3,
+      "owner": "reviewer",
+      "title": "자동 배포(배포 게이트 후)",
+      "requirement": "필수9",
+      "acceptance": [
+        "main 머지 + CI 통과 시에만 배포",
+        "배포 후 /health 확인"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "TEST-01",
+      "phase": 3,
+      "owner": "test-verifier",
+      "title": "API 테스트 커버리지 확보",
+      "requirement": "필수10",
+      "acceptance": [
+        "auth·chat·llm 핵심 경로 테스트",
+        "CI에서 실 LLM 호출 없음"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "OPT-RAG",
+      "phase": 3,
+      "owner": "llm-engineer",
+      "title": "pgvector RAG 모듈(on/off)",
+      "requirement": "선택",
+      "acceptance": [
+        "RAG_ENABLED=false면 의존 코드 미로드",
+        "문서 임베딩 저장·유사도 검색 테스트"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "OPT-USAGE",
+      "phase": 3,
+      "owner": "backend-dev",
+      "title": "LLM 토큰 사용량·비용 로깅",
+      "requirement": "선택",
+      "acceptance": [
+        "요청별 입력/출력 토큰·추정 비용 저장",
+        "GET /api/usage/me"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "OPT-DOCKER",
+      "phase": 3,
+      "owner": "backend-dev",
+      "title": "Docker Compose 전체 실행(db+backend+frontend)",
+      "requirement": "선택",
+      "acceptance": [
+        "docker compose up 한 번으로 전체 기동"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "SAMPLE-01",
+      "phase": 3,
+      "owner": "llm-engineer",
+      "title": "샘플앱: 배움일기 코치 프롬프트·DiaryEntry 모델",
+      "requirement": "필수11",
+      "acceptance": [
+        "코치 페르소나 프롬프트",
+        "대화 → 일기 초안 생성·저장 API"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "SAMPLE-02",
+      "phase": 3,
+      "owner": "frontend-dev",
+      "title": "샘플앱: 일기 목록·상세·주간 회고 화면",
+      "requirement": "필수11",
+      "acceptance": [
+        "일기 목록/상세",
+        "주간 회고 요약 표시"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "DOC-01",
+      "phase": 4,
+      "owner": "docs-writer",
+      "title": "README·사용/운영 가이드",
+      "requirement": "필수12",
+      "acceptance": [
+        "Fork→실행→커스터마이징→배포→점검 절차",
+        "docs/guides/ 작성"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "DOC-02",
+      "phase": 4,
+      "owner": "test-verifier",
+      "title": "신규 환경 Fork 검증",
+      "requirement": "필수13",
+      "acceptance": [
+        "make fork-verify 통과",
+        "다른 사람이 문서만으로 실행·배포 성공 기록"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    },
+    {
+      "id": "DOC-03",
+      "phase": 4,
+      "owner": "docs-writer",
+      "title": "트러블슈팅 보고서·발표 자료",
+      "requirement": "산출물",
+      "acceptance": [
+        "harness/progress.md 기반 원인·해결·재발방지 정리"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
+    }
+  ]
+}

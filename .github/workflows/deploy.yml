@@ -1,0 +1,23 @@
+# 배포 게이트: main의 CI가 성공했을 때만 실행된다.
+# 배포 대상은 TBD(기본안 Render/Railway). 확정 후 아래 deploy 단계를 채운다 (feature CD-01).
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Deploy (TBD)
+        run: echo "배포 대상 확정 후 구현 (CD-01). 필요한 Secret은 docs/guides 에 정리"
+      # - name: Health check
+      #   run: curl --fail --retry 10 --retry-delay 10 "${{ vars.BACKEND_URL }}/health"

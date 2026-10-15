@@ -1,0 +1,82 @@
+[project]
+name = "app"
+version = "0.1.0"
+description = "챗봇형 AI 서비스 스타터킷 - FastAPI 백엔드"
+authors = [
+    { name = "siungryu", email = "siungryu@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.20.0",
+    "bcrypt>=5.0.0",
+    "fastapi[standard]>=0.143.1",
+    "langchain>=1.4.6",
+    "langchain-core>=1.6.10",
+    "langchain-openai>=1.7.2",
+    "pgvector>=0.5.1",
+    "psycopg[binary]>=3.3.6",
+    "pydantic-settings>=2.16.0",
+    "pyjwt>=2.15.1",
+    "sqlalchemy>=2.0",
+    "sse-starlette>=3.5.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "import-linter>=2.15",
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.17.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.13"
+mypy_path = "src"
+packages = ["app"]
+ignore_missing_imports = true
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+
+# 계층 규칙을 기계적으로 강제한다 (docs/conventions.md 참고)
+[tool.importlinter]
+root_package = "app"
+
+[[tool.importlinter.contracts]]
+name = "core는 domain/llm에 의존하지 않는다"
+type = "forbidden"
+source_modules = ["app.core"]
+forbidden_modules = ["app.domain", "app.llm"]
+
+[[tool.importlinter.contracts]]
+name = "llm 모듈은 domain에 의존하지 않는다"
+type = "forbidden"
+source_modules = ["app.llm"]
+forbidden_modules = ["app.domain"]
+
+[[tool.importlinter.contracts]]
+name = "domain 계층: routers -> services -> repositories -> models"
+type = "layers"
+layers = ["routers", "services", "repositories", "models"]
+containers = ["app.domain.auth", "app.domain.chat", "app.domain.usage"]
+exhaustive = false

@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./scripts/verify.sh:*)",
+      "Bash(make verify)",
+      "Bash(make migrate)",
+      "Bash(make migration:*)",
+      "Bash(uv run:*)",
+      "Bash(npm run:*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ],
+    "deny": ["Read(./.env)", "Read(./.env.*)", "Edit(./.env)", "Edit(./.env.*)"]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Edit|Write",
+        "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-secrets.sh" }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format-on-edit.sh" }]
+      }
+    ]
+  }
+}
