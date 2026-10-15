@@ -1,5 +1,6 @@
-# 배포 게이트: main의 CI가 성공했을 때만 실행된다.
-# 배포 대상은 TBD(기본안 Render/Railway). 확정 후 아래 deploy 단계를 채운다 (feature CD-01).
+# 배포 게이트: main의 CI가 모두 성공했을 때만 실행된다.
+# 배포 대상이 정해지기 전에는 "초록불인데 실제로는 배포되지 않는" 상태를 피하려고
+# 저장소 변수 DEPLOY_TARGET이 설정됐을 때만 동작한다(미설정 시 job 자체가 건너뛰어짐).
 name: Deploy
 
 on:
@@ -10,14 +11,19 @@ on:
 
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' && vars.DEPLOY_TARGET != '' }}
     runs-on: ubuntu-latest
     environment: production
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-      - name: Deploy (TBD)
-        run: echo "배포 대상 확정 후 구현 (CD-01). 필요한 Secret은 docs/guides 에 정리"
-      # - name: Health check
-      #   run: curl --fail --retry 10 --retry-delay 10 "${{ vars.BACKEND_URL }}/health"
+
+      # TODO(CD-01): DEPLOY_TARGET에 맞춰 실제 배포 단계를 채운다.
+      - name: Deploy
+        run: |
+          echo "배포 대상: ${{ vars.DEPLOY_TARGET }}"
+          echo "실제 배포 명령은 CD-01에서 추가한다."
+
+      - name: 배포 확인 (health check)
+        run: curl --fail --retry 10 --retry-delay 10 "${{ vars.BACKEND_URL }}/health"
