@@ -22,6 +22,25 @@
 - 이 Mac에 Docker가 없어 DB 마이그레이션은 아직 검증하지 못함
 
 **다음 할 일**
-- [사용자] Docker Desktop 설치 → `make db migrate`
+- [TBD] 강의 제공 LLM API 종류·키, 배포 대상, 팀 구성
+- 다음 기능: SETUP-01(설계 문서 확정) → BE-01 → DB-01 → AUTH-01
+
+---
+
+## 2026-10-15 · 세션 2 · 로컬 DB 환경 구성
+
+**한 일**
+- Docker Desktop 4.95.0 설치 (공식 arm64 DMG, Homebrew 없음), engine/CLI 29.8.2, Compose v5.6.0
+- `~/.zprofile`에 Docker CLI 경로 추가 (`/Applications/Docker.app/Contents/Resources/bin`)
+- `.env.example` → `.env` 생성, `docker compose up -d db` (pgvector/pgvector:pg17, healthy), `make migrate` 성공
+- pgvector 확장 0.8.7 사용 가능 확인
+
+**막힌 점**
+- 문제: 설치 후 `docker` 명령을 찾지 못함
+  - 원인: 초기 설정에서 `/usr/local/bin` 심볼릭 링크가 만들어지지 않음
+  - 해결: 앱 번들 bin 경로를 PATH에 추가
+  - 재발방지: 사용 가이드 "실행 전 준비"에 PATH 확인 절차 추가 예정 (DOC-01)
+
+**다음 할 일**
 - [TBD] 강의 제공 LLM API 종류·키, 배포 대상, 팀 구성
 - 다음 기능: SETUP-01(설계 문서 확정) → BE-01 → DB-01 → AUTH-01
