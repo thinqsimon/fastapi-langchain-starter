@@ -56,6 +56,11 @@ class LLMError(AppError):
     code = "LLM_ERROR"
 
 
+class ServiceUnavailableError(AppError):
+    status_code = 503
+    code = "SERVICE_UNAVAILABLE"
+
+
 # FastAPI/Starlette가 직접 올리는 HTTP 에러를 우리 코드 체계로 옮긴다.
 _HTTP_STATUS_CODES = {
     400: "BAD_REQUEST",
@@ -66,6 +71,7 @@ _HTTP_STATUS_CODES = {
     409: "CONFLICT",
     422: "VALIDATION_ERROR",
     429: "TOO_MANY_REQUESTS",
+    503: "SERVICE_UNAVAILABLE",
 }
 
 

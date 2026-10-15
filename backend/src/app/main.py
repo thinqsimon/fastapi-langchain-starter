@@ -1,11 +1,18 @@
 """FastAPI 앱 진입점. 실행: `uv run fastapi dev src/app/main.py`"""
 
-from fastapi import FastAPI
+import logging
+from typing import Annotated
+
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from app.api import build_api_router
 from app.core.config import settings
-from app.core.exceptions import register_exception_handlers
+from app.core.database import get_db
+from app.core.exceptions import ServiceUnavailableError, register_exception_handlers
 from app.core.logging import setup_logging
 from app.core.middleware import REQUEST_ID_HEADER, RequestContextMiddleware
 
@@ -42,6 +49,9 @@ FastAPI · PostgreSQL · Next.js · LangChain 기반 **챗봇형 AI 서비스 �
 
 응답 헤더의 `X-Request-ID`와 같은 값이 서버 로그에 찍히므로, 문제를 신고할 때 함께 알려주세요.
 """
+
+
+logger = logging.getLogger(__name__)
 
 
 def create_app(rag_enabled: bool | None = None) -> FastAPI:
@@ -81,9 +91,34 @@ def create_app(rag_enabled: bool | None = None) -> FastAPI:
             "health": "/health",
         }
 
-    @app.get("/health", tags=["system"])
+    @app.get(
+        "/health",
+        tags=["system"],
+        summary="서버가 살아 있는지",
+        description="DB를 건드리지 않습니다. 배포 플랫폼의 health check용입니다.",
+    )
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get(
+        "/health/ready",
+        tags=["system"],
+        summary="요청을 처리할 준비가 됐는지(DB 포함)",
+        description=(
+            "DB까지 확인합니다. DB가 끊기면 503을 돌려줍니다.\n\n"
+            "무료 플랜에서 주기적으로 깨우는 용도로도 씁니다. `/health`만 호출하면 "
+            "서버는 깨어 있어도 **DB는 유휴로 판단되어 일시정지될 수 있습니다**."
+        ),
+        responses={503: {"description": "DB에 연결할 수 없음"}},
+    )
+    def readiness(db: Annotated[Session, Depends(get_db)]) -> dict[str, str]:
+        try:
+            db.execute(text("select 1"))
+        except SQLAlchemyError:
+            logger.exception("readiness_check_failed")
+            raise ServiceUnavailableError("데이터베이스에 연결할 수 없습니다.") from None
+
+        return {"status": "ok", "database": "ok"}
 
     app.include_router(build_api_router(rag_enabled))
     return app
