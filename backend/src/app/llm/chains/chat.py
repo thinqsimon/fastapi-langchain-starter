@@ -29,9 +29,10 @@ async def stream_reply(
 ) -> AsyncIterator[str]:
     """응답을 토큰 단위로 흘려보낸다. 실패하면 LLMError로 바꿔 던진다."""
     prompt = build_chat_prompt(system_prompt) if system_prompt else build_chat_prompt()
-    chain = prompt | get_chat_model()
 
     try:
+        # 모델 생성도 여기서 한다. API 키 누락 같은 초기화 실패까지 LLMError로 묶기 위해서다.
+        chain = prompt | get_chat_model()
         async for chunk in chain.astream({"input": user_input, "history": _to_messages(history)}):
             text = chunk.content
             if text:

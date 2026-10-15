@@ -1,14 +1,39 @@
 "use client"
 
-import { useAuthStore } from "@/store/auth"
+import { useEffect } from "react"
+
+import { ConversationSidebar } from "@/components/chat/conversation-sidebar"
+import { MessageInput } from "@/components/chat/message-input"
+import { MessageList } from "@/components/chat/message-list"
+import { useChatStore } from "@/store/chat"
 
 export default function ChatPage() {
-    const user = useAuthStore((state) => state.user)
+    const loadConversations = useChatStore((state) => state.loadConversations)
+    const messages = useChatStore((state) => state.messages)
+    const streamingAnswer = useChatStore((state) => state.streamingAnswer)
+    const isStreaming = useChatStore((state) => state.isStreaming)
+    const error = useChatStore((state) => state.error)
+    const sendMessage = useChatStore((state) => state.sendMessage)
+
+    useEffect(() => {
+        void loadConversations()
+    }, [loadConversations])
 
     return (
-        <div className="p-8">
-            <h1 className="text-xl font-semibold">채팅</h1>
-            <p className="mt-2 text-sm text-muted-foreground">{user?.display_name}님, 환영합니다. 대화 화면은 CHAT-02에서 구현합니다.</p>
+        <div className="flex flex-1 overflow-hidden">
+            <ConversationSidebar />
+
+            <section className="flex flex-1 flex-col">
+                <MessageList messages={messages} streamingAnswer={streamingAnswer} isStreaming={isStreaming} />
+
+                {error && (
+                    <p role="alert" className="px-6 pb-2 text-sm text-destructive">
+                        {error}
+                    </p>
+                )}
+
+                <MessageInput disabled={isStreaming} onSend={(content) => void sendMessage(content)} />
+            </section>
         </div>
     )
 }

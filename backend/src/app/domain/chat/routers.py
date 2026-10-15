@@ -1,10 +1,12 @@
 """chat 도메인 - 라우터."""
 
+import logging
 import uuid
 
 from fastapi import APIRouter, status
 from sse_starlette.sse import EventSourceResponse
 
+from app.core.exceptions import AppError
 from app.domain.auth.dependencies import CurrentUser, DbSession
 from app.domain.chat.schemas import (
     ConversationCreate,
@@ -15,6 +17,8 @@ from app.domain.chat.schemas import (
     MessageRead,
 )
 from app.domain.chat.services import ChatService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/conversations", tags=["chat"])
 
@@ -87,8 +91,14 @@ async def stream_message(
                 conversation_id, current_user.id, payload.content
             ):
                 yield {"event": "token", "data": chunk}
-        except Exception as exc:  # 스트림이 시작된 뒤엔 상태 코드를 바꿀 수 없다.
-            yield {"event": "error", "data": str(exc)}
+        except AppError as exc:
+            # 스트림이 시작된 뒤엔 상태 코드를 바꿀 수 없어 이벤트로 알린다.
+            logger.warning("stream_failed code=%s message=%s", exc.code, exc.message)
+            yield {"event": "error", "data": exc.message}
+        except Exception:
+            # 내부 메시지(스택·키 관련 문구 등)는 클라이언트로 내보내지 않는다.
+            logger.exception("stream_failed_unexpectedly conversation_id=%s", conversation_id)
+            yield {"event": "error", "data": "응답을 생성하지 못했습니다."}
         else:
             yield {"event": "done", "data": ""}
 

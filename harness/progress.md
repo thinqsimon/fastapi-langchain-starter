@@ -115,3 +115,42 @@
 - [TBD] 강의 제공 LLM API 종류·키, 배포 대상, 팀 구성
 - 다음 기능: AUTH-01(JWT 회원가입·로그인·리프레시·내 정보) → FE-01
 - GitHub Actions CI 첫 실행 결과 확인 필요
+
+---
+
+## 2026-10-15 · 세션 5 · AUTH-01 · FE-01/02 · CHAT-01 · LLM-01 · CHAT-02 · FE-03
+
+**한 일**
+- GitHub 연결·push: https://github.com/thinqsimon/fastapi-langchain-starter
+- AUTH-01: 가입·로그인·리프레시·로그아웃·내 정보. 리프레시 토큰 회전(쓴 토큰 폐기),
+  로그인 실패 메시지 단일화(가입 여부 노출 방지), 운영 환경 설정 검증(약한 JWT 키·LLM 키 누락 차단)
+- FE-01/02: 로그인·회원가입 화면, 보호 라우트, 401 시 토큰 자동 재발급(동시 요청은 1회만)
+- CHAT-01/LLM-01/CHAT-02: conversations·messages, 프롬프트 템플릿·체인 분리, SSE 스트리밍
+- FE-03: 사이드바·말풍선·입력창, 스트리밍 실시간 표시
+- Playwright E2E 8개와 `scripts/e2e.sh`(백엔드 8010 / 프론트 3100 전용 포트)
+
+**막힌 점**
+- 문제: 브라우저로는 assistant 메시지가 저장되지 않는데 API 테스트는 통과
+  - 원인: `scripts/e2e.sh`가 `.env`의 실제 OpenAI 공급자를 사용 → 키가 없어 스트림이 에러로 끝남.
+    API 테스트는 `LLM_PROVIDER=fake`라 드러나지 않았다
+  - 해결: e2e.sh에서 `LLM_PROVIDER=fake` 강제
+  - 재발방지: 모든 자동 검증은 fake 공급자로 돌린다(키 불필요·결정적). conventions.md에 명시
+- 문제: SSE 오류 이벤트에 OpenAI 내부 메시지가 그대로 노출
+  - 원인: `get_chat_model()`이 try 블록 밖에 있어 초기화 예외가 LLMError로 안 묶였고,
+    라우터가 `str(exc)`를 그대로 전송
+  - 해결: 모델 생성을 try 안으로, 라우터는 AppError만 메시지 전달하고 그 외는 로그만 남기고 일반 문구 전송
+  - 재발방지: 테스트로 내부 문자열 미노출을 단정(BE-01과 동일 정책)
+- 문제: E2E가 간헐 실패(새로고침 시 이력 없음)
+  - 원인: 스트리밍 중인 말풍선과 저장된 말풍선을 구분할 수 없어 저장 전에 새로고침
+  - 해결: 스트리밍 말풍선에 `data-pending` 표시, 테스트는 저장된 것만 기다림
+- 문제: 포트 충돌(수업 예제 서버가 8000 사용, 이전 E2E 백엔드가 8010에 잔존)
+  - 해결: E2E 전용 포트 + 종료 시 포트 기준으로 자식 프로세스까지 정리, 시작 전 점유 확인
+
+**알려진 사항(후속)**
+- `.env.example` 수정이 `.claude/settings.json`의 `Edit(./.env.*)` deny 규칙에 막힘.
+  `.env.example`은 예외로 둬야 함(사용자 확인 필요)
+- 아직 실제 LLM 키로 호출해 본 적 없음(TBD). OPT-USAGE에서 토큰 사용량 기록 시 함께 확인
+
+**다음 할 일**
+- [TBD] 강의 제공 LLM API 키, 배포 대상
+- 다음 기능: CI-01(GitHub Actions 확인) → TEST-01 → SAMPLE-01/02 → CD-01

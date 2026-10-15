@@ -22,3 +22,19 @@ export type ApiErrorBody = {
         details?: { field: string; message: string }[]
     }
 }
+
+export type Conversation = {
+    id: string
+    title: string
+    created_at: string
+    updated_at: string
+}
+
+export type Message = {
+    id: string
+    role: "user" | "assistant" | "system"
+    content: string
+    created_at: string
+}
+
+export type ConversationDetail = Conversation & { messages: Message[] }

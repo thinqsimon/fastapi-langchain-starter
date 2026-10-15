@@ -166,7 +166,7 @@
         "새로고침 후 이력 복원"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "CI-01",
