@@ -13,6 +13,7 @@ concurrency:
 env:
   APP_ENV: test
   DATABASE_URL: postgresql+psycopg://app:app@localhost:5432/app
+  TEST_DATABASE_URL: postgresql+psycopg://app:app@localhost:5432/app
   JWT_SECRET_KEY: ci-only-secret-key-with-enough-length-0123456789
   # 실제 LLM은 호출하지 않는다(키 불필요·결과 일정).
   LLM_PROVIDER: fake

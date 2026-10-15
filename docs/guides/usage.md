@@ -201,6 +201,11 @@ git push origin main
 | 백엔드 | Render | FastAPI 배포가 단순합니다 |
 | 프론트엔드 | Vercel | Next.js에 최적이고 중지되지 않습니다 |
 
+> **로컬 개발과 운영 DB를 분리하세요.**
+> `.env`의 `DATABASE_URL`을 Supabase로 바꿔도 **테스트와 E2E는 항상 로컬 DB**를 씁니다
+> (`TEST_DATABASE_URL`). 운영 데이터에 테스트가 붙는 사고를 막기 위한 분리입니다.
+> 마이그레이션을 운영 DB에 직접 적용할 때만 `DATABASE_URL`이 그쪽을 가리키면 됩니다.
+
 #### 1단계 · Supabase (DB)
 
 1. 프로젝트를 만듭니다.
@@ -211,6 +216,11 @@ git push origin main
    postgresql+psycopg://postgres.<ref>:<비밀번호>@<호스트>:6543/postgres
    ```
 4. (RAG를 쓸 때만) SQL Editor에서 `create extension if not exists vector;`
+5. 스키마를 올립니다. 배포 시 자동 적용되지만, 미리 확인하고 싶다면:
+   ```bash
+   DATABASE_URL="<Supabase 주소>" make migrate
+   ```
+   `users`, `refresh_tokens`, `conversations`, `messages`, `diary_entries` 5개 테이블이 생깁니다.
 
 #### 2단계 · Render (백엔드)
 

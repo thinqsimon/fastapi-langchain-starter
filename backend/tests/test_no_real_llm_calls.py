@@ -44,3 +44,13 @@ def test_no_api_key_is_needed_for_tests() -> None:
     model = get_chat_model()
 
     assert "".join(str(chunk.content) for chunk in model.stream("안녕"))
+
+
+def test_test_session_never_targets_a_remote_database() -> None:
+    """테스트가 운영 DB에 붙는 사고를 막는다."""
+    from app.core.config import settings as app_settings
+
+    host = app_settings.TEST_DATABASE_URL
+    assert "localhost" in host or "127.0.0.1" in host, (
+        f"테스트 DB가 로컬이 아닙니다: {host.split('@')[-1]}"
+    )

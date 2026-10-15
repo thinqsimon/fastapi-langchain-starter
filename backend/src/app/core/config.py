@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
 
     DATABASE_URL: str = "postgresql+psycopg://app:app@localhost:5432/app"
+    # 테스트는 운영 DB를 건드리면 안 된다. DATABASE_URL이 원격을 가리켜도 테스트는 항상 이쪽을 쓴다.
+    TEST_DATABASE_URL: str = "postgresql+psycopg://app:app@localhost:5432/app"
 
     # 개발용 기본값. 운영에서는 반드시 교체한다(아래 검증이 막는다).
     JWT_SECRET_KEY: str = "dev-only-insecure-secret-key-change-me"

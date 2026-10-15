@@ -49,3 +49,8 @@ event: error   data: {"code": "LLM_ERROR", "message": "..."}
 - 새 모델을 만들면 `app/models.py`에 import한다. 빠뜨리면 등록 검사 테스트가 실패한다
 - DB가 필요한 테스트는 트랜잭션을 열고 끝나면 되돌린다(`db_session` 픽스처). 데이터가 남지 않는다
 - 브라우저 흐름은 `./scripts/e2e.sh`(Playwright). 단위 테스트가 놓친 실제 결함을 여기서 여러 번 잡았다
+
+## 로컬·운영 DB 분리
+- `DATABASE_URL` = 앱이 쓰는 DB (로컬 개발이든 Supabase든)
+- `TEST_DATABASE_URL` = 테스트 전용. 항상 로컬이어야 하며, 원격이면 테스트가 실패한다
+- E2E(`scripts/e2e.sh`)와 Fork 검증(`scripts/fork-verify.sh`)도 각자 로컬 DB를 쓴다

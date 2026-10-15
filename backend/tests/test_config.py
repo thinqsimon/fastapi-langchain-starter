@@ -68,3 +68,13 @@ def test_blank_optional_values_are_treated_as_unset() -> None:
     assert settings.LLM_BASE_URL is None
     assert settings.LLM_PRICE_INPUT_PER_1M is None
     assert settings.LLM_PRICE_OUTPUT_PER_1M is None
+
+
+def test_test_database_is_separate_from_app_database() -> None:
+    """운영 DB를 가리키도록 DATABASE_URL을 바꿔도 테스트 DB는 따라가지 않는다."""
+    settings = Settings(
+        DATABASE_URL="postgresql+psycopg://user:pw@db.example.supabase.com:5432/postgres"
+    )
+
+    assert "supabase" not in settings.TEST_DATABASE_URL
+    assert "localhost" in settings.TEST_DATABASE_URL

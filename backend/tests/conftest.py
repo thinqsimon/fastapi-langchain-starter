@@ -33,7 +33,7 @@ def migrated_database() -> Engine:
 
     result = run_alembic("upgrade", "head")
     assert result.returncode == 0, result.stdout + result.stderr
-    return create_engine(settings.DATABASE_URL)
+    return create_engine(settings.TEST_DATABASE_URL)
 
 
 @pytest.fixture

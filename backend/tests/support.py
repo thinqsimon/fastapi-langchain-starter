@@ -1,5 +1,6 @@
 """테스트 공용 도우미."""
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -13,9 +14,12 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 
 
 def run_alembic(*args: str) -> subprocess.CompletedProcess[str]:
+    # 하위 프로세스도 테스트 DB를 보게 한다(환경 변수가 .env보다 우선한다).
+    env = {**os.environ, "DATABASE_URL": settings.TEST_DATABASE_URL}
     return subprocess.run(
         ["alembic", *args],
         cwd=BACKEND_DIR,
+        env=env,
         capture_output=True,
         text=True,
         check=False,
@@ -24,7 +28,7 @@ def run_alembic(*args: str) -> subprocess.CompletedProcess[str]:
 
 def database_is_reachable() -> bool:
     try:
-        engine = create_engine(settings.DATABASE_URL, connect_args={"connect_timeout": 2})
+        engine = create_engine(settings.TEST_DATABASE_URL, connect_args={"connect_timeout": 2})
         with engine.connect() as conn:
             conn.execute(text("select 1"))
     except OperationalError:
