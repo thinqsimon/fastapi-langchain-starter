@@ -78,3 +78,27 @@ def test_test_database_is_separate_from_app_database() -> None:
 
     assert "supabase" not in settings.TEST_DATABASE_URL
     assert "localhost" in settings.TEST_DATABASE_URL
+
+
+def test_cors_origins_accepts_json_array() -> None:
+    settings = Settings(CORS_ORIGINS='["https://a.vercel.app","http://localhost:3000"]')
+
+    assert settings.CORS_ORIGINS == ["https://a.vercel.app", "http://localhost:3000"]
+
+
+def test_cors_origins_accepts_comma_separated() -> None:
+    """대시보드에 대괄호·따옴표 없이 적어도 동작해야 한다(배포 중 실제로 겪은 문제)."""
+    settings = Settings(CORS_ORIGINS="https://a.vercel.app, http://localhost:3000")
+
+    assert settings.CORS_ORIGINS == ["https://a.vercel.app", "http://localhost:3000"]
+
+
+def test_cors_origins_accepts_single_value() -> None:
+    settings = Settings(CORS_ORIGINS="https://a.vercel.app")
+
+    assert settings.CORS_ORIGINS == ["https://a.vercel.app"]
+
+
+def test_broken_json_cors_origins_explains_the_fix() -> None:
+    with pytest.raises(ValidationError, match="JSON 배열"):
+        Settings(CORS_ORIGINS='["https://a.vercel.app"')

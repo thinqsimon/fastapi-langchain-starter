@@ -323,7 +323,8 @@ make migrate                # 적용
 |---|---|---|
 | 서버가 뜨지 않고 설정 오류 | 운영에서 기본 비밀키나 LLM 키 누락 | `JWT_SECRET_KEY`, LLM 키 확인 |
 | 스트리밍이 오류로 끝남 | LLM 키가 없거나 잘못됨 | 서버 로그의 `stream_failed` 확인. 키 없이 테스트하려면 `LLM_PROVIDER=fake` |
-| 프론트엔드에서 API 호출 실패 | CORS 설정에 주소가 없음 | `.env`의 `CORS_ORIGINS`에 프론트엔드 주소 추가 |
+| 프론트엔드에서 "서버에 연결할 수 없습니다" | CORS 허용 목록에 프론트엔드 주소가 없음 | `CORS_ORIGINS`에 배포된 프론트엔드 주소 추가 후 재배포 |
+| 배포 직후 `SettingsError: error parsing value for field "CORS_ORIGINS"` | 값 형식 오류 | JSON 배열 또는 쉼표 구분으로 적습니다. 따옴표·대괄호가 짝이 맞는지 확인 |
 | `alembic check` 실패 | 모델을 바꾸고 마이그레이션을 안 만듦 | `make migration m="설명"` |
 | 포트 충돌 | 다른 서버가 이미 사용 중 | `lsof -ti tcp:8000 \| xargs kill` |
 

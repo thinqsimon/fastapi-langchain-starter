@@ -4,12 +4,13 @@
 새 설정을 추가하면 루트 `.env.example`에도 반드시 같은 키를 추가한다.
 """
 
+import json
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 # src/app/core/config.py → parents[4] = 저장소 루트
 ROOT_DIR = Path(__file__).resolve().parents[4]
@@ -19,7 +20,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "AX Chat Starter"
     APP_ENV: Literal["local", "test", "production"] = "local"
     LOG_LEVEL: str = "INFO"
-    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    # NoDecode: 기본 JSON 해석을 끄고 아래 검증기가 직접 읽는다.
+    # 배포 대시보드에서는 JSON 배열보다 쉼표 구분으로 적기 쉬워서 둘 다 받는다.
+    CORS_ORIGINS: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
 
     DATABASE_URL: str = "postgresql+psycopg://app:app@localhost:5432/app"
     # 테스트는 운영 DB를 건드리면 안 된다. DATABASE_URL이 원격을 가리켜도 테스트는 항상 이쪽을 쓴다.
@@ -54,6 +57,36 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def _parse_cors_origins(cls, value: object) -> object:
+        """허용 출처를 JSON 배열과 쉼표 구분 문자열 양쪽으로 받는다.
+
+        둘 다 받는 이유: 배포 대시보드에 값을 넣을 때 따옴표와 대괄호를 빠뜨리기 쉬운데,
+        그러면 설정 파싱이 실패해 서버가 아예 뜨지 않는다(실제로 겪은 문제).
+
+            ["https://a.com","http://localhost:3000"]
+            https://a.com, http://localhost:3000
+        """
+        if not isinstance(value, str):
+            return value
+
+        text = value.strip()
+        if not text:
+            return []
+
+        if text.startswith("["):
+            try:
+                return json.loads(text)
+            except json.JSONDecodeError as exc:
+                raise ValueError(
+                    "CORS_ORIGINS가 올바른 JSON 배열이 아닙니다. "
+                    '예: ["https://내앱.vercel.app","http://localhost:3000"] '
+                    "또는 쉼표로 구분해 적으세요."
+                ) from exc
+
+        return [origin.strip() for origin in text.split(",") if origin.strip()]
 
     @field_validator(
         "LLM_BASE_URL",
