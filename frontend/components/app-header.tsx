@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
+import { UsageBadge } from "@/components/usage-badge"
 import { useAuthStore } from "@/store/auth"
 
 export function AppHeader() {
@@ -30,6 +31,7 @@ export function AppHeader() {
                 </nav>
             </div>
             <div className="flex items-center gap-3">
+                <UsageBadge />
                 <span className="text-sm text-muted-foreground">{user?.display_name}</span>
                 <Button variant="outline" size="sm" onClick={handleLogout}>
                     로그아웃

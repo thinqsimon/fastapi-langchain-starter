@@ -231,7 +231,7 @@
         "GET /api/usage/me"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "OPT-DOCKER",

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import NotFoundError
 from app.domain.chat.models import Conversation, Message
 from app.domain.chat.repositories import ConversationRepository, MessageRepository
-from app.llm.chains.chat import stream_reply
+from app.llm.chains.chat import TokenUsage, stream_reply
 
 logger = logging.getLogger(__name__)
 
@@ -73,8 +73,14 @@ class ChatService:
         self.db.commit()
 
         chunks: list[str] = []
+        usage: TokenUsage | None = None
+
+        def record_usage(reported: TokenUsage) -> None:
+            nonlocal usage
+            usage = reported
+
         try:
-            async for chunk in stream_reply(content, history):
+            async for chunk in stream_reply(content, history, on_usage=record_usage):
                 chunks.append(chunk)
                 yield chunk
         finally:
@@ -84,6 +90,8 @@ class ChatService:
                     conversation_id=conversation_id,
                     role="assistant",
                     content="".join(chunks),
+                    input_tokens=usage.input_tokens if usage else None,
+                    output_tokens=usage.output_tokens if usage else None,
                 )
                 self.db.commit()
                 logger.info(

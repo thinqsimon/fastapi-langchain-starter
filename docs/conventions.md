@@ -36,3 +36,9 @@ event: error   data: {"code": "LLM_ERROR", "message": "..."}
 - 401을 받으면 리프레시로 한 번만 재발급 후 원요청을 재시도한다(동시 요청은 한 번만 호출)
 - 보호가 필요한 화면은 `app/(main)/` 아래에 둔다(`RequireAuth`가 감싼다)
 - E2E: `./scripts/e2e.sh` (백엔드 :8010, 프론트 :3100 전용 포트. 개발 서버와 겹치지 않음)
+
+## LLM 사용량·비용
+- 토큰 수는 assistant 메시지(`messages.input_tokens/output_tokens`)에 기록한다. 별도 집계 테이블은 두지 않는다
+- OpenAI는 `stream_usage=True`를 줘야 스트리밍에서도 사용량이 온다
+- 단가는 `llm/pricing.py`의 기본 표를 쓰고, `.env`의 `LLM_PRICE_*_PER_1M`로 덮어쓸 수 있다
+- 표에 없는 모델은 비용 0으로 계산하고 경고만 남긴다(사용량 조회가 실패하지 않도록)

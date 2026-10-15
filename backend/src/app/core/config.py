@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     GOOGLE_API_KEY: str = ""
 
+    # 토큰 단가(100만 토큰당 USD). 비우면 llm/pricing.py의 기본 표를 쓴다.
+    LLM_PRICE_INPUT_PER_1M: float | None = None
+    LLM_PRICE_OUTPUT_PER_1M: float | None = None
+
     RAG_ENABLED: bool = False
 
     model_config = SettingsConfigDict(

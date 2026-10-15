@@ -59,3 +59,12 @@ export type WeeklyReview = {
     repeated_difficulty: string
     suggestion: string
 }
+
+export type UsageSummary = {
+    model: string
+    message_count: number
+    input_tokens: number
+    output_tokens: number
+    total_tokens: number
+    estimated_cost_usd: string
+}

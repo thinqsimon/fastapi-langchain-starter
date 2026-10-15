@@ -11,3 +11,4 @@
 | LLM | LangChain `init_chat_model` | .env만으로 공급자 교체, fake 공급자로 키 없는 CI |
 | 스트리밍 | SSE | 단방향 토큰 전송에 충분, 프록시·배포 환경 호환 |
 | 인증 | PyJWT + bcrypt, access/refresh | 과제 필수, python-jose는 유지보수 중단으로 제외 |
+| 배포 | Render | 2026-10-15 확정. 관리형 PostgreSQL을 함께 제공하고 GitHub 연동 배포가 간단하다 |
