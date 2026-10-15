@@ -307,7 +307,7 @@
         "harness/progress.md 기반 원인·해결·재발방지 정리"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     }
   ]
 }
