@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import api_router
+from app.api import build_api_router
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
@@ -44,7 +44,7 @@ FastAPI · PostgreSQL · Next.js · LangChain 기반 **챗봇형 AI 서비스 �
 """
 
 
-def create_app() -> FastAPI:
+def create_app(rag_enabled: bool | None = None) -> FastAPI:
     setup_logging()
     app = FastAPI(
         title=settings.APP_NAME,
@@ -85,7 +85,7 @@ def create_app() -> FastAPI:
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    app.include_router(api_router)
+    app.include_router(build_api_router(rag_enabled))
     return app
 
 

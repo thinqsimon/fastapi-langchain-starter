@@ -2,13 +2,30 @@
 
 from fastapi import APIRouter
 
+from app.core.config import settings
 from app.domain.auth.routers import router as auth_router
 from app.domain.chat.routers import router as chat_router
 from app.domain.diary.routers import router as diary_router
 from app.domain.usage.routers import router as usage_router
 
-api_router = APIRouter(prefix="/api")
-api_router.include_router(auth_router)
-api_router.include_router(chat_router)
-api_router.include_router(diary_router)
-api_router.include_router(usage_router)
+
+def build_api_router(rag_enabled: bool | None = None) -> APIRouter:
+    """`/api` 아래 라우터를 구성한다.
+
+    선택 기능은 **호출 시점에** 판단한다. import 시점에 정하면 설정을 바꿔도 반영되지 않아
+    테스트나 기능 토글이 어려워진다.
+    """
+    router = APIRouter(prefix="/api")
+    router.include_router(auth_router)
+    router.include_router(chat_router)
+    router.include_router(diary_router)
+    router.include_router(usage_router)
+
+    enabled = settings.RAG_ENABLED if rag_enabled is None else rag_enabled
+    if enabled:
+        # 꺼져 있으면 API가 등록되지 않아 /docs에도 보이지 않는다.
+        from app.domain.rag.routers import router as rag_router
+
+        router.include_router(rag_router)
+
+    return router

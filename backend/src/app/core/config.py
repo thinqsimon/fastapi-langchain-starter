@@ -50,7 +50,13 @@ class Settings(BaseSettings):
     LLM_PRICE_INPUT_PER_1M: float | None = None
     LLM_PRICE_OUTPUT_PER_1M: float | None = None
 
+    # 선택 기능: 문서를 저장해 두고 질문과 비슷한 대목을 찾아 답변에 쓰는 기능.
+    # 끄면 관련 API가 아예 등록되지 않는다.
     RAG_ENABLED: bool = False
+    RAG_EMBEDDING_MODEL: str = "text-embedding-3-small"
+    RAG_CHUNK_SIZE: int = 800
+    RAG_CHUNK_OVERLAP: int = 100
+    RAG_TOP_K: int = 4
 
     model_config = SettingsConfigDict(
         env_file=ROOT_DIR / ".env",

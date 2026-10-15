@@ -54,3 +54,9 @@ event: error   data: {"code": "LLM_ERROR", "message": "..."}
 - `DATABASE_URL` = 앱이 쓰는 DB (로컬 개발이든 Supabase든)
 - `TEST_DATABASE_URL` = 테스트 전용. 항상 로컬이어야 하며, 원격이면 테스트가 실패한다
 - E2E(`scripts/e2e.sh`)와 Fork 검증(`scripts/fork-verify.sh`)도 각자 로컬 DB를 쓴다
+
+## 선택 기능 켜고 끄기
+- `RAG_ENABLED=false`면 RAG 라우터가 **등록되지 않아** `/docs`에도 보이지 않는다
+- 선택 기능은 import 시점이 아니라 `build_api_router()` 호출 시점에 판단한다
+  (import 시점에 정하면 설정을 바꿔도 반영되지 않아 테스트가 어려워진다)
+- 벡터 차원을 바꾸면 기존 임베딩과 맞지 않는다. 마이그레이션과 재색인이 필요하다
