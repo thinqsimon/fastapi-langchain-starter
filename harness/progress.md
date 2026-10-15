@@ -77,3 +77,41 @@
 **다음 할 일**
 - [TBD] 강의 제공 LLM API 종류·키, 배포 대상, 팀 구성, GitHub 원격 저장소
 - 다음 기능: DB-01(users·refresh_tokens 모델·마이그레이션) → AUTH-01 → FE-01
+
+---
+
+## 2026-10-15 · 세션 4 · DB-01 users·refresh_tokens 모델과 첫 마이그레이션
+
+**한 일**
+- GitHub 연결: https://github.com/thinqsimon/fastapi-langchain-starter
+  원격의 초기 커밋(.gitignore) 위로 rebase, `.gitignore`는 우리 것 + GitHub Node 템플릿의 유용한 항목 병합 후 push
+- 스키마 확정(ADR-0003): UUID PK + 최소 필드(email, password_hash, display_name, is_active)
+  - `User`, `RefreshToken` 모델, `TimestampMixin`(created_at/updated_at UTC)
+  - 리프레시 토큰은 원문이 아니라 SHA-256 해시로 저장, 사용자 삭제 시 CASCADE
+  - 기본값을 Python과 DB(`server_default`) 양쪽에 지정
+- `alembic.ini`에 post_write_hooks 추가 → 생성되는 마이그레이션이 자동으로 ruff 포맷됨
+- `tests/test_migrations.py` 4개 추가(총 15개). DB 없으면 skip, CI는 DB가 있어 항상 실행
+- 마이그레이션 불일치 감지가 실제로 동작하는지 모델에 임시 컬럼을 넣어 확인 후 원복
+
+**막힌 점**
+- 문제: 편집 중 `func`, `Uuid`, `true`, `Path` import가 사라져 NameError 연쇄 발생
+  - 원인: PostToolUse 훅의 `ruff check --fix`가 여러 번에 나눠 편집하는 도중
+    "아직 쓰이지 않은" import를 미사용으로 보고 삭제
+  - 해결: 훅을 `ruff format`만 수행하도록 변경. 린트는 verify.sh가 담당
+  - 재발방지: 자동 수정 도구는 포맷처럼 되돌릴 수 있는 작업만 맡긴다
+- 문제: 마이그레이션 파일을 지운 뒤 DB의 alembic_version이 사라진 리비전을 가리켜 upgrade 불가
+  - 원인: downgrade가 실패한 상태에서 파일을 먼저 삭제
+  - 해결: 테이블과 alembic_version을 비우고 재생성
+  - 재발방지: 마이그레이션 파일 삭제 전 `alembic downgrade base` 성공을 먼저 확인
+- 문제(검증자 지적): DB 기본값이 Python 쪽에만 있어 psql 직접 INSERT가 not-null 위반으로 실패
+  - 해결: `server_default`(gen_random_uuid/now/true) 추가 후 raw INSERT 성공 확인
+  - 재발방지: conventions.md "데이터베이스" 절에 규칙으로 명시
+
+**알려진 사항(후속)**
+- `updated_at`은 ORM을 거친 UPDATE에서만 자동 갱신됨(문서화 완료, 필요해지면 DB 트리거 검토)
+- `refresh_tokens.expires_at` 인덱스 없음 — 만료 토큰 정리 배치를 만들 때 추가
+
+**다음 할 일**
+- [TBD] 강의 제공 LLM API 종류·키, 배포 대상, 팀 구성
+- 다음 기능: AUTH-01(JWT 회원가입·로그인·리프레시·내 정보) → FE-01
+- GitHub Actions CI 첫 실행 결과 확인 필요

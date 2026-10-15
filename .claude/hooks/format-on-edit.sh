@@ -4,7 +4,9 @@ file=$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("tool_input",
 root="$CLAUDE_PROJECT_DIR"
 case "$file" in
   "$root"/backend/*.py)
-    (cd "$root/backend" && uv run -q ruff format "$file" && uv run -q ruff check --fix -q "$file") >&2 || true ;;
+    # 포맷만 한다. `ruff check --fix`는 여러 번에 나눠 편집하는 도중
+    # "아직 안 쓰인" import를 지워버리므로 쓰지 않는다(린트는 verify.sh가 맡는다).
+    (cd "$root/backend" && uv run -q ruff format "$file") >&2 || true ;;
   "$root"/frontend/*.ts|"$root"/frontend/*.tsx)
     (cd "$root/frontend" && npx prettier --write --log-level warn "$file") >&2 || true ;;
 esac

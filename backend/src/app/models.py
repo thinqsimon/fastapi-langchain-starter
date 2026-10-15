@@ -4,5 +4,6 @@
 """
 
 from app.core.database import Base
+from app.domain.auth.models import RefreshToken, User
 
-__all__ = ["Base"]
+__all__ = ["Base", "RefreshToken", "User"]

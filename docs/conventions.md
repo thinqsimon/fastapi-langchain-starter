@@ -22,3 +22,11 @@ event: error   data: {"code": "LLM_ERROR", "message": "..."}
 
 ## 백엔드 / 프론트엔드
 `backend/CLAUDE.md`, `frontend/CLAUDE.md` 참고.
+
+## 데이터베이스
+- PK는 UUID(`server_default=gen_random_uuid()`). URL·토큰에 노출돼도 가입자 수가 추정되지 않는다
+- 모든 테이블은 `TimestampMixin`을 상속해 `created_at`/`updated_at`(UTC)을 가진다
+- 기본값은 Python(`default=`)과 DB(`server_default=`) 양쪽에 준다. 시드 데이터·psql 수동 작업에서도 채워져야 하므로
+- 주의: `updated_at` 자동 갱신은 ORM을 거친 UPDATE에만 적용된다. 대량/raw SQL UPDATE에서는 직접 넣는다
+- 사용자는 삭제하지 않고 `is_active=false`로 둔다(대화 이력 보존). 토큰은 사용자 삭제 시 CASCADE
+- 리프레시 토큰은 원문이 아니라 SHA-256 해시로 저장한다

@@ -72,7 +72,7 @@
         "alembic check로 모델-마이그레이션 일치"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "AUTH-01",
