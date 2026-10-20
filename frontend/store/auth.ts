@@ -11,6 +11,10 @@ type AuthState = {
     restore: () => Promise<void>
     login: (email: string, password: string) => Promise<void>
     logout: () => Promise<void>
+    // 계정 정보 수정. 실패하면 예외를 그대로 던져 화면이 메시지를 보여주게 한다.
+    updateProfile: (displayName: string) => Promise<void>
+    changeEmail: (email: string, currentPassword: string) => Promise<void>
+    changePassword: (currentPassword: string, newPassword: string) => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -41,5 +45,18 @@ export const useAuthStore = create<AuthState>((set) => ({
     logout: async () => {
         await authApi.logout()
         set({ user: null, isAuthenticated: false, isLoading: false })
+    },
+
+    updateProfile: async (displayName) => {
+        set({ user: await authApi.updateProfile({ display_name: displayName }) })
+    },
+
+    changeEmail: async (email, currentPassword) => {
+        set({ user: await authApi.changeEmail({ email, current_password: currentPassword }) })
+    },
+
+    changePassword: async (currentPassword, newPassword) => {
+        // 새 토큰은 api 계층이 저장한다. 사용자 정보는 바뀌지 않는다.
+        await authApi.changePassword({ current_password: currentPassword, new_password: newPassword })
     },
 }))

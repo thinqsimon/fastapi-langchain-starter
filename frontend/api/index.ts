@@ -3,5 +3,21 @@ export { errorMessage, httpClient, tokenStorage } from "./client"
 export * as authApi from "./auth"
 export * as chatApi from "./chat"
 export * as diaryApi from "./diary"
+export * as preferencesApi from "./preferences"
 export * as usageApi from "./usage"
-export type { ApiErrorBody, Conversation, ConversationDetail, DiaryDraft, DiaryEntry, Message, TokenPair, UsageSummary, User, WeeklyReview } from "./types"
+export type {
+    ApiErrorBody,
+    Conversation,
+    ConversationDetail,
+    DiaryDraft,
+    DiaryEntry,
+    DiaryEntryCreate,
+    DiaryForm,
+    EligibleConversation,
+    Message,
+    Preferences,
+    TokenPair,
+    UsageSummary,
+    User,
+    WeeklyReview,
+} from "./types"

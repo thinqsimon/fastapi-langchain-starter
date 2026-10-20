@@ -17,6 +17,23 @@ export async function fetchMe(): Promise<User> {
     return data
 }
 
+export async function updateProfile(input: { display_name: string }): Promise<User> {
+    const { data } = await httpClient.patch<User>("/api/auth/me", input)
+    return data
+}
+
+/** 로그인 ID가 바뀌므로 현재 비밀번호를 함께 보낸다. */
+export async function changeEmail(input: { email: string; current_password: string }): Promise<User> {
+    const { data } = await httpClient.put<User>("/api/auth/me/email", input)
+    return data
+}
+
+/** 다른 기기의 로그인은 모두 끊기고, 이 화면은 새로 받은 토큰으로 이어진다. */
+export async function changePassword(input: { current_password: string; new_password: string }): Promise<void> {
+    const { data } = await httpClient.put<TokenPair>("/api/auth/me/password", input)
+    tokenStorage.save(data)
+}
+
 export async function logout(): Promise<void> {
     const refreshToken = tokenStorage.refresh
     try {

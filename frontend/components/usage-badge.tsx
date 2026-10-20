@@ -4,8 +4,8 @@ import { useEffect } from "react"
 
 import { useUsageStore } from "@/store/usage"
 
-/** 헤더에 표시하는 내 LLM 사용량. 비용은 추정치다. */
-export function UsageBadge() {
+/** 내 LLM 사용량(계정 메뉴에 표시). 비용은 추정치다. */
+export function UsageBadge({ emptyText }: { emptyText?: string }) {
     const usage = useUsageStore((state) => state.usage)
     const refresh = useUsageStore((state) => state.refresh)
 
@@ -16,7 +16,9 @@ export function UsageBadge() {
         return () => clearInterval(timer)
     }, [refresh])
 
-    if (!usage || usage.message_count === 0) return null
+    if (!usage || usage.message_count === 0) {
+        return emptyText ? <span className="text-xs text-muted-foreground">{emptyText}</span> : null
+    }
 
     return (
         <span className="text-xs text-muted-foreground" title={`${usage.model} · 입력 ${usage.input_tokens} / 출력 ${usage.output_tokens} 토큰`}>

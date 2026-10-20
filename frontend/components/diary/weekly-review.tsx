@@ -5,6 +5,7 @@ import { useState } from "react"
 import { diaryApi, errorMessage, type WeeklyReview } from "@/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { localToday } from "@/lib/date"
 
 export function WeeklyReviewCard() {
     const [review, setReview] = useState<WeeklyReview | null>(null)
@@ -15,7 +16,8 @@ export function WeeklyReviewCard() {
         setIsLoading(true)
         setError(null)
         try {
-            setReview(await diaryApi.fetchWeeklyReview())
+            // 사용자 기준 이번 주(서버는 UTC라 월요일 새벽에는 지난주가 된다).
+            setReview(await diaryApi.fetchWeeklyReview(localToday()))
         } catch (caught) {
             setError(errorMessage(caught, "회고를 만들지 못했습니다."))
         } finally {

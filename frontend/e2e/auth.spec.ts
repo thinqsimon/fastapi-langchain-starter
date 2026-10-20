@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test"
 
+import { logOut } from "./helpers"
+
 /** 테스트마다 새 계정을 써서 서로 간섭하지 않게 한다. */
 function newAccount() {
     const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -32,9 +34,9 @@ test("로그아웃하면 토큰이 지워지고 로그인 화면으로 돌아간
     await signUp(page, account)
     await expect(page).toHaveURL(/\/chat$/)
 
-    await page.getByRole("button", { name: "로그아웃" }).click()
+    // 로그아웃은 우측 상단 계정 메뉴 안에 있다.
+    await logOut(page)
 
-    await expect(page).toHaveURL(/\/sign-in$/)
     const accessToken = await page.evaluate(() => localStorage.getItem("access_token"))
     expect(accessToken).toBeNull()
 })
@@ -48,8 +50,7 @@ test("로그인하지 않으면 보호 화면에 접근할 수 없다", async ({
 test("잘못된 비밀번호는 오류 메시지를 보여준다", async ({ page }) => {
     const account = newAccount()
     await signUp(page, account)
-    await page.getByRole("button", { name: "로그아웃" }).click()
-    await expect(page).toHaveURL(/\/sign-in$/)
+    await logOut(page)
 
     await page.getByLabel("이메일").fill(account.email)
     await page.getByLabel("비밀번호").fill("wrong-password")
