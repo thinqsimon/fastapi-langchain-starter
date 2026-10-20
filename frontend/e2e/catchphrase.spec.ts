@@ -10,15 +10,21 @@ function board(page: Page) {
     return page.locator('[data-slot="catchphrase"]')
 }
 
-test("공간이 넉넉하면 헤더 가운데 여백에 멈춰 있고 가운데 정렬된다", async ({ page }) => {
+test("공간이 넉넉하면 헤더 정중앙에 양옆 여백을 두고 멈춰 있다", async ({ page }) => {
     await signUp(page, "e2e-marquee")
 
     await expect(board(page)).toHaveAttribute("data-motion", "static")
     await expect(board(page)).toContainText("풀스택 화이팅")
 
-    const area = (await board(page).boundingBox())!
+    const header = (await page.locator("header").boundingBox())!
     const text = (await board(page).locator("span").boundingBox())!
-    expect(Math.abs(area.x + area.width / 2 - (text.x + text.width / 2))).toBeLessThan(2)
+    const nav = (await page.locator("header").getByRole("navigation").boundingBox())!
+    const account = (await page.getByRole("button", { name: "계정 메뉴 열기" }).boundingBox())!
+    // 헤더의 정중앙
+    expect(Math.abs(header.x + header.width / 2 - (text.x + text.width / 2))).toBeLessThan(2)
+    // 왼쪽 메뉴·오른쪽 계정 버튼과 붙지 않는다(여백).
+    expect(text.x - (nav.x + nav.width)).toBeGreaterThanOrEqual(40)
+    expect(account.x - (text.x + text.width)).toBeGreaterThanOrEqual(40)
 })
 
 test("공간보다 길면 오른쪽에서 왼쪽으로 흐르고, 다 흐르면 10초 비운 뒤 계속 반복한다", async ({ page }) => {

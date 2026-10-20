@@ -73,7 +73,9 @@ test("비밀번호를 바꿔도 이 화면은 로그인이 유지되고, 다음�
     await form.getByRole("button", { name: "비밀번호 변경" }).click()
     await expect(form.locator('p[role="status"]')).toContainText("비밀번호를 바꿨습니다")
 
-    // 새로 받은 토큰으로 로그인이 이어진다.
+    // 새로 받은 토큰이 저장됐는지 확인한다. 액세스 토큰을 못 쓰게 만들면 리프레시 토큰으로 복구해야 하는데,
+    // 예전 리프레시 토큰은 폐기됐으므로 새 토큰이 저장돼 있어야만 화면이 유지된다.
+    await page.evaluate(() => localStorage.setItem("access_token", "expired.invalid.token"))
     await page.reload()
     await expect(page).toHaveURL(/\/settings$/)
     await expect(page.getByRole("button", { name: "계정 메뉴 열기" })).toBeVisible()

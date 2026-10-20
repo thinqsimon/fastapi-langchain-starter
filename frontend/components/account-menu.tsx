@@ -36,7 +36,8 @@ export function AccountMenu() {
                 render={<Button variant="ghost" size="sm" aria-label={`계정 메뉴 열기: ${user?.display_name ?? ""}`} className="max-w-40 shrink-0" />}
             >
                 <CircleUserRound />
-                <span className="truncate">{user?.display_name}</span>
+                {/* 좁은 화면에서는 아이콘만 보여 가운데 문구에 자리를 준다(이름은 메뉴 안에 있다). */}
+                <span className="hidden truncate sm:inline">{user?.display_name}</span>
             </SheetTrigger>
 
             <SheetContent side="right" className="w-80">
