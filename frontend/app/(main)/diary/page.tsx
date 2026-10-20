@@ -5,6 +5,7 @@ import { useEffect } from "react"
 import { ConversationPicker } from "@/components/diary/conversation-picker"
 import { DiaryEditor } from "@/components/diary/diary-editor"
 import { DiaryEntryCard } from "@/components/diary/diary-entry-card"
+import { DiaryPreviewActions } from "@/components/diary/diary-preview-actions"
 import { WeeklyReviewCard } from "@/components/diary/weekly-review"
 import { Button } from "@/components/ui/button"
 import { useDiaryStore } from "@/store/diary"
@@ -25,6 +26,8 @@ export default function DiaryPage() {
     const save = useDiaryStore((state) => state.save)
     const remove = useDiaryStore((state) => state.remove)
     const footer = usePreferencesStore((state) => state.preferences?.diary_footer)
+    // 프리뷰에는 저장했을 때 붙을 푸터를 넣는다(수정 중이면 그 일기에 이미 붙은 푸터).
+    const previewFooter = editingId ? (entries.find((entry) => entry.id === editingId)?.footer ?? null) : (footer ?? null)
 
     useEffect(() => {
         void load()
@@ -33,7 +36,10 @@ export default function DiaryPage() {
     return (
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 overflow-y-auto p-4 sm:p-6">
             <section className="flex flex-col gap-3">
-                <h1 className="text-xl font-semibold">{editingId ? "일기 수정" : "새 배움일기"}</h1>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h1 className="text-xl font-semibold">{editingId ? "일기 수정" : "새 배움일기"}</h1>
+                    <DiaryPreviewActions name="작성 중인 일기" diary={{ ...form, footer: previewFooter }} />
+                </div>
 
                 {!editingId && <ConversationPicker />}
 

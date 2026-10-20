@@ -1,6 +1,7 @@
 "use client"
 
 import type { DiaryEntry } from "@/api"
+import { DiaryPreviewActions } from "@/components/diary/diary-preview-actions"
 import { MarkdownView } from "@/components/markdown-view"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,7 +19,7 @@ function Item({ label, children }: { label: string; children: string }) {
 export function DiaryEntryCard({ entry, onEdit, onDelete }: { entry: DiaryEntry; onEdit: () => void; onDelete: () => void }) {
     return (
         <Card data-slot="diary-entry">
-            <CardHeader className="flex flex-row items-start justify-between gap-3">
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 flex-col gap-1">
                     <CardTitle className="text-base wrap-anywhere">{entry.title}</CardTitle>
                     <p className="text-xs text-muted-foreground">
@@ -26,7 +27,8 @@ export function DiaryEntryCard({ entry, onEdit, onDelete }: { entry: DiaryEntry;
                         {entry.conversation_id ? " · 채팅으로 작성" : ""}
                     </p>
                 </div>
-                <div className="flex shrink-0 gap-2">
+                <div className="flex shrink-0 flex-wrap gap-2">
+                    <DiaryPreviewActions name={entry.title} diary={entry} />
                     <Button size="sm" variant="outline" onClick={onEdit}>
                         수정
                     </Button>
