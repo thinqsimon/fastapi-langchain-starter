@@ -3,6 +3,7 @@
 import logging
 import uuid
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import AppError, ConflictError, UnauthorizedError
@@ -107,7 +108,12 @@ class AuthService:
             raise ConflictError("이미 사용 중인 이메일입니다.")
 
         user.email = email
-        self.db.commit()
+        try:
+            self.db.commit()
+        except IntegrityError as exc:
+            # 확인과 저장 사이에 다른 계정이 같은 이메일을 먼저 가져간 경우(500이 아니라 409)
+            self.db.rollback()
+            raise ConflictError("이미 사용 중인 이메일입니다.") from exc
         # 이메일 원문은 남기지 않는다(개인정보).
         logger.info("email_changed user_id=%s", user.id)
         return user

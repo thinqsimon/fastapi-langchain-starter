@@ -31,13 +31,17 @@ class WeeklyReview(BaseModel):
     suggestion: str = Field(description="다음 주 제안")
 
 
+SPEAKER_LABELS = {"user": "교육생", "assistant": "코치"}
+
+
 def _format_conversation(messages: Sequence[tuple[str, str]]) -> str:
-    labels = {"user": "교육생", "assistant": "코치"}
-    return "\n".join(f"{labels.get(role, role)}: {content}" for role, content in messages)
+    return "\n".join(f"{SPEAKER_LABELS.get(role, role)}: {content}" for role, content in messages)
 
 
 # 한두 글자("네", "내일")만 인용하면 어디에나 있으므로 근거로 보지 않는다.
 MIN_EVIDENCE_LENGTH = 4
+# 모델이 인용 앞에 붙이곤 하는 화자 표시("교육생: ")
+_SPEAKER_PREFIX = re.compile(rf"^\s*(?:{'|'.join(SPEAKER_LABELS.values())})\s*:\s*")
 
 
 def _compact(text: str) -> str:
@@ -45,17 +49,18 @@ def _compact(text: str) -> str:
     return re.sub(r"[\s\"'“”‘’]", "", text)
 
 
-def keep_grounded_next_plan(draft: DiaryDraft, conversation: str) -> DiaryDraft:
+def keep_grounded_next_plan(draft: DiaryDraft, messages: Sequence[str]) -> DiaryDraft:
     """'내일 할 것'은 대화에 근거가 있을 때만 남긴다.
 
     모델은 "없으면 비워 두라"는 지시를 받아도 그럴듯한 계획을 지어내곤 한다.
-    그래서 근거 문장을 대화에서 그대로 인용하게 하고, 그 문장이 실제 대화에 없으면 비운다.
+    그래서 근거 문장을 대화에서 그대로 인용하게 하고, 그 문장이 실제 메시지 본문에 없으면 비운다.
+    화자 표시는 대화에 쓴 말이 아니므로 근거에서 빼고 본다.
     """
-    evidence = _compact(draft.next_plan_evidence)
+    evidence = _compact(_SPEAKER_PREFIX.sub("", draft.next_plan_evidence))
     grounded = (
         bool(draft.next_plan.strip())
         and len(evidence) >= MIN_EVIDENCE_LENGTH
-        and evidence in _compact(conversation)
+        and any(evidence in _compact(message) for message in messages)
     )
     if grounded:
         return draft
@@ -81,7 +86,7 @@ async def draft_diary(
 
     if not isinstance(result, DiaryDraft):
         raise LLMError("일기 초안 형식이 올바르지 않습니다.")
-    return keep_grounded_next_plan(result, conversation)
+    return keep_grounded_next_plan(result, [content for _, content in new_messages])
 
 
 async def review_week(entries: Sequence[str]) -> WeeklyReview:

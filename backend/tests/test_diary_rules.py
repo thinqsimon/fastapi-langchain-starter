@@ -10,7 +10,7 @@ from app.llm.chains.diary import DiaryDraft, draft_diary, keep_grounded_next_pla
 from app.llm.prompts.diary_coach import DRAFT_SYSTEM_PROMPT
 
 DAY = date(2026, 10, 20)
-CONVERSATION = "교육생: 오늘은 JWT를 배웠어요. 내일은 리프레시 토큰을 복습할게요.\n코치: 좋아요."
+MESSAGES = ["오늘은 JWT를 배웠어요. 내일은 리프레시 토큰을 복습할게요.", "좋아요."]
 
 
 def make_draft(next_plan: str, evidence: str) -> DiaryDraft:
@@ -56,13 +56,20 @@ def test_blank_values_become_missing() -> None:
 def test_next_plan_quoted_from_chat_is_kept() -> None:
     draft = make_draft("리프레시 토큰 복습", "내일은 리프레시 토큰을 복습할게요.")
 
-    assert keep_grounded_next_plan(draft, CONVERSATION).next_plan == "리프레시 토큰 복습"
+    assert keep_grounded_next_plan(draft, MESSAGES).next_plan == "리프레시 토큰 복습"
 
 
-def test_quote_with_different_spacing_or_quotes_still_counts() -> None:
-    draft = make_draft("리프레시 토큰 복습", "“내일은 리프레시토큰을  복습할게요”")
+@pytest.mark.parametrize(
+    "evidence",
+    [
+        "“내일은 리프레시토큰을  복습할게요”",  # 띄어쓰기·따옴표가 달라도
+        "교육생: 내일은 리프레시 토큰을 복습할게요.",  # 화자 표시를 붙여 인용해도
+    ],
+)
+def test_quote_with_small_differences_still_counts(evidence: str) -> None:
+    draft = make_draft("리프레시 토큰 복습", evidence)
 
-    assert keep_grounded_next_plan(draft, CONVERSATION).next_plan == "리프레시 토큰 복습"
+    assert keep_grounded_next_plan(draft, MESSAGES).next_plan == "리프레시 토큰 복습"
 
 
 @pytest.mark.parametrize(
@@ -71,10 +78,12 @@ def test_quote_with_different_spacing_or_quotes_still_counts() -> None:
         "내일은 React를 공부할게요",  # 대화에 없는 문장(지어낸 계획)
         "",  # 근거 없음
         "내일",  # 너무 짧아 어디에나 있는 말
+        "교육생:",  # 화자 표시만 있는 것
+        "복습할게요.좋아요.",  # 두 메시지에 걸친 것(한 메시지 안에서 그대로 찾을 수 있어야 한다)
     ],
 )
 def test_next_plan_without_real_evidence_is_dropped(evidence: str) -> None:
-    result = keep_grounded_next_plan(make_draft("React 공부", evidence), CONVERSATION)
+    result = keep_grounded_next_plan(make_draft("React 공부", evidence), MESSAGES)
 
     assert result.next_plan == ""
     assert result.next_plan_evidence == ""

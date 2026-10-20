@@ -102,6 +102,22 @@ def test_change_email_to_taken_address_conflicts(
     assert res.status_code == 409
 
 
+def test_email_taken_at_the_last_moment_conflicts(
+    api_client: TestClient, tokens: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """중복 확인을 통과한 직후 다른 계정이 같은 이메일을 가져가도 500이 아니라 409다."""
+    api_client.post("/api/auth/signup", json={**ACCOUNT, "email": "raced@example.com"})
+    monkeypatch.setattr("app.domain.auth.repositories.UserRepository.get_by_email", lambda *_: None)
+
+    res = api_client.put(
+        "/api/auth/me/email",
+        json={"email": "raced@example.com", "current_password": ACCOUNT["password"]},
+        headers=bearer(tokens),
+    )
+
+    assert res.status_code == 409
+
+
 def test_keeping_the_same_email_is_fine(api_client: TestClient, tokens: dict[str, str]) -> None:
     res = api_client.put(
         "/api/auth/me/email",
