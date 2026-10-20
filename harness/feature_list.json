@@ -322,7 +322,7 @@
         "기본값으로 되돌릴 수 있다"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "ACC-01",
@@ -337,7 +337,7 @@
         "비밀번호 변경 후 현재 화면은 새 토큰으로 로그인이 유지된다"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "UX-01",
@@ -351,7 +351,7 @@
         "설정 화면에서 계정 정보와 캐치프레이즈·푸터를 수정할 수 있다"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "UX-02",
@@ -366,7 +366,7 @@
         "동작 줄이기(prefers-reduced-motion) 설정이면 흐르지 않는다"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "DIARY-01",
@@ -381,7 +381,7 @@
         "새 대화가 없는 채팅으로 API를 직접 호출해도 거부된다(409)"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "DIARY-02",
@@ -397,7 +397,7 @@
         "상세 내용은 화면에서 소제목·목록으로 렌더링된다"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "DIARY-03",
@@ -411,7 +411,7 @@
         "저장할 때의 푸터 문구가 일기 맨 끝에 붙고, 나중에 설정을 바꿔도 지난 일기는 그대로다"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     }
   ]
 }
