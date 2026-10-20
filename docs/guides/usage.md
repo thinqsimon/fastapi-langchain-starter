@@ -220,7 +220,8 @@ git push origin main
    ```bash
    DATABASE_URL="<Supabase 주소>" make migrate
    ```
-   `users`, `refresh_tokens`, `conversations`, `messages`, `diary_entries` 5개 테이블이 생깁니다.
+   `users`, `refresh_tokens`, `conversations`, `messages`, `diary_entries`, `user_preferences`,
+   `document_chunks`(RAG) 7개 테이블이 생깁니다.
 
 #### 2단계 · Render (백엔드)
 
