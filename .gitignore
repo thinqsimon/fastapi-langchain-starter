@@ -10,6 +10,8 @@ __pycache__/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+# pytest-cov 실행 결과(실행할 때마다 바뀐다)
+.coverage
 
 # Node / Next.js
 node_modules/

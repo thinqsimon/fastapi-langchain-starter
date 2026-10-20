@@ -53,6 +53,7 @@ if [ "$REMOVE_SAMPLE" = "y" ] || [ "$REMOVE_SAMPLE" = "Y" ]; then
   echo "→ 샘플앱 제거"
   rm -rf backend/src/app/domain/diary \
          backend/tests/api/test_diary.py \
+         backend/tests/test_diary_rules.py \
          frontend/app/\(main\)/diary \
          frontend/components/diary \
          frontend/store/diary.ts \
@@ -68,6 +69,7 @@ if [ "$REMOVE_SAMPLE" = "y" ] || [ "$REMOVE_SAMPLE" = "Y" ]; then
   echo "   backend/pyproject.toml        import-linter containers의 app.domain.diary"
   echo "   frontend/api/index.ts         diaryApi 내보내기"
   echo "   frontend/components/app-header.tsx  일기 링크"
+  echo "   frontend/components/settings/preferences-form.tsx  '일기 푸터' 입력칸(필요 없으면 제거)"
   echo "   backend/alembic/versions/     diary_entries 마이그레이션(새로 시작한다면 전체 삭제 후 재생성)"
 fi
 
