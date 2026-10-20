@@ -7,6 +7,7 @@ from app.core.database import Base
 from app.domain.auth.models import RefreshToken, User
 from app.domain.chat.models import Conversation, Message
 from app.domain.diary.models import DiaryEntry
+from app.domain.preferences.models import UserPreference
 from app.domain.rag.models import DocumentChunk
 
 __all__ = [
@@ -17,4 +18,5 @@ __all__ = [
     "Message",
     "RefreshToken",
     "User",
+    "UserPreference",
 ]

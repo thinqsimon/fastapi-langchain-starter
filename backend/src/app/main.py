@@ -28,6 +28,7 @@ OPENAPI_TAGS = [
         "description": "샘플 서비스(배움일기 코치) 전용 API. 새 서비스를 만들 때 참고하세요.",
     },
     {"name": "usage", "description": "내 LLM 토큰 사용량과 추정 비용."},
+    {"name": "preferences", "description": "개인 화면 설정(캐치프레이즈, 일기 푸터)."},
     {"name": "system", "description": "상태 확인용."},
 ]
 

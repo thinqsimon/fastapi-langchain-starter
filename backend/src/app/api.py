@@ -6,6 +6,7 @@ from app.core.config import settings
 from app.domain.auth.routers import router as auth_router
 from app.domain.chat.routers import router as chat_router
 from app.domain.diary.routers import router as diary_router
+from app.domain.preferences.routers import router as preferences_router
 from app.domain.usage.routers import router as usage_router
 
 
@@ -19,6 +20,7 @@ def build_api_router(rag_enabled: bool | None = None) -> APIRouter:
     router.include_router(auth_router)
     router.include_router(chat_router)
     router.include_router(diary_router)
+    router.include_router(preferences_router)
     router.include_router(usage_router)
 
     enabled = settings.RAG_ENABLED if rag_enabled is None else rag_enabled

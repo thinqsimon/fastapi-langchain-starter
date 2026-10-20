@@ -4,7 +4,10 @@ from fastapi import APIRouter, status
 
 from app.domain.auth.dependencies import AuthServiceDep, CurrentUser
 from app.domain.auth.schemas import (
+    EmailChange,
     LoginRequest,
+    PasswordChange,
+    ProfileUpdate,
     RefreshRequest,
     SignupRequest,
     TokenPair,
@@ -64,3 +67,45 @@ def logout(payload: RefreshRequest, auth_service: AuthServiceDep) -> None:
 @router.get("/me", response_model=UserRead, summary="내 정보")
 def read_me(current_user: CurrentUser) -> UserRead:
     return UserRead.model_validate(current_user)
+
+
+@router.patch("/me", response_model=UserRead, summary="내 정보 수정(이름)")
+def update_me(
+    payload: ProfileUpdate, current_user: CurrentUser, auth_service: AuthServiceDep
+) -> UserRead:
+    return UserRead.model_validate(auth_service.update_profile(current_user, payload.display_name))
+
+
+@router.put(
+    "/me/email",
+    response_model=UserRead,
+    summary="이메일 변경",
+    description="로그인 ID가 바뀌므로 현재 비밀번호를 확인합니다.",
+    responses={
+        400: {"description": "현재 비밀번호가 올바르지 않음 (WRONG_PASSWORD)"},
+        409: {"description": "이미 사용 중인 이메일"},
+    },
+)
+def change_email(
+    payload: EmailChange, current_user: CurrentUser, auth_service: AuthServiceDep
+) -> UserRead:
+    user = auth_service.change_email(current_user, payload.email, payload.current_password)
+    return UserRead.model_validate(user)
+
+
+@router.put(
+    "/me/password",
+    response_model=TokenPair,
+    summary="비밀번호 변경",
+    description=(
+        "현재 비밀번호를 확인한 뒤 바꿉니다. **다른 기기의 로그인은 모두 끊기고**, "
+        "지금 화면에서 쓸 새 토큰을 돌려줍니다."
+    ),
+    responses={400: {"description": "현재 비밀번호가 올바르지 않음 (WRONG_PASSWORD)"}},
+)
+def change_password(
+    payload: PasswordChange, current_user: CurrentUser, auth_service: AuthServiceDep
+) -> TokenPair:
+    return auth_service.change_password(
+        current_user, payload.current_password, payload.new_password
+    )

@@ -13,11 +13,29 @@ COACH_SYSTEM_PROMPT = (
     "교육생이 쓴 용어가 모호하면 무엇을 뜻하는지 되묻습니다."
 )
 
-DRAFT_SYSTEM_PROMPT = (
-    "당신은 학습 코치입니다. 아래 대화를 바탕으로 교육생의 '배움일기' 초안을 작성합니다. "
-    "대화에 없는 내용을 지어내지 않습니다. 각 항목은 교육생의 말투가 아니라 "
-    "'~했다'체의 담백한 기록으로 씁니다."
-)
+DRAFT_SYSTEM_PROMPT = """당신은 학습 코치입니다. 교육생의 대화를 읽고 '배움일기' 초안을 작성합니다.
+
+[무엇을 쓰나]
+- '새로 추가된 대화'에서 배운 것만 일기로 씁니다.
+- '이전 대화'가 있으면 맥락을 이해하는 데만 쓰고, 그 내용을 일기에 다시 쓰지 않습니다.
+
+[항목]
+- keywords: 배운 내용의 핵심 단어 2~4개를 쉼표로 구분해 씁니다.
+- learned: 배운 것을 3~5문장으로 요약합니다.
+- learned_detail: 배운 내용을 주제별로 나눠 상세하게 정리합니다.
+  - 주제마다 '### 소제목'으로 시작하는 마크다운으로 씁니다. 필요하면 목록과 코드 블록을 씁니다.
+  - 나중에 이것만 다시 읽어도 이해되도록, 대화에서 부족했던
+    설명·예시·주의할 점을 보충해 자연스럽게 함께 씁니다.
+  - 길이 제한은 없습니다. 복습에 충분할 만큼 자세히 씁니다.
+- difficult: 교육생이 어려워했거나 헷갈려한 부분을 씁니다.
+- next_plan: 대화에 '내일 할 것'이나 다음에 할 계획이 분명히 나올 때만 씁니다.
+  나오지 않으면 반드시 빈 문자열로 둡니다. 지어내지 않습니다.
+- next_plan_evidence: next_plan의 근거가 된 문장을 '새로 추가된 대화'에서
+  한 글자도 바꾸지 않고 그대로 옮깁니다. next_plan이 비어 있으면 빈 문자열로 둡니다.
+
+[문체]
+- learned, difficult, next_plan은 대화에 있는 내용만 씁니다.
+- 교육생의 말투가 아니라 '~했다'체의 담백한 기록으로 씁니다."""
 
 WEEKLY_SYSTEM_PROMPT = (
     "당신은 학습 코치입니다. 한 주치 배움일기를 읽고 회고를 정리합니다. "
@@ -38,7 +56,14 @@ def build_coach_prompt() -> ChatPromptTemplate:
 
 def build_draft_prompt() -> ChatPromptTemplate:
     return ChatPromptTemplate.from_messages(
-        [("system", DRAFT_SYSTEM_PROMPT), ("human", "오늘의 대화:\n\n{conversation}")]
+        [
+            ("system", DRAFT_SYSTEM_PROMPT),
+            (
+                "human",
+                "이전 대화(맥락으로만 참고):\n{context}\n\n"
+                "새로 추가된 대화(일기 대상):\n{conversation}",
+            ),
+        ]
     )
 
 
