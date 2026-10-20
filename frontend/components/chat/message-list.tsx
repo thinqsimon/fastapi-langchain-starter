@@ -18,7 +18,7 @@ export function MessageList({ messages, streamingAnswer, isStreaming }: { messag
     }
 
     return (
-        <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-6">
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 sm:p-6">
             {messages.map((message) => (
                 <Bubble key={message.id} role={message.role}>
                     {message.content}
@@ -52,7 +52,10 @@ function Bubble({
             <div
                 data-role={role}
                 data-pending={pending || undefined}
-                className={cn("max-w-[80%] rounded-lg px-4 py-2 text-sm whitespace-pre-wrap", isUser ? "bg-primary text-primary-foreground" : "bg-muted")}
+                className={cn(
+                    "max-w-[85%] rounded-lg px-4 py-2 text-sm wrap-anywhere whitespace-pre-wrap sm:max-w-[80%]",
+                    isUser ? "bg-primary text-primary-foreground" : "bg-muted"
+                )}
             >
                 {children}
             </div>

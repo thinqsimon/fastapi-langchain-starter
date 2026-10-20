@@ -31,7 +31,7 @@ export default function DiaryPage() {
     }, [load])
 
     return (
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 overflow-y-auto p-6">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 overflow-y-auto p-4 sm:p-6">
             <section className="flex flex-col gap-3">
                 <h1 className="text-xl font-semibold">{editingId ? "일기 수정" : "새 배움일기"}</h1>
 

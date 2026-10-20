@@ -73,7 +73,12 @@ export function DiaryEditor({
                         </Button>
                     </div>
                 </div>
-                <Textarea {...bind("learned_detail")} rows={10} hidden={isPreview} className="max-h-[60vh] overflow-y-auto font-mono text-xs md:text-xs" />
+                <Textarea
+                    {...bind("learned_detail")}
+                    rows={10}
+                    hidden={isPreview}
+                    className="max-h-[60vh] overflow-y-auto font-mono text-base md:[@media(pointer:fine)]:text-xs"
+                />
                 {isPreview && (
                     <div className="max-h-[60vh] overflow-y-auto rounded-lg border px-3 py-2">
                         {value.learned_detail.trim() ? (

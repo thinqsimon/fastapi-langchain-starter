@@ -34,7 +34,7 @@ export function ProfileForm() {
             )}
         >
             <Label htmlFor="settings-display-name">이름</Label>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
                 <Input id="settings-display-name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} required maxLength={50} />
                 <Button type="submit" disabled={isPending}>
                     {isPending ? "저장 중…" : "이름 저장"}

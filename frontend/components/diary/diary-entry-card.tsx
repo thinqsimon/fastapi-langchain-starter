@@ -9,7 +9,7 @@ function Item({ label, children }: { label: string; children: string }) {
     return (
         <div className="flex flex-col gap-1">
             <span className="font-medium">{label}</span>
-            <p className="whitespace-pre-wrap text-muted-foreground">{children}</p>
+            <p className="wrap-anywhere whitespace-pre-wrap text-muted-foreground">{children}</p>
         </div>
     )
 }
@@ -20,7 +20,7 @@ export function DiaryEntryCard({ entry, onEdit, onDelete }: { entry: DiaryEntry;
         <Card data-slot="diary-entry">
             <CardHeader className="flex flex-row items-start justify-between gap-3">
                 <div className="flex min-w-0 flex-col gap-1">
-                    <CardTitle className="text-base break-words">{entry.title}</CardTitle>
+                    <CardTitle className="text-base wrap-anywhere">{entry.title}</CardTitle>
                     <p className="text-xs text-muted-foreground">
                         {entry.entry_date}
                         {entry.conversation_id ? " · 채팅으로 작성" : ""}

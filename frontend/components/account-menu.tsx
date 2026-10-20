@@ -40,7 +40,7 @@ export function AccountMenu() {
                 <span className="hidden truncate sm:inline">{user?.display_name}</span>
             </SheetTrigger>
 
-            <SheetContent side="right" className="w-80">
+            <SheetContent side="right" className="w-80 max-w-[85vw]">
                 <SheetHeader>
                     <SheetTitle>계정</SheetTitle>
                     <SheetDescription>내 정보와 화면 설정</SheetDescription>

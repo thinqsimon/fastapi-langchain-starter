@@ -27,7 +27,7 @@ export default function ChatPage() {
                 <MessageList messages={messages} streamingAnswer={streamingAnswer} isStreaming={isStreaming} />
 
                 {error && (
-                    <p role="alert" className="px-6 pb-2 text-sm text-destructive">
+                    <p role="alert" className="px-4 pb-2 text-sm text-destructive sm:px-6">
                         {error}
                     </p>
                 )}

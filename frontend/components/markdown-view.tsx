@@ -35,7 +35,7 @@ const COMPONENTS: Components = {
  */
 export function MarkdownView({ children, className }: { children: string; className?: string }) {
     return (
-        <div className={cn("flex flex-col gap-2 text-sm", className)}>
+        <div className={cn("flex min-w-0 flex-col gap-2 text-sm wrap-anywhere", className)}>
             <Markdown remarkPlugins={[remarkGfm]} components={COMPONENTS}>
                 {children}
             </Markdown>
