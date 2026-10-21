@@ -34,7 +34,7 @@ export default function DiaryPage() {
     }, [load])
 
     return (
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 overflow-y-auto p-4 sm:p-6">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
             <section className="flex flex-col gap-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <h1 className="text-xl font-semibold">{editingId ? "일기 수정" : "새 배움일기"}</h1>

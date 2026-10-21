@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react"
 
+import { SendHorizontal } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 
 /** 입력칸이 늘어나는 최대 줄 수. 넘으면 입력칸 안에서 스크롤한다. */
@@ -38,7 +40,11 @@ export function MessageInput({ disabled, onSend }: { disabled: boolean; onSend: 
     }
 
     return (
-        <form onSubmit={submit} className="flex items-end gap-2 border-t p-3 sm:p-4">
+        // 아이폰 홈 인디케이터(하단 안전 영역) 위에서 끝나도록 아래 여백을 더한다.
+        <form
+            onSubmit={submit}
+            className="flex items-end gap-2 border-t p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:p-4 sm:pb-[calc(1rem+env(safe-area-inset-bottom))]"
+        >
             <textarea
                 ref={textareaRef}
                 aria-label="메시지"
@@ -56,8 +62,8 @@ export function MessageInput({ disabled, onSend }: { disabled: boolean; onSend: 
                 // 모바일 Safari는 16px 미만 입력칸을 누르면 화면을 확대하므로, 마우스가 있는 넓은 화면에서만 14px로 줄인다.
                 className="min-w-0 flex-1 resize-none overflow-y-hidden rounded-md border border-input bg-background px-3 py-2 text-base leading-6 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none md:[@media(pointer:fine)]:text-sm md:[@media(pointer:fine)]:leading-5"
             />
-            <Button type="submit" className="h-10" disabled={disabled || !value.trim()}>
-                보내기
+            <Button type="submit" size="icon-lg" className="size-10" aria-label="보내기" title="보내기" disabled={disabled || !value.trim()}>
+                <SendHorizontal className="size-5" />
             </Button>
         </form>
     )

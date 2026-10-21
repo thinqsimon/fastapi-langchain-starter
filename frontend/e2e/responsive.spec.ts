@@ -86,6 +86,22 @@ test.describe("터치 폰(390px)", () => {
     })
 })
 
+test.describe("아이폰 폭(375px)", () => {
+    test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true })
+
+    test("입력칸 기본 너비가 넓은 기기에서도 보내기(종이비행기) 버튼이 화면 안에 있다", async ({ page }) => {
+        await signUp(page, "e2e-responsive")
+        const send = page.getByRole("button", { name: "보내기" })
+        await expect(send.locator("svg")).toBeVisible()
+        await expect(send).toHaveText("")
+
+        // 실제 아이폰은 글꼴 때문에 입력칸 기본 너비가 넓다. 같은 조건을 만들어도 채팅 영역이 화면 밖으로 밀리지 않아야 한다.
+        await page.getByLabel("메시지").evaluate((element) => ((element as HTMLTextAreaElement).cols = 60))
+        const box = (await send.boundingBox())!
+        expect(box.x + box.width).toBeLessThanOrEqual(375)
+    })
+})
+
 test.describe("터치 태블릿(820px)", () => {
     test.use({ viewport: { width: 820, height: 1180 }, hasTouch: true, isMobile: true })
 

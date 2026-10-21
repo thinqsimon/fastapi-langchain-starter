@@ -23,7 +23,7 @@ export default function ChatPage() {
         <div className="flex flex-1 overflow-hidden">
             <ConversationSidebar />
 
-            <section className="flex flex-1 flex-col">
+            <section className="flex min-w-0 flex-1 flex-col">
                 <MessageList messages={messages} streamingAnswer={streamingAnswer} isStreaming={isStreaming} />
 
                 {error && (

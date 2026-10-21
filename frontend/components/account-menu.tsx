@@ -62,7 +62,7 @@ export function AccountMenu() {
                     </dl>
                 </section>
 
-                <SheetFooter>
+                <SheetFooter className="pb-[calc(1rem+env(safe-area-inset-bottom))]">
                     <Button variant="outline" onClick={goToSettings}>
                         <Settings />
                         설정

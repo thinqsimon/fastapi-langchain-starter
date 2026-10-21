@@ -68,7 +68,7 @@ function ConversationList({ onPicked }: { onPicked?: () => void }) {
                 </Button>
             </div>
 
-            <nav aria-label="대화 목록" className="flex-1 overflow-y-auto px-2 pb-3">
+            <nav aria-label="대화 목록" className="flex-1 overflow-y-auto px-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
                 {conversations.length === 0 && <p className="px-2 py-4 text-sm text-muted-foreground">아직 대화가 없습니다.</p>}
 
                 <ul className="flex flex-col gap-1">

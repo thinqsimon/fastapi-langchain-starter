@@ -17,7 +17,7 @@ export default function SettingsPage() {
     }, [preferences, loadPreferences])
 
     return (
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 overflow-y-auto p-4 sm:p-6">
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
             <h1 className="text-xl font-semibold">설정</h1>
 
             <Card>
