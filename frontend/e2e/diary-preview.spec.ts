@@ -128,3 +128,23 @@ test("그냥 쓴 글의 '#'·'---' 줄은 문서의 제목이나 구분선으로
     // 구분선은 푸터 앞 하나뿐이다.
     await expect(article.locator("hr")).toHaveCount(1)
 })
+
+test("붙여 넣기 서식: 상세의 소주제 사이에도 빈 줄이 들어가고, 첫 소제목 앞에는 넣지 않는다", async ({ page }) => {
+    await signUp(page, "e2e-preview")
+    await fillDiary(page)
+    await page.getByLabel("배운 내용 상세").fill("### 설치\n공식 문서대로 설치했다.\n\n### 실행\n- `docker compose up`")
+
+    await page.getByRole("button", { name: "작성 중인 일기 전체 복사" }).click()
+    await expect(page.getByRole("button", { name: "작성 중인 일기 전체 복사" })).toContainText("복사됨")
+    const { html } = await clipboard(page)
+
+    // 각 소제목 바로 앞 요소가 무엇인지 본다.
+    const before = await page.evaluate((source) => {
+        const doc = new DOMParser().parseFromString(source, "text/html")
+        return Array.from(doc.querySelectorAll("p > strong")).map((strong) => {
+            const previous = strong.parentElement!.previousElementSibling!
+            return previous.innerHTML === "<br>" ? "빈 줄" : previous.textContent
+        })
+    }, html)
+    expect(before).toEqual(["배운 내용 상세", "빈 줄"])
+})
