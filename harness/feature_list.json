@@ -474,6 +474,21 @@
       ],
       "verify": "./scripts/verify.sh",
       "passes": true
+    },
+    {
+      "id": "DIARY-05",
+      "phase": 6,
+      "owner": "frontend-dev",
+      "title": "전체 복사 서식을 교육 플랫폼 붙여 넣기에 맞춤",
+      "requirement": "개선",
+      "acceptance": [
+        "붙여 넣은 곳에서 항목(컬럼) 사이가 빈 줄로 명확히 구분된다",
+        "항목 제목(배운 것·배운 내용 상세·어려웠던 것·내일 할 것)이 모두 같은 크기다",
+        "배운 내용 상세의 소제목은 항목 제목보다 작게('▶ 굵은 글씨') 보인다",
+        "마크다운 글자 복사와 프리뷰 화면은 그대로다"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": true
     }
   ]
 }

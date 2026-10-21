@@ -29,25 +29,38 @@ function paragraphs(text: string): string {
         .join("\n\n")
 }
 
+/** 일기의 항목(컬럼) 하나. 본문은 마크다운이다. */
+export type DiarySection = { heading: string; body: string }
+
+/**
+ * 비어 있지 않은 항목만 순서대로 돌려준다.
+ * 순서: 배운 것 → 배운 내용 상세 → 어려웠던 것 → 내일 할 것(있을 때만).
+ */
+export function diarySections(diary: DiaryDocumentInput): DiarySection[] {
+    return [
+        { heading: "배운 것", body: paragraphs(diary.learned) },
+        // 상세는 이미 '### 소제목' 마크다운이라 그대로 둔다.
+        { heading: "배운 내용 상세", body: diary.learned_detail.trim() },
+        { heading: "어려웠던 것", body: paragraphs(diary.difficult) },
+        { heading: "내일 할 것", body: paragraphs(diary.next_plan ?? "") },
+    ].filter((section) => section.body.trim())
+}
+
+/** 푸터를 문단으로 정리한 것. 없으면 빈 문자열 */
+export function diaryFooter(diary: DiaryDocumentInput): string {
+    return diary.footer?.trim() ? paragraphs(diary.footer) : ""
+}
+
 /**
  * 일기 전체를 마크다운 한 문서로 만든다.
- * 순서: 제목 → 배운 것 → 배운 내용 상세 → 어려웠던 것 → 내일 할 것(있을 때만) → 푸터(있을 때만).
- * 비어 있는 항목은 넣지 않는다.
+ * 순서: 제목 → 항목들(diarySections) → 푸터(있을 때만). 비어 있는 항목은 넣지 않는다.
  */
 export function diaryToMarkdown(diary: DiaryDocumentInput): string {
     const blocks: string[] = []
     if (diary.title.trim()) blocks.push(`# ${diary.title.trim()}`)
-
-    const section = (heading: string, body: string) => {
-        if (body.trim()) blocks.push(`## ${heading}\n\n${body}`)
-    }
-    section("배운 것", paragraphs(diary.learned))
-    // 상세는 이미 '### 소제목' 마크다운이라 그대로 둔다.
-    section("배운 내용 상세", diary.learned_detail.trim())
-    section("어려웠던 것", paragraphs(diary.difficult))
-    section("내일 할 것", paragraphs(diary.next_plan ?? ""))
-
-    if (diary.footer?.trim()) blocks.push(`---\n\n${paragraphs(diary.footer)}`)
+    for (const { heading, body } of diarySections(diary)) blocks.push(`## ${heading}\n\n${body}`)
+    const footer = diaryFooter(diary)
+    if (footer) blocks.push(`---\n\n${footer}`)
     return blocks.join("\n\n") + "\n"
 }
 

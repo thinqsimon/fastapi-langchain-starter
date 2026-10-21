@@ -6,30 +6,31 @@ import { flushSync } from "react-dom"
 import { createRoot } from "react-dom/client"
 
 import { DiaryDocument } from "@/components/diary/diary-document"
+import { DiaryPasteDocument } from "@/components/diary/diary-paste-document"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { copyRichText } from "@/lib/clipboard"
 import { diaryToMarkdown, hasDiaryContent, type DiaryDocumentInput } from "@/lib/diary-markdown"
 
-/** 프리뷰와 같은 모양의 HTML을 만든다(서식 붙여 넣기용). 화면에 띄우지 않고 메모리에서 그린다. */
-function renderHtml(markdown: string): string {
+/** 붙여 넣기용 HTML을 만든다(DiaryPasteDocument). 화면에 띄우지 않고 메모리에서 그린다. */
+function renderPasteHtml(diary: DiaryDocumentInput): string {
     const container = document.createElement("div")
     const root = createRoot(container)
-    flushSync(() => root.render(<DiaryDocument markdown={markdown} />))
+    flushSync(() => root.render(<DiaryPasteDocument diary={diary} />))
     const html = container.innerHTML
     root.unmount()
     return html
 }
 
 /** '전체 복사' 버튼. 복사가 끝나면 잠시 '복사됨'으로 바뀐다. */
-function CopyButton({ markdown, label, disabled }: { markdown: string; label: string; disabled?: boolean }) {
+function CopyButton({ diary, label, disabled }: { diary: DiaryDocumentInput; label: string; disabled?: boolean }) {
     const [state, setState] = useState<"idle" | "copied" | "failed">("idle")
     const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
     useEffect(() => () => clearTimeout(timer.current), [])
 
     async function copy() {
         try {
-            await copyRichText(markdown, renderHtml(markdown))
+            await copyRichText(diaryToMarkdown(diary), renderPasteHtml(diary))
             setState("copied")
         } catch {
             setState("failed")
@@ -62,7 +63,7 @@ export function DiaryPreviewActions({ diary, name }: { diary: DiaryDocumentInput
                 <Eye />
                 프리뷰 보기
             </Button>
-            <CopyButton markdown={markdown} label={`${name} 전체 복사`} disabled={empty} />
+            <CopyButton diary={diary} label={`${name} 전체 복사`} disabled={empty} />
 
             <Dialog open={open} onOpenChange={setOpen}>
                 <DialogContent showCloseButton={false} className="flex max-h-[90dvh] flex-col gap-0 p-0 sm:max-w-3xl">
@@ -71,7 +72,7 @@ export function DiaryPreviewActions({ diary, name }: { diary: DiaryDocumentInput
                         <DialogTitle>일기 프리뷰</DialogTitle>
                         <DialogDescription className="sr-only">일기 전체를 문서 형태로 봅니다.</DialogDescription>
                         <div className="flex gap-2">
-                            <CopyButton markdown={markdown} label="프리뷰 전체 복사" />
+                            <CopyButton diary={diary} label="프리뷰 전체 복사" />
                             <DialogClose render={<Button type="button" size="sm" />}>닫기</DialogClose>
                         </div>
                     </DialogHeader>

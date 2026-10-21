@@ -69,9 +69,28 @@ test("작성 화면: 전체 복사는 창을 열지 않고 마크다운 글자�
             `---\n\n${DEFAULT_FOOTER}`,
         ].join("\n\n") + "\n"
     )
-    // 서식 붙여 넣기용 HTML도 함께 들어 있다(노션·구글 문서·워드에 제목·목록 서식으로 붙는다).
-    expect(copied.html).toContain(`<h1`)
-    expect(copied.html).toContain("<li")
+    // 서식(HTML)은 붙여 넣는 곳(교육 플랫폼 편집기 등)에서도 깔끔하게 보이도록 따로 만든다.
+    const html = await page.evaluate((source) => {
+        const doc = new DOMParser().parseFromString(source, "text/html")
+        const text = (selector: string) => Array.from(doc.querySelectorAll(selector)).map((element) => element.textContent)
+        return {
+            h1: text("h1"),
+            sectionTitles: text("h3"),
+            otherHeadings: doc.querySelectorAll("h2, h4, h5, h6").length,
+            subHeadings: text("p > strong"),
+            blankLines: Array.from(doc.querySelectorAll("p")).filter((p) => p.innerHTML === "<br>").length,
+            items: text("li"),
+        }
+    }, copied.html)
+    expect(html.h1).toEqual([title])
+    // 항목 제목은 모두 같은 단계(h3)라 크기가 균일하다.
+    expect(html.sectionTitles).toEqual(["배운 것", "배운 내용 상세", "어려웠던 것"])
+    expect(html.otherHeadings).toBe(0)
+    // 상세의 소제목은 '▶ 굵은 글씨' 문단이라 항목 제목보다 작다.
+    expect(html.subHeadings).toEqual(["▶ 컨테이너 실행"])
+    // 항목 3개 앞과 푸터 앞에 빈 줄이 하나씩 들어가 구분된다.
+    expect(html.blankLines).toBe(4)
+    expect(html.items).toEqual(["docker compose up", "docker compose down"])
 })
 
 test("지난 일기 카드에도 프리뷰 보기·전체 복사가 있고 '내일 할 것'은 있을 때만 들어간다", async ({ page }) => {
