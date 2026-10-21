@@ -11,7 +11,7 @@ function entries(page: Page) {
 }
 
 async function openDiary(page: Page) {
-    await page.getByRole("link", { name: "일기" }).click()
+    await page.getByRole("link", { name: "일기", exact: true }).click()
     await expect(page.getByRole("heading", { name: "새 배움일기" })).toBeVisible()
 }
 

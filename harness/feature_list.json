@@ -458,6 +458,22 @@
       ],
       "verify": "./scripts/verify.sh",
       "passes": true
+    },
+    {
+      "id": "BRAND-01",
+      "phase": 6,
+      "owner": "frontend-dev",
+      "title": "앱 로고(A안 열정 노트)·파비콘 적용",
+      "requirement": "개선",
+      "acceptance": [
+        "브라우저 탭에 로고 파비콘이 보인다(favicon.ico와 SVG 아이콘)",
+        "아이폰 홈 화면에 추가하면 로고 아이콘과 '배움일기 코치' 이름이 쓰인다(apple-touch-icon, 웹앱 매니페스트)",
+        "헤더 왼쪽에 로고가 있고 누르면 채팅 화면으로 간다(좁은 화면에서는 로고만)",
+        "로그인·가입 화면 위쪽에 로고와 서비스 이름이 보인다",
+        "아이콘 파일은 로고 원본 SVG 하나에서 스크립트로 다시 만들 수 있다"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": true
     }
   ]
 }

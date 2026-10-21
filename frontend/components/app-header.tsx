@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { useEffect } from "react"
 
 import { AccountMenu } from "@/components/account-menu"
+import { APP_NAME, LogoMark } from "@/components/brand-logo"
 import { CatchphraseMarquee } from "@/components/catchphrase-marquee"
 import { Button } from "@/components/ui/button"
 import { useMediaQuery } from "@/lib/use-media-query"
@@ -30,8 +31,11 @@ export function AppHeader() {
         <header className="grid grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-2 border-b px-3 py-2 sm:px-6 sm:py-3">
             <div className="flex items-center gap-3 justify-self-start whitespace-nowrap sm:gap-6">
                 {isChat && <SidebarToggle />}
-                {/* 좁은 화면에서는 서비스 이름을 줄여 가운데 문구에 자리를 준다. */}
-                <span className="hidden font-semibold sm:inline">배움일기 코치</span>
+                {/* 로고를 누르면 채팅으로 간다. 좁은 화면에서는 이름을 감춰 가운데 문구에 자리를 준다. */}
+                <Link href="/chat" aria-label={`${APP_NAME} 홈`} className="flex items-center gap-2">
+                    <LogoMark size={28} decorative />
+                    <span className="hidden font-semibold sm:inline">{APP_NAME}</span>
+                </Link>
                 <nav className="flex gap-3 text-sm sm:gap-4">
                     <Link href="/chat" className="hover:underline">
                         채팅

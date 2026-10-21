@@ -74,7 +74,7 @@ test.describe("터치 폰(390px)", () => {
         expect(await hasHorizontalScroll(page)).toBe(false)
         expect(await smallestInputFont(page)).toBeGreaterThanOrEqual(16)
 
-        await page.getByRole("link", { name: "일기" }).click()
+        await page.getByRole("link", { name: "일기", exact: true }).click()
         await expect(page.getByRole("heading", { name: "새 배움일기" })).toBeVisible()
         expect(await hasHorizontalScroll(page)).toBe(false)
         expect(await smallestInputFont(page)).toBeGreaterThanOrEqual(16)

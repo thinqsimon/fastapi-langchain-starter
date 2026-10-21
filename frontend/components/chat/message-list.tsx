@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react"
 
 import type { Message } from "@/api"
+import { LogoMark } from "@/components/brand-logo"
 import { cn } from "@/lib/utils"
 
 export function MessageList({ messages, streamingAnswer, isStreaming }: { messages: Message[]; streamingAnswer: string; isStreaming: boolean }) {
@@ -14,7 +15,12 @@ export function MessageList({ messages, streamingAnswer, isStreaming }: { messag
     }, [messages, streamingAnswer])
 
     if (messages.length === 0 && !isStreaming) {
-        return <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">무엇이든 물어보세요.</div>
+        return (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
+                <LogoMark size={56} decorative className="opacity-90" />
+                무엇이든 물어보세요.
+            </div>
+        )
     }
 
     return (

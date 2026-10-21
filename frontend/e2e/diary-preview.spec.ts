@@ -11,7 +11,7 @@ test.beforeEach(async ({ context }) => {
 })
 
 async function fillDiary(page: Page, nextPlan = "") {
-    await page.getByRole("link", { name: "일기" }).click()
+    await page.getByRole("link", { name: "일기", exact: true }).click()
     await page.getByLabel("제목").fill(title)
     await page.getByLabel("오늘 배운 것").fill("Compose로 여러 컨테이너를 한 번에 관리했다.")
     await page.getByLabel("배운 내용 상세").fill("### 컨테이너 실행\n- `docker compose up`\n- `docker compose down`")

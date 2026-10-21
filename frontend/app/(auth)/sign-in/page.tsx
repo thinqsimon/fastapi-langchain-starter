@@ -34,7 +34,7 @@ export default function SignInPage() {
     return (
         <AuthFormCard
             title="로그인"
-            description="AX Chat Starter 계정으로 로그인하세요."
+            description="배움일기 코치 계정으로 로그인하세요."
             error={error}
             isSubmitting={isSubmitting}
             submitLabel="로그인"
