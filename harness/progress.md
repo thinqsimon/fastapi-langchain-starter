@@ -432,3 +432,22 @@
 - 후속(사용자 확인 후): 플랫폼에서 상세의 소제목이 앞 문단에 붙어 보여, 두 번째 소제목부터 앞에 빈 줄을 넣음
   (맨 앞 소제목은 바로 위가 항목 제목이라 제외). E2E로 고정, 전체 37/37
 - 코드 블록 안 회색 글자는 플랫폼이 직접 입히는 강조 색이라 붙여 넣는 쪽에서 바꿀 수 없음
+
+---
+
+## 2026-10-21 · 세션 15 · 문서 동기화
+
+**요청**: 최근 변경(세션 9~14)이 스타터킷·프로젝트 문서에 반영됐는지 확인하고 필요하면 수정.
+
+**한 일**
+- README: 화면 공통(로고·아이콘)·모바일 행 추가, E2E 22→37개, '새 서비스로 바꾸기'의 이름·로고 교체 위치
+- architecture.md: 채팅 스트리밍 경로 오류 수정(`/api/chat/{id}/stream` → `/api/conversations/{id}/stream`, 이전부터 틀려 있었음)
+- conventions.md·frontend/CLAUDE.md: 모바일(min-w-0, hover/pointer 판단, 16px, 안전 영역, 서랍 닫기), 클립보드·붙여 넣기 서식, 아이콘 생성, E2E 정확히 일치 규칙
+- usage.md ⑥: 이름·로고 바꾸기(`brand-logo.tsx`, `public/brand/logo.svg` → `npm run icons`)
+- troubleshooting.md: 7번 '아이폰에서만 보내기 버튼이 밀림' 신설, 그 밖의 문제 6건, 발견 수단 표에 실기기·WebKit, test-verifier 추가
+- 샘플앱 README·기획 04: 프리뷰·전체 복사, 모바일, 로고 반영 / 루트 CLAUDE.md 구조에 public/brand
+- 요구사항 점검표·발표 메모: 현재 지표(165개·E2E 37개) 갱신, 슬라이드 갱신 필요 항목 표시
+- new-project.sh: 샘플 제거 목록에 `diary-preview.spec.ts`·`lib/diary-markdown.ts`, 로고·이름 교체 안내
+
+**남은 일**
+- 발표 슬라이드(아티팩트) 본문의 테스트 수·화면 갱신

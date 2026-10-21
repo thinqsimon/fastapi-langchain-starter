@@ -36,6 +36,15 @@ event: error   data: {"code": "LLM_ERROR", "message": "..."}
 - 401을 받으면 리프레시로 한 번만 재발급 후 원요청을 재시도한다(동시 요청은 한 번만 호출)
 - 보호가 필요한 화면은 `app/(main)/` 아래에 둔다(`RequireAuth`가 감싼다)
 - E2E: `./scripts/e2e.sh` (백엔드 :8010, 프론트 :3100 전용 포트. 개발 서버와 겹치지 않음)
+- 모바일·반응형
+  - flex 안에서 줄어들어야 하는 영역에는 `min-w-0`을 함께 둔다(아이폰은 입력칸 기본 너비가 넓어 화면 밖으로 밀렸다)
+  - "터치 기기"는 화면 폭이 아니라 입력 방식으로 판단한다: hover 효과는 `[@media(hover:hover)]`, 입력칸 14px은 `md:[@media(pointer:fine)]`에서만
+  - 입력칸 글자는 16px 이상(모바일 Safari가 누를 때 확대하지 않게)
+  - 화면 아래에 닿는 요소는 `env(safe-area-inset-bottom)` 여백(`viewport-fit=cover`는 `app/layout.tsx`)
+  - 서랍·모달은 화면 폭이 바뀌면 닫는다(배경 막만 남아 화면이 막히지 않게)
+- 클립보드 복사는 `lib/clipboard.ts`(마크다운 글자 + HTML). 붙여 넣는 편집기는 CSS를 버리고 태그만 받으므로,
+  붙여 넣기용 HTML은 크기·여백 대신 태그 단계와 빈 줄로 모양을 잡는다(`components/diary/diary-paste-document.tsx`)
+- 로고 원본은 `public/brand/logo.svg` 하나. 파비콘·홈 화면 아이콘은 `npm run icons`로 만든다(손으로 고치지 않는다)
 
 ## LLM 사용량·비용
 - 토큰 수는 assistant 메시지(`messages.input_tokens/output_tokens`)에 기록한다. 별도 집계 테이블은 두지 않는다

@@ -147,8 +147,11 @@ curl -s http://localhost:8000/api/usage/me -H "Authorization: Bearer $TOKEN"
 
 샘플앱 [배움일기 코치](../../samples/diary-coach/)가 실제로 이 절차를 거쳐 만들어졌습니다.
 
-**1. 이름 바꾸기**
-`.env`의 `APP_NAME`, `frontend/components/app-header.tsx`의 표시 문구.
+**1. 이름·로고 바꾸기**
+- 이름: `.env`의 `APP_NAME`(백엔드), `frontend/components/brand-logo.tsx`의 `APP_NAME`(화면·브라우저 탭·홈 화면 이름)
+- 로고: `frontend/public/brand/logo.svg`를 교체한 뒤 `cd frontend && npm run icons`.
+  파비콘(`app/favicon.ico`·`icon.svg`), 아이폰 홈 화면 아이콘(`app/apple-icon.png`), 웹앱 매니페스트 아이콘이 다시 만들어집니다
+- 32px 이하에서 뭉개지는 세부는 SVG 요소에 `data-detail` 속성을 달면 작은 아이콘에서 빠집니다
 
 **2. 프롬프트 교체** — 성격이 바뀌는 지점입니다.
 `backend/src/app/llm/prompts/`에 새 파일을 만들고, 기존 `chat.py`와 같은 구조로 작성합니다.

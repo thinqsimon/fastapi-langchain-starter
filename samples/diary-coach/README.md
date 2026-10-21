@@ -13,6 +13,8 @@
 4. 이미 일기로 만든 채팅은 목록에서 사라지고, 그 채팅에 **대화가 추가되면** 다시 나타난다.
    다시 만드는 일기는 추가된 대화만 다룬다
 5. "회고 만들기"로 이번 주 일기를 모아 회고를 받는다
+6. 작성 화면 제목 옆과 지난 일기 카드마다 **프리뷰 보기**(문서 형태로 보는 창)와 **전체 복사**가 있다.
+   복사하면 마크다운 글자와 서식이 함께 들어가, 교육 플랫폼·노션에는 서식으로, 메모장·카톡에는 마크다운으로 붙는다
 
 우측 상단 계정 버튼을 누르면 오른쪽에서 메뉴가 열린다(계정 정보·사용량·설정·로그아웃).
 설정에서 이름·이메일·비밀번호와 **캐치프레이즈**(헤더 가운데, 넘치면 전광판처럼 흐름)·푸터를 바꾼다.
@@ -32,6 +34,8 @@
 | 개인 설정 도메인 | `backend/src/app/domain/preferences/` | 캐치프레이즈·일기 푸터. 저장 전에는 기본값 |
 | 일기 화면 | `frontend/app/(main)/diary/`, `frontend/components/diary/` | 채팅 고르기, 초안·작성·수정(상세 미리보기), 지난 일기(마크다운), 주간 회고 |
 | 일기 상태 | `frontend/store/diary.ts` | 채팅 스토어와 같은 구조 |
+| 프리뷰·전체 복사 | `frontend/components/diary/diary-preview-actions.tsx`, `diary-document.tsx`, `diary-paste-document.tsx`, `frontend/lib/diary-markdown.ts` | 프리뷰는 문서 형태, 붙여 넣기용 HTML은 항목 제목 단계 통일·빈 줄 구분(플랫폼 편집기용) |
+| 로고·이름 | `frontend/public/brand/logo.svg`, `frontend/components/brand-logo.tsx` | A안 '열정 노트'. 파비콘·홈 화면 아이콘은 `npm run icons`로 생성 |
 
 설계 이유: [ADR-0006](../../docs/decisions/ADR-0006-diary-per-chat-and-preferences.md)
 
@@ -44,6 +48,9 @@
 | 계정 사이드 메뉴·설정 화면 | `frontend/components/account-menu.tsx`, `frontend/app/(main)/settings/` |
 | 캐치프레이즈 전광판 | `frontend/components/catchphrase-marquee.tsx` |
 | 마크다운 보기 | `frontend/components/markdown-view.tsx` |
+| 반응형·모바일 | `frontend/store/layout.ts`(대화 목록 접기·서랍), `components/chat/message-input.tsx`(3줄 자동 높이), 아이폰 안전 영역 |
+| 클립보드 복사(마크다운 + 서식) | `frontend/lib/clipboard.ts` |
+| 아이콘 생성 스크립트 | `frontend/scripts/generate-icons.mjs` (`npm run icons`) |
 
 ## Fork 후 같은 방식으로 새 서비스를 만들려면
 1. `/add-domain-model <이름>`으로 도메인 폴더와 모델을 만든다

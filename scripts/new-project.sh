@@ -59,6 +59,8 @@ if [ "$REMOVE_SAMPLE" = "y" ] || [ "$REMOVE_SAMPLE" = "Y" ]; then
          frontend/store/diary.ts \
          frontend/api/diary.ts \
          frontend/e2e/diary.spec.ts \
+         frontend/e2e/diary-preview.spec.ts \
+         frontend/lib/diary-markdown.ts \
          samples/diary-coach \
          backend/src/app/llm/prompts/diary_coach.py \
          backend/src/app/llm/chains/diary.py
@@ -70,6 +72,9 @@ if [ "$REMOVE_SAMPLE" = "y" ] || [ "$REMOVE_SAMPLE" = "Y" ]; then
   echo "   frontend/api/index.ts         diaryApi 내보내기"
   echo "   frontend/components/app-header.tsx  일기 링크"
   echo "   frontend/components/settings/preferences-form.tsx  '일기 푸터' 입력칸(필요 없으면 제거)"
+  echo "   frontend/components/brand-logo.tsx  APP_NAME(화면·탭·홈 화면 이름) — e2e/brand.spec.ts의 이름도 함께"
+  echo "   frontend/public/brand/logo.svg  새 로고로 바꾼 뒤 'cd frontend && npm run icons'"
+  echo "   frontend/e2e/responsive.spec.ts  일기 화면을 여는 단계(가로 스크롤 검사)"
   echo "   backend/alembic/versions/     diary_entries 마이그레이션(새로 시작한다면 전체 삭제 후 재생성)"
 fi
 
