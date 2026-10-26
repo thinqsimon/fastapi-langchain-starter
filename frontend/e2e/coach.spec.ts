@@ -28,6 +28,7 @@ test("구름 코치 시작 화면·추천 질문·응답 아바타와 데스크�
 test("현재 대화로 초안만 만들고 수정·저장하며, 새 대화 없는 재생성은 차단한다", async ({ page }) => {
     await signUp(page, "coach-origin")
     await sendChatMessage(page, "먼저 FastAPI를 배웠어요")
+    await expect(page.getByRole("button", { name: "먼저 FastAPI를 배웠어요", exact: true })).toBeVisible()
     await diaryLink(page).click()
     await expect(page.getByLabel("일기로 만들 채팅")).not.toHaveValue("")
     const previousId = await page.getByLabel("일기로 만들 채팅").inputValue()
@@ -217,6 +218,7 @@ test("초안 대기 중 채팅을 바꾸어도 출처를 유지하고, 채팅을
     await signUp(page, "coach-navigation")
     const firstCreated = page.waitForResponse((response) => response.url().endsWith("/api/conversations") && response.request().method() === "POST")
     await sendChatMessage(page, "첫 번째 학습 대화")
+    await expect(page.getByRole("button", { name: "첫 번째 학습 대화", exact: true })).toBeVisible()
     const first = await (await firstCreated).json()
     const secondCreated = page.waitForResponse((response) => response.url().endsWith("/api/conversations") && response.request().method() === "POST")
     await page.getByRole("button", { name: "새 대화", exact: true }).click()
@@ -266,6 +268,7 @@ test("초안 대기 중 채팅을 바꾸어도 출처를 유지하고, 채팅을
 test("다른 대화의 늦은 응답 실패가 현재 대화의 일기 만들기를 막지 않는다", async ({ page }) => {
     await signUp(page, "coach-stream-error")
     await sendChatMessage(page, "첫 번째 대화의 배움")
+    await expect(page.getByRole("button", { name: "첫 번째 대화의 배움", exact: true })).toBeVisible()
     const created = page.waitForResponse((response) => response.url().endsWith("/api/conversations") && response.request().method() === "POST")
     await page.getByRole("button", { name: "새 대화", exact: true }).click()
     await created
