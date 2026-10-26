@@ -523,7 +523,7 @@
         "품질 게이트·두 프로필 E2E를 통과하고 데스크톱·모바일 화면을 직접 확인한다"
       ],
       "verify": "./scripts/verify.sh 및 두 프로필 E2E·화면 검토",
-      "passes": false
+      "passes": true
     }
   ]
 }
