@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises"
 import { expect, test, type Page } from "@playwright/test"
 
-import { logOut, sendChatMessage, signUp } from "./helpers"
+import { logOut, openSettings, sendChatMessage, signUp } from "./helpers"
 
 const draftButton = (page: Page) => page.getByRole("button", { name: "이 대화로 일기 만들기", exact: true })
 const diaryLink = (page: Page) => page.getByRole("link", { name: "일기", exact: true })
@@ -29,6 +29,7 @@ test("현재 대화로 초안만 만들고 수정·저장하며, 새 대화 없�
     await signUp(page, "coach-origin")
     await sendChatMessage(page, "먼저 FastAPI를 배웠어요")
     await diaryLink(page).click()
+    await expect(page.getByLabel("일기로 만들 채팅")).not.toHaveValue("")
     const previousId = await page.getByLabel("일기로 만들 채팅").inputValue()
     await chatLink(page).click()
     const created = page.waitForResponse((response) => response.url().endsWith("/api/conversations") && response.request().method() === "POST")
@@ -209,6 +210,57 @@ test("일기 화면에서도 미저장 교체를 확인하고, 저장 중에는 
     await expect(entryCards(page)).toHaveCount(1)
     await expect(page.getByLabel("오늘 배운 것")).toBeEnabled()
     await expect(page.getByLabel("오늘 배운 것")).toHaveValue("")
+})
+
+test("초안 대기 중 채팅을 바꾸어도 출처를 유지하고, 채팅을 떠났다면 강제 이동하지 않는다", async ({ page }) => {
+    test.setTimeout(60_000)
+    await signUp(page, "coach-navigation")
+    const firstCreated = page.waitForResponse((response) => response.url().endsWith("/api/conversations") && response.request().method() === "POST")
+    await sendChatMessage(page, "첫 번째 학습 대화")
+    const first = await (await firstCreated).json()
+    const secondCreated = page.waitForResponse((response) => response.url().endsWith("/api/conversations") && response.request().method() === "POST")
+    await page.getByRole("button", { name: "새 대화", exact: true }).click()
+    const second = await (await secondCreated).json()
+    await sendChatMessage(page, "두 번째 학습 대화")
+
+    async function holdNextDraft() {
+        let release!: () => void
+        const gate = new Promise<void>((resolve) => {
+            release = resolve
+        })
+        await page.route(
+            "**/api/diary/draft",
+            async (route) => {
+                const response = await route.fetch()
+                await gate
+                await route.fulfill({ response })
+            },
+            { times: 1 }
+        )
+        await draftButton(page).click()
+        await expect(page.getByRole("button", { name: "일기 초안 만드는 중…" })).toBeDisabled()
+        return release
+    }
+
+    const releaseSecond = await holdNextDraft()
+    await page.getByRole("button", { name: "첫 번째 학습 대화", exact: true }).click()
+    await expect(page.locator('[data-role="user"]')).toHaveText("첫 번째 학습 대화")
+    releaseSecond()
+    await expect(page).toHaveURL(/\/diary$/)
+    await expect(page.getByLabel("일기로 만들 채팅")).toHaveValue(second.id)
+    await page.getByRole("button", { name: "초안 버리기" }).click()
+    await chatLink(page).click()
+
+    const releaseFirst = await holdNextDraft()
+    await openSettings(page)
+    const completed = page.waitForResponse((response) => response.url().endsWith("/api/diary/draft"))
+    releaseFirst()
+    await (await completed).finished()
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+    await expect(page).toHaveURL(/\/settings$/)
+    await diaryLink(page).click()
+    await expect(page.getByLabel("배운 내용 상세")).not.toHaveValue("")
+    await expect(page.getByLabel("일기로 만들 채팅")).toHaveValue(first.id)
 })
 
 test("모바일에서도 구름 코치·입력·일기 만들기가 화면 안에 보인다", async ({ page }) => {
