@@ -272,7 +272,7 @@ test("다른 대화의 늦은 응답 실패가 현재 대화의 일기 만들기
     await expect(page.locator('[data-role="user"]')).toHaveCount(0)
     await sendChatMessage(page, "두 번째 대화의 배움")
     await page.getByRole("button", { name: "첫 번째 대화의 배움", exact: true }).click()
-    await expect(page.locator('[data-role="user"]')).toHaveText("첫 번째 대화의 배움")
+    await expect(page.locator('[data-role="user"]')).toHaveText(["첫 번째 대화의 배움"])
     let release!: () => void
     const gate = new Promise<void>((resolve) => {
         release = resolve
@@ -285,7 +285,7 @@ test("다른 대화의 늦은 응답 실패가 현재 대화의 일기 만들기
     await page.getByRole("button", { name: "보내기", exact: true }).click()
     await expect(draftButton(page)).toBeDisabled()
     await page.getByRole("button", { name: "두 번째 대화의 배움", exact: true }).click()
-    await expect(page.locator('[data-role="user"]')).toHaveText("두 번째 대화의 배움")
+    await expect(page.locator('[data-role="user"]')).toHaveText(["두 번째 대화의 배움"])
     release()
     await expect(draftButton(page)).toBeEnabled()
     await expect(page.locator('p[role="alert"]')).toHaveCount(0)
