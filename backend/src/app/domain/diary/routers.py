@@ -13,9 +13,13 @@ from app.domain.diary.schemas import (
     DiaryEntryRead,
     DiaryEntryUpdate,
     EligibleConversation,
+    SavedWeeklyReviewRead,
+    StudyItemRead,
+    StudyProgressUpdate,
+    WeeklyReviewCreate,
     WeeklyReviewResponse,
 )
-from app.domain.diary.services import DiaryService
+from app.domain.diary.services import DiaryService, LearningService
 
 router = APIRouter(prefix="/diary", tags=["diary"])
 
@@ -84,6 +88,51 @@ async def weekly_review(
     current_user: CurrentUser, db: DbSession, reference: date | None = None
 ) -> WeeklyReviewResponse:
     return await DiaryService(db).weekly_review(current_user.id, reference)
+
+
+@router.get("/reviews", response_model=list[SavedWeeklyReviewRead], summary="저장된 주간 회고 목록")
+def list_reviews(current_user: CurrentUser, db: DbSession) -> list[SavedWeeklyReviewRead]:
+    return [
+        SavedWeeklyReviewRead.model_validate(review)
+        for review in LearningService(db).list_reviews(current_user.id)
+    ]
+
+
+@router.post(
+    "/reviews",
+    response_model=SavedWeeklyReviewRead,
+    summary="주간 회고 생성·저장",
+    description=(
+        "계정당 한 주에 한 편을 저장합니다. 이미 저장했다면 LLM 재호출 없이 기존 회고를 돌려줍니다."
+    ),
+)
+async def create_review(
+    payload: WeeklyReviewCreate, current_user: CurrentUser, db: DbSession
+) -> SavedWeeklyReviewRead:
+    return SavedWeeklyReviewRead.model_validate(
+        await LearningService(db).create_review(current_user.id, payload.reference)
+    )
+
+
+@router.delete(
+    "/reviews/{review_id}", status_code=status.HTTP_204_NO_CONTENT, summary="저장된 회고 삭제"
+)
+def delete_review(review_id: uuid.UUID, current_user: CurrentUser, db: DbSession) -> None:
+    LearningService(db).delete_review(review_id, current_user.id)
+
+
+@router.get("/study", response_model=list[StudyItemRead], summary="어려웠던 내용과 복습 진행")
+def list_study(current_user: CurrentUser, db: DbSession) -> list[StudyItemRead]:
+    return LearningService(db).list_study(current_user.id)
+
+
+@router.put("/study/{entry_id}", response_model=StudyItemRead, summary="복습 메모·완료 상태 저장")
+def save_study(
+    entry_id: uuid.UUID, payload: StudyProgressUpdate, current_user: CurrentUser, db: DbSession
+) -> StudyItemRead:
+    return LearningService(db).save_study(
+        entry_id, current_user.id, payload.completed, payload.note
+    )
 
 
 @router.get("/{entry_id}", response_model=DiaryEntryRead, summary="일기 상세")

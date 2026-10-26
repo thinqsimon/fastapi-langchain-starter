@@ -65,6 +65,8 @@ def test_current_schema_is_as_expected() -> None:
         "conversations",
         "messages",
         "diary_entries",
+        "diary_weekly_reviews",
+        "diary_study_progress",
         "document_chunks",
         "user_preferences",
     }

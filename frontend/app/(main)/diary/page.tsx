@@ -6,7 +6,7 @@ import { ConversationPicker } from "@/components/diary/conversation-picker"
 import { DiaryEditor } from "@/components/diary/diary-editor"
 import { DiaryEntryCard } from "@/components/diary/diary-entry-card"
 import { DiaryPreviewActions } from "@/components/diary/diary-preview-actions"
-import { WeeklyReviewCard } from "@/components/diary/weekly-review"
+import { LearningWorkbench } from "@/components/diary/learning-workbench"
 import { Button } from "@/components/ui/button"
 import { useDiaryStore } from "@/store/diary"
 import { usePreferencesStore } from "@/store/preferences"
@@ -41,6 +41,9 @@ export default function DiaryPage() {
                     <DiaryPreviewActions name="작성 중인 일기" diary={{ ...form, footer: previewFooter }} />
                 </div>
 
+                <a href="#learning-workbench" className="w-fit text-sm text-sky-700 underline underline-offset-4 dark:text-sky-300">
+                    주간 회고·복습 바로가기
+                </a>
                 {!editingId && <ConversationPicker />}
 
                 {source && (
@@ -69,7 +72,7 @@ export default function DiaryPage() {
                 />
             </section>
 
-            <WeeklyReviewCard />
+            <LearningWorkbench />
 
             <section className="flex flex-col gap-3">
                 <h2 className="text-lg font-semibold">지난 일기</h2>

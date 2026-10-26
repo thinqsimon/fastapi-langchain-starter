@@ -1,13 +1,14 @@
 """diary 도메인 - 데이터 접근 계층."""
 
 import uuid
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 from sqlalchemy import func, or_, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.domain.chat.models import Conversation, Message
-from app.domain.diary.models import DiaryEntry
+from app.domain.diary.models import DiaryEntry, DiaryStudyProgress, SavedWeeklyReview
 
 
 class DiaryRepository:
@@ -113,3 +114,78 @@ class DiaryRepository:
     def delete(self, entry: DiaryEntry) -> None:
         self.db.delete(entry)
         self.db.flush()
+
+
+class LearningRepository:
+    def __init__(self, db: Session) -> None:
+        self.db = db
+
+    def list_reviews(self, user_id: uuid.UUID) -> list[SavedWeeklyReview]:
+        return list(
+            self.db.scalars(
+                select(SavedWeeklyReview)
+                .where(SavedWeeklyReview.user_id == user_id)
+                .order_by(SavedWeeklyReview.week_start.desc())
+            )
+        )
+
+    def review_for_week(self, user_id: uuid.UUID, start: date) -> SavedWeeklyReview | None:
+        return self.db.scalar(
+            select(SavedWeeklyReview).where(
+                SavedWeeklyReview.user_id == user_id, SavedWeeklyReview.week_start == start
+            )
+        )
+
+    def get_review_owned(
+        self, review_id: uuid.UUID, user_id: uuid.UUID
+    ) -> SavedWeeklyReview | None:
+        return self.db.scalar(
+            select(SavedWeeklyReview).where(
+                SavedWeeklyReview.id == review_id, SavedWeeklyReview.user_id == user_id
+            )
+        )
+
+    def create_review(self, user_id: uuid.UUID, **fields: object) -> SavedWeeklyReview:
+        review = SavedWeeklyReview(user_id=user_id, **fields)
+        self.db.add(review)
+        self.db.flush()
+        return review
+
+    def delete_review(self, review: SavedWeeklyReview) -> None:
+        self.db.delete(review)
+
+    def study_items(self, user_id: uuid.UUID) -> list[tuple[DiaryEntry, DiaryStudyProgress | None]]:
+        rows = self.db.execute(
+            select(DiaryEntry, DiaryStudyProgress)
+            .outerjoin(DiaryStudyProgress, DiaryStudyProgress.entry_id == DiaryEntry.id)
+            .where(DiaryEntry.user_id == user_id)
+            .order_by(DiaryEntry.entry_date, DiaryEntry.day_sequence)
+        ).all()
+        return [(row[0], row[1]) for row in rows]
+
+    def save_progress(self, entry_id: uuid.UUID, completed: bool, note: str) -> DiaryStudyProgress:
+        now = datetime.now(UTC)
+        statement = insert(DiaryStudyProgress).values(
+            entry_id=entry_id,
+            completed=completed,
+            note=note,
+            reviewed_at=now if completed else None,
+        )
+        upsert = statement.on_conflict_do_update(
+            index_elements=[DiaryStudyProgress.entry_id],
+            set_={
+                "completed": completed,
+                "note": note,
+                "reviewed_at": func.coalesce(DiaryStudyProgress.reviewed_at, now)
+                if completed
+                else None,
+                "updated_at": func.now(),
+            },
+        ).returning(DiaryStudyProgress)
+        return self.db.scalars(upsert, execution_options={"populate_existing": True}).one()
+
+    def reset_completion(self, entry_id: uuid.UUID) -> None:
+        progress = self.db.get(DiaryStudyProgress, entry_id)
+        if progress is not None:
+            progress.completed = False
+            progress.reviewed_at = None

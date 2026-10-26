@@ -3,6 +3,7 @@ export { errorMessage, httpClient, tokenStorage } from "./client"
 export * as authApi from "./auth"
 export * as chatApi from "./chat"
 export * as diaryApi from "./diary"
+export * as learningApi from "./learning"
 export * as preferencesApi from "./preferences"
 export * as usageApi from "./usage"
 export type {
@@ -20,4 +21,6 @@ export type {
     UsageSummary,
     User,
     WeeklyReview,
+    SavedWeeklyReview,
+    StudyItem,
 } from "./types"

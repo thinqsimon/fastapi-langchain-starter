@@ -4,7 +4,9 @@ DB가 떠 있을 때만 실행된다(로컬에서 `make db` 없이도 나머지 
 CI는 항상 DB를 띄우므로 여기서 걸러진다.
 """
 
-from sqlalchemy import Engine, inspect
+import uuid
+
+from sqlalchemy import Engine, inspect, text
 
 from tests.support import run_alembic
 
@@ -39,3 +41,42 @@ def test_refresh_token_cascades_on_user_delete(migrated_database: Engine) -> Non
 
     user_fk = next(fk for fk in foreign_keys if fk["referred_table"] == "users")
     assert user_fk["options"]["ondelete"] == "CASCADE"
+
+
+def test_learning_migration_can_roundtrip_without_losing_existing_diary(
+    migrated_database: Engine,
+) -> None:
+    user_id, entry_id = uuid.uuid4(), uuid.uuid4()
+    with migrated_database.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO users(id,email,password_hash,display_name) "
+                "VALUES (:id,:email,'test-hash','migration-test')"
+            ),
+            {"id": user_id, "email": f"{user_id}@example.com"},
+        )
+        connection.execute(
+            text(
+                "INSERT INTO diary_entries(id,user_id,entry_date,title,learned,difficult) "
+                "VALUES (:id,:user_id,'2026-10-21','보존할 일기','배운 것','어려움')"
+            ),
+            {"id": entry_id, "user_id": user_id},
+        )
+    try:
+        result = run_alembic("downgrade", "c85195cc050f")
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert "diary_weekly_reviews" not in inspect(migrated_database).get_table_names()
+        with migrated_database.connect() as connection:
+            assert (
+                connection.scalar(
+                    text("SELECT title FROM diary_entries WHERE id=:id"), {"id": entry_id}
+                )
+                == "보존할 일기"
+            )
+    finally:
+        upgraded = run_alembic("upgrade", "head")
+        assert upgraded.returncode == 0, upgraded.stdout + upgraded.stderr
+        with migrated_database.begin() as connection:
+            connection.execute(text("DELETE FROM users WHERE id=:id"), {"id": user_id})
+    tables = set(inspect(migrated_database).get_table_names())
+    assert {"diary_weekly_reviews", "diary_study_progress"} <= tables

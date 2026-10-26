@@ -8,6 +8,7 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (
+    Boolean,
     Date,
     DateTime,
     ForeignKey,
@@ -63,3 +64,36 @@ class DiaryEntry(Base, TimestampMixin):
         UniqueConstraint("user_id", "entry_date", "day_sequence", name="uq_diary_user_date_seq"),
         Index("ix_diary_entries_user_id_entry_date", "user_id", "entry_date"),
     )
+
+
+class SavedWeeklyReview(Base, TimestampMixin):
+    """생성 당시의 주간 회고. 원본 일기를 수정·삭제해도 보존한다."""
+
+    __tablename__ = "diary_weekly_reviews"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, primary_key=True, default=uuid.uuid4, server_default=func.gen_random_uuid()
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    week_start: Mapped[date] = mapped_column(Date, nullable=False)
+    week_end: Mapped[date] = mapped_column(Date, nullable=False)
+    entry_count: Mapped[int] = mapped_column(nullable=False)
+    grown: Mapped[str] = mapped_column(Text, nullable=False)
+    repeated_difficulty: Mapped[str] = mapped_column(Text, nullable=False)
+    suggestion: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # user_id가 선두이므로 소유자 조회와 사용자 삭제에도 이 인덱스를 쓸 수 있다.
+    __table_args__ = (UniqueConstraint("user_id", "week_start", name="uq_diary_review_user_week"),)
+
+
+class DiaryStudyProgress(Base, TimestampMixin):
+    __tablename__ = "diary_study_progress"
+
+    entry_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("diary_entries.id", ondelete="CASCADE"), primary_key=True
+    )
+    completed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    note: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

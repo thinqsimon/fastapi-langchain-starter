@@ -27,6 +27,8 @@ def test_profile_exposes_only_its_features(profile: AppProfile) -> None:
     assert "/api/conversations" in paths
     assert "/api/usage/me" in paths
     assert ("/api/diary/draft" in paths) == (profile == "diary-coach")
+    assert ("/api/diary/reviews" in paths) == (profile == "diary-coach")
+    assert ("/api/diary/study" in paths) == (profile == "diary-coach")
     assert ("/api/me/preferences" in paths) == (profile == "diary-coach")
     if profile == "starter":
         assert client.get("/api/diary").status_code == 404

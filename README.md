@@ -42,7 +42,7 @@ node scripts/dev.mjs starter frontend
 | 사용량 | 토큰 수 기록과 비용 추정 (`GET /api/usage/me`) |
 | 품질 | 계층 규칙 자동 검사, 테스트 173개(커버리지 게이트 90%), 서비스 E2E 47개·스타터 E2E 3개, 단일 검증 명령 |
 | 자동화 | GitHub Actions CI(E2E 포함), 배포 게이트 |
-| 샘플앱 | [배움일기 코치](samples/diary-coach/) — 구름 코치와 대화 → 현재 대화로 일기 초안 → 수정·저장 |
+| 샘플앱 | [배움일기 코치](samples/diary-coach/) — 구름 코치와 대화 → 일기 → 주간 회고 보관·어려웠던 내용 복습 |
 | AI 협업 | `CLAUDE.md`, 서브에이전트·스킬, 작업 목록([harness/](harness/)) |
 
 ## 빠른 시작

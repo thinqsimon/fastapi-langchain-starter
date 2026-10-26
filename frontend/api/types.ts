@@ -103,6 +103,20 @@ export type WeeklyReview = {
     suggestion: string
 }
 
+export type SavedWeeklyReview = WeeklyReview & { id: string; created_at: string }
+
+export type StudyItem = {
+    entry_id: string
+    title: string
+    entry_date: string
+    difficult: string
+    learned: string
+    learned_detail: string
+    completed: boolean
+    note: string
+    reviewed_at: string | null
+}
+
 export type UsageSummary = {
     model: string
     message_count: number

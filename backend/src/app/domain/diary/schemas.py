@@ -87,3 +87,31 @@ class WeeklyReviewResponse(BaseModel):
     grown: str
     repeated_difficulty: str
     suggestion: str
+
+
+class WeeklyReviewCreate(BaseModel):
+    reference: date
+
+
+class SavedWeeklyReviewRead(WeeklyReviewResponse):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    created_at: datetime
+
+
+class StudyProgressUpdate(BaseModel):
+    completed: bool
+    note: str = Field(default="", max_length=10000)
+
+
+class StudyItemRead(BaseModel):
+    entry_id: uuid.UUID
+    title: str
+    entry_date: date
+    difficult: str
+    learned: str
+    learned_detail: str
+    completed: bool
+    note: str
+    reviewed_at: datetime | None

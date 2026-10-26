@@ -20,11 +20,12 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import ConflictError, NotFoundError
 from app.domain.chat.models import Message
 from app.domain.chat.repositories import ConversationRepository, MessageRepository
-from app.domain.diary.models import DiaryEntry
-from app.domain.diary.repositories import DiaryRepository
+from app.domain.diary.models import DiaryEntry, DiaryStudyProgress, SavedWeeklyReview
+from app.domain.diary.repositories import DiaryRepository, LearningRepository
 from app.domain.diary.schemas import (
     DiaryDraftResponse,
     EligibleConversation,
+    StudyItemRead,
     WeeklyReviewResponse,
 )
 from app.domain.preferences.services import PreferenceService
@@ -228,6 +229,9 @@ class DiaryService:
         next_plan: str | None = None,
     ) -> DiaryEntry:
         entry = self.get_entry(entry_id, user_id)
+        if entry.difficult.strip() != difficult.strip():
+            # 원문이 바뀌면 다시 복습한다. 사용자가 쓴 메모는 보존한다.
+            LearningRepository(self.db).reset_completion(entry.id)
         entry.title = title.strip()
         entry.learned = learned
         entry.learned_detail = learned_detail
@@ -264,3 +268,81 @@ class DiaryService:
             repeated_difficulty=review.repeated_difficulty,
             suggestion=review.suggestion,
         )
+
+
+def has_difficulty(value: str) -> bool:
+    normalized = re.sub(r"\s+", "", value).strip(".!。")
+    return bool(normalized) and normalized not in {
+        "없음",
+        "없다",
+        "없어요",
+        "없습니다",
+        "해당없음",
+        "특별히없음",
+    }
+
+
+class LearningService:
+    def __init__(self, db: Session) -> None:
+        self.db = db
+        self.repo = LearningRepository(db)
+        self.diary = DiaryService(db)
+
+    def list_reviews(self, user_id: uuid.UUID) -> list[SavedWeeklyReview]:
+        return self.repo.list_reviews(user_id)
+
+    async def create_review(self, user_id: uuid.UUID, reference: date) -> SavedWeeklyReview:
+        start, _ = week_bounds(reference)
+        existing = self.repo.review_for_week(user_id, start)
+        if existing is not None:
+            return existing
+        snapshot = await self.diary.weekly_review(user_id, reference)
+        try:
+            review = self.repo.create_review(user_id, **snapshot.model_dump())
+            self.db.commit()
+            return review
+        except IntegrityError as exc:
+            self.db.rollback()
+            # 같은 주에 동시 요청이 들어와도 한 편만 보관한다.
+            existing = self.repo.review_for_week(user_id, start)
+            if existing is not None:
+                return existing
+            raise ConflictError("회고를 저장하지 못했습니다. 다시 시도해 주세요.") from exc
+
+    def delete_review(self, review_id: uuid.UUID, user_id: uuid.UUID) -> None:
+        review = self.repo.get_review_owned(review_id, user_id)
+        if review is None:
+            raise NotFoundError("회고를 찾을 수 없습니다.")
+        self.repo.delete_review(review)
+        self.db.commit()
+
+    @staticmethod
+    def study_item(entry: DiaryEntry, progress: DiaryStudyProgress | None) -> StudyItemRead:
+        return StudyItemRead(
+            entry_id=entry.id,
+            title=entry.title,
+            entry_date=entry.entry_date,
+            difficult=entry.difficult,
+            learned=entry.learned,
+            learned_detail=entry.learned_detail,
+            completed=progress.completed if progress else False,
+            note=progress.note if progress else "",
+            reviewed_at=progress.reviewed_at if progress else None,
+        )
+
+    def list_study(self, user_id: uuid.UUID) -> list[StudyItemRead]:
+        return [
+            self.study_item(entry, progress)
+            for entry, progress in self.repo.study_items(user_id)
+            if has_difficulty(entry.difficult)
+        ]
+
+    def save_study(
+        self, entry_id: uuid.UUID, user_id: uuid.UUID, completed: bool, note: str
+    ) -> StudyItemRead:
+        entry = self.diary.get_entry(entry_id, user_id)
+        if not has_difficulty(entry.difficult):
+            raise NotFoundError("복습할 내용을 찾을 수 없습니다.")
+        progress = self.repo.save_progress(entry.id, completed, note)
+        self.db.commit()
+        return self.study_item(entry, progress)
