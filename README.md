@@ -40,7 +40,7 @@ node scripts/dev.mjs starter frontend
 | 대화 | 대화·메시지 저장, SSE 스트리밍, 대화 목록 사이드바 |
 | LLM | LangChain 연동, 프롬프트 템플릿 분리, `.env`만으로 공급자 교체, 키 없이 쓰는 테스트용 공급자 |
 | 사용량 | 토큰 수 기록과 비용 추정 (`GET /api/usage/me`) |
-| 품질 | 계층 규칙 자동 검사, 테스트 165개(커버리지 97%), 브라우저 E2E 37개, 단일 검증 명령 |
+| 품질 | 계층 규칙 자동 검사, 테스트 173개(커버리지 게이트 90%), 서비스 E2E 37개·스타터 E2E 3개, 단일 검증 명령 |
 | 자동화 | GitHub Actions CI(E2E 포함), 배포 게이트 |
 | 샘플앱 | [배움일기 코치](samples/diary-coach/) — 이 구조로 새 서비스를 만드는 예시 |
 | AI 협업 | `CLAUDE.md`, 서브에이전트·스킬, 작업 목록([harness/](harness/)) |

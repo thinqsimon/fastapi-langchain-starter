@@ -477,6 +477,13 @@
 - 첫 CI의 starter E2E가 일기 화면의 HTTP 200을 발견했다. Next.js는 렌더링 중 notFound를
   호출해도 스트리밍을 시작한 뒤라면 200을 유지한다. 인수조건을 완화하지 않고 요청 전
   proxy 가드에서 404로 처리하도록 수정하고 하위 경로 검사도 추가했다
+- 수정 코드 `19bc0ca`의 [CI 40254350948](https://github.com/thinqsimon/fastapi-langchain-starter/actions/runs/40254350948):
+  DB를 포함한 백엔드 173개 통과(skip 없음), 커버리지 97.38%, verify.sh 및 두 프로필 빌드 통과.
+  starter E2E 3개 통과. 서비스 E2E 결과를 확인 중이다
+  서비스 job의 브라우저 설치가 6분 가까이 지연돼 CI에 필요한 headless shell만 설치하고
+  설치 단계 5분 제한을 추가했다. 테스트 수나 통과 기준은 유지한다
+- 최신 proxy 포함 로컬 starter 운영 빌드와 임시 서버 HTTP 검사:
+  `/sign-in` 200·AX Chat Starter 제목, `/diary` 및 하위 경로 404 확인. 임시 서버 종료
 
 **후속**: 구름 캐릭터 UI·채팅에서 일기 바로 만들기·회고 저장·복습은 다음 기능으로 진행.
 독립된 제3자 실행·배포 재현(DOC-02)은 별도 미완료 항목으로 유지한다.

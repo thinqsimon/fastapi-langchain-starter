@@ -91,7 +91,8 @@ jobs:
           cd backend && uv sync --locked
           cd ../frontend && npm ci
       - name: Install browser
-        run: cd frontend && npx playwright install --with-deps chromium
+        timeout-minutes: 5
+        run: cd frontend && npx playwright install --with-deps --only-shell chromium
       - name: Migrate
         run: cd backend && uv run alembic upgrade head
       - name: E2E (가입 → 대화 → 스트리밍)
