@@ -78,8 +78,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
         if (get().isStreaming) return
         const sessionVersion = get().sessionVersion
         set({ isStreaming: true, streamingAnswer: "", error: null })
+        let conversationId = get().activeId
         try {
-            const conversationId = get().activeId ?? (await get().startNewConversation())
+            conversationId ??= await get().startNewConversation()
             if (get().sessionVersion !== sessionVersion) return
             // 보낸 메시지를 먼저 보여준다. 연속 클릭은 대화 생성 전부터 막는다.
             const pending: Message = { id: `pending-${Date.now()}`, role: "user", content, created_at: new Date().toISOString() }
@@ -98,7 +99,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             if (get().sessionVersion !== sessionVersion) return
             set({
                 isStreaming: false,
-                error: caught instanceof Error ? caught.message : "응답을 받지 못했습니다.",
+                ...(get().activeId === conversationId ? { error: caught instanceof Error ? caught.message : "응답을 받지 못했습니다." } : {}),
             })
         }
     },

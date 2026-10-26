@@ -263,6 +263,37 @@ test("초안 대기 중 채팅을 바꾸어도 출처를 유지하고, 채팅을
     await expect(page.getByLabel("일기로 만들 채팅")).toHaveValue(first.id)
 })
 
+test("다른 대화의 늦은 응답 실패가 현재 대화의 일기 만들기를 막지 않는다", async ({ page }) => {
+    await signUp(page, "coach-stream-error")
+    await sendChatMessage(page, "첫 번째 대화의 배움")
+    const created = page.waitForResponse((response) => response.url().endsWith("/api/conversations") && response.request().method() === "POST")
+    await page.getByRole("button", { name: "새 대화", exact: true }).click()
+    await created
+    await expect(page.locator('[data-role="user"]')).toHaveCount(0)
+    await sendChatMessage(page, "두 번째 대화의 배움")
+    await page.getByRole("button", { name: "첫 번째 대화의 배움", exact: true }).click()
+    await expect(page.locator('[data-role="user"]')).toHaveText("첫 번째 대화의 배움")
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+        release = resolve
+    })
+    await page.route("**/api/conversations/*/stream", async (route) => {
+        await gate
+        await route.fulfill({ status: 503, json: { error: { code: "unavailable", message: "첫 대화 응답 실패" } } })
+    })
+    await page.getByLabel("메시지").fill("아직 응답 중인 질문")
+    await page.getByRole("button", { name: "보내기", exact: true }).click()
+    await expect(draftButton(page)).toBeDisabled()
+    await page.getByRole("button", { name: "두 번째 대화의 배움", exact: true }).click()
+    await expect(page.locator('[data-role="user"]')).toHaveText("두 번째 대화의 배움")
+    release()
+    await expect(draftButton(page)).toBeEnabled()
+    await expect(page.locator('p[role="alert"]')).toHaveCount(0)
+    await draftButton(page).click()
+    await expect(page).toHaveURL(/\/diary$/)
+    await expect(page.getByLabel("오늘 배운 것")).not.toHaveValue("")
+})
+
 test("모바일에서도 구름 코치·입력·일기 만들기가 화면 안에 보인다", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await signUp(page, "coach-mobile")
