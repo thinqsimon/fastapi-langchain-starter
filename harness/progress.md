@@ -468,22 +468,25 @@
 - 전체 ORM 모델과 기존 Alembic 이력을 보존. 운영 DB·배포 플랫폼·Secret은 변경하지 않음
 - 서비스 브랜치 push CI와 서비스/스타터 E2E matrix 추가. 두 실패 리포트의 artifact 이름도 분리
 
-**검증 중간 기록**
+**검증 결과**
 - ruff, mypy(64파일), import-linter(3계약), 프론트엔드 포맷·린트·타입 검사 통과
 - 새 프로필/초기화 테스트: 로컬 7 passed, 1 skipped(DB 통합)
 - 로컬 Docker 엔진이 없어 DB를 쓰는 전체 검증과 E2E는 GitHub CI에서 확인한다
 - test-verifier 정적 검토의 Render 프로필 누락 지적을 수정하고 회귀 테스트 추가
-- 최종 CI 결과를 확인하기 전에는 SEP-01을 passes:true로 표시하지 않는다
 - 첫 CI의 starter E2E가 일기 화면의 HTTP 200을 발견했다. Next.js는 렌더링 중 notFound를
   호출해도 스트리밍을 시작한 뒤라면 200을 유지한다. 인수조건을 완화하지 않고 요청 전
   proxy 가드에서 404로 처리하도록 수정하고 하위 경로 검사도 추가했다
-- 수정 코드 `19bc0ca`의 [CI 40254350948](https://github.com/thinqsimon/fastapi-langchain-starter/actions/runs/40254350948):
-  DB를 포함한 백엔드 173개 통과(skip 없음), 커버리지 97.38%, verify.sh 및 두 프로필 빌드 통과.
-  starter E2E 3개 통과. 서비스 E2E 결과를 확인 중이다
-  서비스 job의 브라우저 설치가 6분 가까이 지연돼 CI에 필요한 headless shell만 설치하고
+- 서비스 job의 브라우저 설치가 6분 가까이 지연돼 CI에 필요한 headless shell만 설치하고
   설치 단계 5분 제한을 추가했다. 테스트 수나 통과 기준은 유지한다
+- 검증 코드 `3f900486f4de4545cdab950e46bbf5c1d32b058a`의
+  [CI 40254954116](https://github.com/thinqsimon/fastapi-langchain-starter/actions/runs/40254954116) 전체 성공:
+  DB를 포함한 백엔드 **173 passed**(skip 없음), 커버리지 **97.38%**, verify.sh 전체 및 두 프로필 빌드 통과.
+  서비스 E2E **37 passed**, starter E2E **3 passed**
 - 최신 proxy 포함 로컬 starter 운영 빌드와 임시 서버 HTTP 검사:
   `/sign-in` 200·AX Chat Starter 제목, `/diary` 및 하위 경로 404 확인. 임시 서버 종료
+- 독립 test-verifier가 CI 세 job 로그와 인수조건 6개를 직접 확인해 모두 PASS로 판정.
+  SEP-01만 passes:true로 갱신한다. 이번 완료 기록은 검증 결과와 하네스 상태만 바꾸며
+  검증한 코드에는 변경이 없어 CI 재실행을 생략한다
 
 **후속**: 구름 캐릭터 UI·채팅에서 일기 바로 만들기·회고 저장·복습은 다음 기능으로 진행.
 독립된 제3자 실행·배포 재현(DOC-02)은 별도 미완료 항목으로 유지한다.

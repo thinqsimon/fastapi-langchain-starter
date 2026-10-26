@@ -505,7 +505,7 @@
         "설정·초기화·사용 가이드와 양쪽 프로필 CI/E2E를 제공한다"
       ],
       "verify": "./scripts/verify.sh 및 두 프로필 E2E",
-      "passes": false
+      "passes": true
     }
   ]
 }
