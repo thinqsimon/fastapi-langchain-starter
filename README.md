@@ -19,6 +19,7 @@ node scripts/dev.mjs starter frontend
 ```
 
 선택 지점과 빌드 환경 변수: [실행 프로필 가이드](docs/guides/application-profiles.md).
+팀원이 실제 LLM을 연결할 때는 [LLM 연동 인수인계](docs/guides/llm-handoff.md)를 기준으로 시작하세요.
 운영 배포 설정은 main 기준이며 서비스 브랜치 push는 검증만 수행합니다.
 
 ```
@@ -103,6 +104,7 @@ make verify                              # 린트·타입·테스트·빌드
 |---|---|
 | [아키텍처](docs/architecture.md) | 전체 구조, 요청 흐름, 배포 흐름 |
 | [사용 및 운영 가이드](docs/guides/usage.md) | 실행·커스터마이징·배포·장애 점검 |
+| [LLM 연동 인수인계](docs/guides/llm-handoff.md) | 현재 구현 범위·팀원 실행·제공자 연결 지점·수동 확인 순서 |
 | [코딩 규칙](docs/conventions.md) | API·DB·LLM·프론트엔드 규칙 |
 | [설계 결정(ADR)](docs/decisions/) | 왜 이렇게 만들었는지 |
 | [설계·계획](docs/plans/) | 범위, 설계서, 일정 |

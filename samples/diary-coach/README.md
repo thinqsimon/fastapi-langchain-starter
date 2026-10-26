@@ -5,6 +5,7 @@
 실제 API와 UI는 프로필 조립 지점으로 공통 스타터킷과 분리합니다.
 [실행 프로필 가이드](../../docs/guides/application-profiles.md),
 [ADR-0007](../../docs/decisions/ADR-0007-application-profiles.md).
+실제 제공자 연결을 이어서 맡는 팀원은 [LLM 연동 인수인계](../../docs/guides/llm-handoff.md)를 참고하세요.
 
 스타터킷을 Fork해 새 서비스를 만드는 **실제 예시**. 교육생이 코치와 대화하며 오늘 배운 것을 정리하고,
 **채팅을 골라** 그 대화로 배움일기 초안을 만들어 저장하며, 한 주를 회고합니다.
