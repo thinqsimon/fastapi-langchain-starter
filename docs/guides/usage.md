@@ -148,7 +148,9 @@ curl -s http://localhost:8000/api/usage/me -H "Authorization: Bearer $TOKEN"
 샘플앱 [배움일기 코치](../../samples/diary-coach/)가 실제로 이 절차를 거쳐 만들어졌습니다.
 
 **1. 이름·로고 바꾸기**
-- 이름: `.env`의 `APP_NAME`(백엔드), `frontend/components/brand-logo.tsx`의 `APP_NAME`(화면·브라우저 탭·홈 화면 이름)
+- 이름: `.env`의 `APP_NAME`(백엔드), 프론트엔드 빌드 환경의 `NEXT_PUBLIC_APP_NAME`(화면·브라우저 탭·홈 화면 이름).
+  비우면 실행 프로필의 기본 이름을 사용합니다. 프로필과 이름을 바꾸는 방법은
+  [실행 프로필 가이드](application-profiles.md)를 참고하세요.
 - 로고: `frontend/public/brand/logo.svg`를 교체한 뒤 `cd frontend && npm run icons`.
   파비콘(`app/favicon.ico`·`icon.svg`), 아이폰 홈 화면 아이콘(`app/apple-icon.png`), 웹앱 매니페스트 아이콘이 다시 만들어집니다
 - 32px 이하에서 뭉개지는 세부는 SVG 요소에 `data-detail` 속성을 달면 작은 아이콘에서 빠집니다

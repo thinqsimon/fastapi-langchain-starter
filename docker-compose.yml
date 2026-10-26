@@ -30,6 +30,8 @@ services:
       # 컨테이너끼리는 서비스 이름으로 통신한다(localhost가 아님).
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}
       APP_ENV: local
+      APP_PROFILE: ${APP_PROFILE:-diary-coach}
+      APP_NAME: ${APP_NAME:-}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-only-insecure-secret-key-change-me}
       LLM_PROVIDER: ${LLM_PROVIDER:-fake}
       LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
@@ -46,6 +48,8 @@ services:
     build: ./frontend
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+      NEXT_PUBLIC_APP_PROFILE: ${APP_PROFILE:-diary-coach}
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-}
     ports:
       - "3000:3000"
     depends_on:

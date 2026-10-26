@@ -5,6 +5,22 @@ FastAPI · PostgreSQL(pgvector) · Next.js · LangChain 기반 **챗봇형 AI �
 Fork하면 인증, 대화 이력, LLM 스트리밍, 토큰 사용량 집계, CI/CD, 브라우저 테스트가 갖춰진 상태에서
 새 AI 서비스를 시작할 수 있습니다. 샘플 서비스로 **AI 배움일기 코치**가 들어 있습니다.
 
+## 서비스 브랜치와 실행 프로필
+
+`service/diary-coach`에서 배움일기 코치를 발전시킵니다. 같은 코드에서 `starter`는
+인증·채팅·사용량만, `diary-coach`는 일기·회고·전용 개인 설정까지 제공합니다.
+두 프로필 모두 기존 DB와 마이그레이션 이력을 보존합니다.
+
+```sh
+# 각 명령은 별도 터미널. 먼저 아래 빠른 시작의 의존성·DB 준비가 필요합니다.
+node scripts/dev.mjs starter backend
+node scripts/dev.mjs starter frontend
+# 배움일기 서비스는 starter 대신 diary-coach
+```
+
+선택 지점과 빌드 환경 변수: [실행 프로필 가이드](docs/guides/application-profiles.md).
+운영 배포 설정은 main 기준이며 서비스 브랜치 push는 검증만 수행합니다.
+
 ```
 사용자 → Next.js → FastAPI → PostgreSQL / LangChain → LLM API → SSE 스트리밍 응답
 ```
@@ -72,7 +88,7 @@ make verify                              # 린트·타입·테스트·빌드
 
 [사용 및 운영 가이드](docs/guides/usage.md)에 단계별로 적어 두었습니다. 요약하면:
 
-1. `.env`의 `APP_NAME`, `frontend/components/brand-logo.tsx`의 `APP_NAME`(화면·탭·홈 화면 이름)을 바꾸고,
+1. `.env`의 `APP_NAME`, 프론트엔드 빌드 환경의 `NEXT_PUBLIC_APP_NAME`(화면·탭·홈 화면 이름)을 바꾸고,
    로고 원본 `frontend/public/brand/logo.svg`를 교체한 뒤 `npm run icons`로 파비콘·아이콘을 다시 만듭니다
 2. `backend/src/app/llm/prompts/`에 서비스에 맞는 프롬프트를 둡니다
 3. `backend/src/app/domain/<이름>/`에 도메인을 추가하고 `make migration`

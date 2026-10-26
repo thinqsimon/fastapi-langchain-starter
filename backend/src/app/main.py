@@ -10,7 +10,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.api import build_api_router
-from app.core.config import settings
+from app.application import resolve_application
+from app.core.config import AppProfile, settings
 from app.core.database import get_db
 from app.core.exceptions import ServiceUnavailableError, register_exception_handlers
 from app.core.logging import setup_logging
@@ -55,15 +56,23 @@ FastAPI · PostgreSQL · Next.js · LangChain 기반 **챗봇형 AI 서비스 �
 logger = logging.getLogger(__name__)
 
 
-def create_app(rag_enabled: bool | None = None) -> FastAPI:
+def create_app(rag_enabled: bool | None = None, app_profile: AppProfile | None = None) -> FastAPI:
     setup_logging()
+    application = resolve_application(app_profile or settings.APP_PROFILE)
+    app_name = settings.APP_NAME or application.name
     app = FastAPI(
-        title=settings.APP_NAME,
+        title=app_name,
         version="0.1.0",
         description=API_DESCRIPTION,
-        openapi_tags=OPENAPI_TAGS,
+        openapi_tags=[
+            tag
+            for tag in OPENAPI_TAGS
+            if application.diary_enabled or tag["name"] not in {"diary", "preferences"}
+        ],
         swagger_ui_parameters={"docExpansion": "none", "persistAuthorization": True},
     )
+    app.state.application_profile = application.profile
+    app.state.chat_system_prompt = application.system_prompt
 
     # 미들웨어는 등록 역순으로 실행된다. request_id를 CORS보다 먼저 잡도록 뒤에 등록한다.
     app.add_middleware(
@@ -86,7 +95,7 @@ def create_app(rag_enabled: bool | None = None) -> FastAPI:
         404가 쌓이고 "No open ports detected" 경고가 난다.
         """
         return {
-            "service": settings.APP_NAME,
+            "service": app_name,
             "status": "ok",
             "docs": "/docs",
             "health": "/health",
@@ -121,7 +130,7 @@ def create_app(rag_enabled: bool | None = None) -> FastAPI:
 
         return {"status": "ok", "database": "ok"}
 
-    app.include_router(build_api_router(rag_enabled))
+    app.include_router(build_api_router(rag_enabled, application.profile))
     return app
 
 

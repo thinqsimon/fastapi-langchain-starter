@@ -19,8 +19,9 @@ TITLE_FROM_MESSAGE_LENGTH = 40
 
 
 class ChatService:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: Session, system_prompt: str | None = None) -> None:
         self.db = db
+        self.system_prompt = system_prompt
         self.conversations = ConversationRepository(db)
         self.messages = MessageRepository(db)
 
@@ -80,7 +81,9 @@ class ChatService:
             usage = reported
 
         try:
-            async for chunk in stream_reply(content, history, on_usage=record_usage):
+            async for chunk in stream_reply(
+                content, history, system_prompt=self.system_prompt, on_usage=record_usage
+            ):
                 chunks.append(chunk)
                 yield chunk
         finally:

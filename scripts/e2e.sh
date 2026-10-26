@@ -8,6 +8,8 @@ cd "$(dirname "$0")/.."
 BACKEND_PORT="${BACKEND_PORT:-8010}"
 BACKEND_URL="http://localhost:${BACKEND_PORT}"
 export NEXT_PUBLIC_API_BASE_URL="$BACKEND_URL"
+export APP_PROFILE="${APP_PROFILE:-diary-coach}"
+export NEXT_PUBLIC_APP_PROFILE="$APP_PROFILE"
 # E2E 프론트엔드는 3100에서 뜨므로 백엔드 CORS에 그 출처를 허용한다.
 # 실제 LLM을 호출하지 않는다. 키 없이도 돌고 결과가 일정하다.
 export LLM_PROVIDER="fake"

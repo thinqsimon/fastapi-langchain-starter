@@ -16,8 +16,14 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 ROOT_DIR = Path(__file__).resolve().parents[4]
 
 
+AppProfile = Literal["starter", "diary-coach"]
+
+
 class Settings(BaseSettings):
-    APP_NAME: str = "AX Chat Starter"
+    # 서비스 브랜치의 기본 동작은 유지한다. starter는 서비스 전용 API를 등록하지 않는다.
+    APP_PROFILE: AppProfile = "diary-coach"
+    # 비우면 선택한 프로필의 이름을 사용한다.
+    APP_NAME: str = ""
     APP_ENV: Literal["local", "test", "production"] = "local"
     LOG_LEVEL: str = "INFO"
     # NoDecode: 기본 JSON 해석을 끄고 아래 검증기가 직접 읽는다.

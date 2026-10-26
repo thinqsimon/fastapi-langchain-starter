@@ -2,15 +2,16 @@
 
 from fastapi import APIRouter
 
-from app.core.config import settings
+from app.application import resolve_application
+from app.core.config import AppProfile, settings
 from app.domain.auth.routers import router as auth_router
 from app.domain.chat.routers import router as chat_router
-from app.domain.diary.routers import router as diary_router
-from app.domain.preferences.routers import router as preferences_router
 from app.domain.usage.routers import router as usage_router
 
 
-def build_api_router(rag_enabled: bool | None = None) -> APIRouter:
+def build_api_router(
+    rag_enabled: bool | None = None, app_profile: AppProfile | None = None
+) -> APIRouter:
     """`/api` 아래 라우터를 구성한다.
 
     선택 기능은 **호출 시점에** 판단한다. import 시점에 정하면 설정을 바꿔도 반영되지 않아
@@ -19,9 +20,16 @@ def build_api_router(rag_enabled: bool | None = None) -> APIRouter:
     router = APIRouter(prefix="/api")
     router.include_router(auth_router)
     router.include_router(chat_router)
-    router.include_router(diary_router)
-    router.include_router(preferences_router)
     router.include_router(usage_router)
+
+    application = resolve_application(app_profile or settings.APP_PROFILE)
+    if application.diary_enabled:
+        # 스타터킷 실행 시 일기 서비스와 전용 개인 설정을 불러오지 않는다.
+        from app.domain.diary.routers import router as diary_router
+        from app.domain.preferences.routers import router as preferences_router
+
+        router.include_router(diary_router)
+        router.include_router(preferences_router)
 
     enabled = settings.RAG_ENABLED if rag_enabled is None else rag_enabled
     if enabled:

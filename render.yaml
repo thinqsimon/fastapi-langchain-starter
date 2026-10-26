@@ -19,6 +19,10 @@ services:
     envVars:
       - key: APP_ENV
         value: production
+      - key: APP_PROFILE
+        value: diary-coach
+      - key: APP_NAME
+        value: "배움일기 코치"
       - key: PYTHON_VERSION
         value: "3.13"
       # 아래 값들은 Render 대시보드에서 직접 입력한다(sync: false = 저장소에 담지 않음).

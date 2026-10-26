@@ -3,7 +3,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "service/**"]
   pull_request:
 
 concurrency:
@@ -50,10 +50,22 @@ jobs:
         run: cd backend && uv run alembic upgrade head
       - name: Verify (lint · type · test · build)
         run: ./scripts/verify.sh
+      - name: Starter 프로필 빌드
+        run: cd frontend && npm run -s build
+        env:
+          APP_PROFILE: starter
+          NEXT_PUBLIC_APP_PROFILE: starter
 
   e2e:
-    name: 브라우저 E2E
+    name: 브라우저 E2E (${{ matrix.profile }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [diary-coach, starter]
+    env:
+      APP_PROFILE: ${{ matrix.profile }}
+      NEXT_PUBLIC_APP_PROFILE: ${{ matrix.profile }}
     services:
       db:
         image: pgvector/pgvector:pg17
@@ -88,6 +100,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.profile }}
           path: frontend/playwright-report/
           retention-days: 7

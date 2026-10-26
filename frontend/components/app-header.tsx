@@ -3,27 +3,17 @@
 import { PanelLeft } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useEffect } from "react"
 
+import { ApplicationHeaderContent } from "@/applications/components"
 import { AccountMenu } from "@/components/account-menu"
 import { APP_NAME, LogoMark } from "@/components/brand-logo"
-import { CatchphraseMarquee } from "@/components/catchphrase-marquee"
 import { Button } from "@/components/ui/button"
 import { useMediaQuery } from "@/lib/use-media-query"
-import { useAuthStore } from "@/store/auth"
+import { application } from "@/lib/application"
 import { DESKTOP_QUERY, useLayoutStore } from "@/store/layout"
-import { usePreferencesStore } from "@/store/preferences"
 
 export function AppHeader() {
-    const userId = useAuthStore((state) => state.user?.id)
-    const catchphrase = usePreferencesStore((state) => state.preferences?.catchphrase ?? "")
-    const loadPreferences = usePreferencesStore((state) => state.load)
     const isChat = usePathname().startsWith("/chat")
-
-    // 로그인한 사람이 바뀌면 그 사람의 캐치프레이즈를 다시 읽는다.
-    useEffect(() => {
-        if (userId) void loadPreferences()
-    }, [userId, loadPreferences])
 
     return (
         // 좌우 칸을 같은 비율(1fr)로 두어 가운데 칸이 헤더의 정중앙에 오게 한다.
@@ -37,16 +27,15 @@ export function AppHeader() {
                     <span className="hidden font-semibold sm:inline">{APP_NAME}</span>
                 </Link>
                 <nav className="flex gap-3 text-sm sm:gap-4">
-                    <Link href="/chat" className="hover:underline">
-                        채팅
-                    </Link>
-                    <Link href="/diary" className="hover:underline">
-                        일기
-                    </Link>
+                    {application.navigation.map((item) => (
+                        <Link key={item.href} href={item.href} className="hover:underline">
+                            {item.label}
+                        </Link>
+                    ))}
                 </nav>
             </div>
             {/* 양옆에 여백을 둔다. */}
-            <CatchphraseMarquee text={catchphrase} className="mx-3 sm:mx-10" />
+            <ApplicationHeaderContent />
             <div className="flex justify-end">
                 <AccountMenu />
             </div>

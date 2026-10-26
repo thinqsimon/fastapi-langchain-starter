@@ -489,6 +489,23 @@
       ],
       "verify": "./scripts/verify.sh",
       "passes": true
+    },
+    {
+      "id": "SEP-01",
+      "phase": 7,
+      "owner": "backend-dev",
+      "title": "공통 스타터킷과 배움일기 코치 실행 프로필 분리",
+      "requirement": "2026-10-26 사용자 승인 기획",
+      "acceptance": [
+        "service/diary-coach 브랜치 생성",
+        "starter는 공통 인증·채팅·사용량을 제공하고 일기·전용 설정 API와 메뉴를 노출하지 않는다",
+        "starter의 일기 직접 접근은 404이고 서비스 설정 API를 요청하지 않는다",
+        "diary-coach 기존 기능을 유지하고 프로필별 채팅 프롬프트를 주입한다",
+        "기존 DB 모델·마이그레이션 이력을 보존한다",
+        "설정·초기화·사용 가이드와 양쪽 프로필 CI/E2E를 제공한다"
+      ],
+      "verify": "./scripts/verify.sh 및 두 프로필 E2E",
+      "passes": false
     }
   ]
 }

@@ -3,7 +3,7 @@
 import logging
 import uuid
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Request, status
 from sse_starlette.sse import EventSourceResponse
 
 from app.core.exceptions import AppError
@@ -99,11 +99,12 @@ def list_messages(
 async def stream_message(
     conversation_id: uuid.UUID,
     payload: MessageCreate,
+    request: Request,
     current_user: CurrentUser,
     db: DbSession,
 ) -> EventSourceResponse:
     """SSE로 응답 토큰을 흘려보낸다. 이벤트 형식은 docs/conventions.md 참고."""
-    service = ChatService(db)
+    service = ChatService(db, system_prompt=request.app.state.chat_system_prompt)
 
     async def events():
         try:

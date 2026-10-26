@@ -1,5 +1,11 @@
 # 샘플앱: AI 배움일기 코치
 
+서비스 발전 브랜치: `service/diary-coach`. 실행은 `diary-coach` 프로필을 사용합니다.
+이 폴더는 실행 코드를 복제한 별도 앱이 아니라 변경 지점을 설명하는 문서입니다.
+실제 API와 UI는 프로필 조립 지점으로 공통 스타터킷과 분리합니다.
+[실행 프로필 가이드](../../docs/guides/application-profiles.md),
+[ADR-0007](../../docs/decisions/ADR-0007-application-profiles.md).
+
 스타터킷을 Fork해 새 서비스를 만드는 **실제 예시**. 교육생이 코치와 대화하며 오늘 배운 것을 정리하고,
 **채팅을 골라** 그 대화로 배움일기 초안을 만들어 저장하며, 한 주를 회고합니다.
 
