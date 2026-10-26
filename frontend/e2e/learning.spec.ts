@@ -57,11 +57,11 @@ test("주간 회고는 바로 저장되고 새로고침·재로그인 후 다시
     await weekly(page).getByRole("button", { name: "저장된 회고 열기" }).click()
     expect(calls).toBe(1)
     await page.reload()
-    await expect(saved(page)).toHaveText(snapshot)
+    await expect(saved(page)).toHaveText(snapshot, { useInnerText: true })
     await logOut(page)
     await loginOnPage(page, account)
     await openDiary(page)
-    await expect(saved(page)).toHaveText(snapshot)
+    await expect(saved(page)).toHaveText(snapshot, { useInnerText: true })
     await expect(page.getByLabel("저장된 회고").locator("option")).toHaveCount(2)
 })
 
