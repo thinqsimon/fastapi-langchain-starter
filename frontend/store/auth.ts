@@ -1,6 +1,7 @@
 import { create } from "zustand"
 
 import { authApi, tokenStorage, type User } from "@/api"
+import { useChatStore } from "@/store/chat"
 
 type AuthState = {
     user: User | null
@@ -39,11 +40,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     login: async (email, password) => {
         await authApi.login({ email, password })
         const user = await authApi.fetchMe()
+        useChatStore.getState().reset()
         set({ user, isAuthenticated: true, isLoading: false })
     },
 
     logout: async () => {
-        await authApi.logout()
+        // API 계층은 실패해도 토큰을 비운다. 서버 장애가 로컬 로그아웃을 막아서는 안 된다.
+        await authApi.logout().catch(() => undefined)
+        useChatStore.getState().reset()
         set({ user: null, isAuthenticated: false, isLoading: false })
     },
 

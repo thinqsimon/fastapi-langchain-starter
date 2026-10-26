@@ -106,3 +106,11 @@ jobs:
             frontend/playwright-report/
             frontend/test-results/
           retention-days: 7
+      - name: 코치 UI 화면 보관
+        if: always() && matrix.profile == 'diary-coach'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coach-ui-previews
+          path: frontend/coach-ui-previews/
+          if-no-files-found: ignore
+          retention-days: 7

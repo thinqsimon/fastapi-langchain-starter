@@ -11,7 +11,9 @@
 
 ## 사용 흐름
 1. 채팅에서 코치와 오늘 배운 것을 이야기한다
-2. 일기 화면에서 **일기로 만들 채팅**을 고르고 "초안 만들기"를 누른다
+2. 채팅 상단의 **이 대화로 일기 만들기**를 누르면 현재 대화가 일기 초안이 되고 작성 화면이 열린다.
+   자동 저장하지 않으며, 저장하지 않은 일기가 있으면 교체 여부를 확인한다.
+   기존처럼 일기 화면에서 **일기로 만들 채팅**을 고르고 "초안 만들기"를 눌러도 된다
    - 제목: `오늘 날짜 + 핵심 단어`. 같은 날 두 번째 일기부터 `2026-10-20(2) …`처럼 순번이 붙는다
    - 배운 것(요약), **배운 내용 상세**(주제별 `### 소제목`, 복습용 보충 설명 포함), 어려웠던 것
    - 내일 할 것: 대화에 있을 때만 채워지고, 비워 두면 항목 없이 저장된다
@@ -33,13 +35,14 @@
 
 | 변경 지점 | 위치 | 설명 |
 |---|---|---|
+| 구름 코치 화면 | `frontend/applications/diary-coach/chat-experience.tsx`, `frontend/public/coach/cloud-coach.png` | 제공된 구름 이미지, 추천 질문, 응답 아바타, 현재 채팅으로 일기 만들기. 프로필 조립 지점에서 주입 |
 | 코치 페르소나·일기 프롬프트 | `backend/src/app/llm/prompts/diary_coach.py` | 새 대화/이전 대화(맥락) 구분, 상세 작성 규칙, '내일 할 것'을 지어내지 않는 규칙 |
 | 구조화 출력 체인 | `backend/src/app/llm/chains/diary.py` | `with_structured_output`으로 일기 항목·회고 3항목을 받음. '내일 할 것'은 근거 문장이 대화에 있을 때만 남김 |
 | `DiaryEntry` 모델 | `backend/src/app/domain/diary/models.py` | 채팅 단위(`source_last_message_at`), 같은 날 여러 편(`day_sequence`), 제목·상세·푸터 |
 | 일기 서비스·API | `backend/src/app/domain/diary/` | 고를 수 있는 채팅 목록, 초안, 재발행 조건(409), 작성·수정·삭제, 주간 회고 |
 | 개인 설정 도메인 | `backend/src/app/domain/preferences/` | 캐치프레이즈·일기 푸터. 저장 전에는 기본값 |
 | 일기 화면 | `frontend/app/(main)/diary/`, `frontend/components/diary/` | 채팅 고르기, 초안·작성·수정(상세 미리보기), 지난 일기(마크다운), 주간 회고 |
-| 일기 상태 | `frontend/store/diary.ts` | 채팅 스토어와 같은 구조 |
+| 일기 상태 | `frontend/store/diary.ts` | 초안 출처 보존, 미저장 입력·지연 응답·로그아웃 보호. 새로고침하면 미저장 초안은 사라짐 |
 | 프리뷰·전체 복사 | `frontend/components/diary/diary-preview-actions.tsx`, `diary-document.tsx`, `diary-paste-document.tsx`, `frontend/lib/diary-markdown.ts` | 프리뷰는 문서 형태, 붙여 넣기용 HTML은 항목 제목 단계 통일·빈 줄 구분(플랫폼 편집기용) |
 | 로고·이름 | `frontend/public/brand/logo.svg`, `frontend/components/brand-logo.tsx` | A안 '열정 노트'. 파비콘·홈 화면 아이콘은 `npm run icons`로 생성 |
 

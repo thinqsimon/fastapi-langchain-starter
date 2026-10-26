@@ -7,15 +7,19 @@ import { PreferencesForm } from "@/components/settings/preferences-form"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuthStore } from "@/store/auth"
 import { usePreferencesStore } from "@/store/preferences"
+import { useDiaryStore } from "@/store/diary"
 
 export function DiaryHeaderMessage() {
     const userId = useAuthStore((state) => state.user?.id)
     const catchphrase = usePreferencesStore((state) => state.preferences?.catchphrase ?? "")
     const load = usePreferencesStore((state) => state.load)
+    const resetDiary = useDiaryStore((state) => state.reset)
 
     useEffect(() => {
+        resetDiary()
         if (userId) void load()
-    }, [userId, load])
+        return resetDiary
+    }, [userId, load, resetDiary])
 
     return <CatchphraseMarquee text={catchphrase} className="mx-3 sm:mx-10" />
 }

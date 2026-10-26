@@ -26,12 +26,19 @@ type DiaryState = {
     isSaving: boolean
     isDrafting: boolean
     error: string | null
+    hasUnsavedChanges: boolean
+    /** 늦게 도착한 응답이 새 입력이나 다른 계정의 상태를 덮지 않도록 구분한다. */
+    revision: number
+    draftVersion: number
+    sessionVersion: number
 
     /** 지난 일기와 고를 수 있는 채팅을 함께 새로 읽는다. */
     load: () => Promise<void>
     selectConversation: (id: string) => void
     /** 고른 채팅으로 초안을 만든다. */
     generateDraft: () => Promise<void>
+    generateDraftFromConversation: (id: string, title: string, replaceExisting?: boolean) => Promise<boolean>
+    reset: () => void
     /** 초안을 버리고 빈 입력칸으로 돌아간다. */
     discardDraft: () => void
     setForm: (form: DiaryForm) => void
@@ -51,10 +58,33 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
     isSaving: false,
     isDrafting: false,
     error: null,
+    hasUnsavedChanges: false,
+    revision: 0,
+    draftVersion: 0,
+    sessionVersion: 0,
+
+    reset: () =>
+        set((state) => ({
+            entries: [],
+            conversations: [],
+            selectedConversationId: "",
+            form: emptyForm(),
+            source: null,
+            editingId: null,
+            isSaving: false,
+            isDrafting: false,
+            error: null,
+            hasUnsavedChanges: false,
+            revision: state.revision + 1,
+            draftVersion: state.draftVersion + 1,
+            sessionVersion: state.sessionVersion + 1,
+        })),
 
     load: async () => {
+        const sessionVersion = get().sessionVersion
         try {
             const [entries, conversations] = await Promise.all([diaryApi.listEntries(), diaryApi.listEligibleConversations()])
+            if (get().sessionVersion !== sessionVersion) return
             const selected = get().selectedConversationId
             set({
                 entries,
@@ -63,7 +93,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
                 selectedConversationId: conversations.some((c) => c.id === selected) ? selected : (conversations[0]?.id ?? ""),
             })
         } catch (caught) {
-            set({ error: errorMessage(caught, "일기를 불러오지 못했습니다.") })
+            if (get().sessionVersion === sessionVersion) set({ error: errorMessage(caught, "일기를 불러오지 못했습니다.") })
         }
     },
 
@@ -75,22 +105,46 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
             set({ error: "일기로 만들 채팅을 고르세요." })
             return
         }
-        set({ isDrafting: true, error: null })
+        await get().generateDraftFromConversation(selectedConversationId, conversations.find((c) => c.id === selectedConversationId)?.title ?? "")
+    },
+
+    generateDraftFromConversation: async (id, title, replaceExisting = false) => {
+        const { isDrafting, isSaving, hasUnsavedChanges, revision } = get()
+        if (isDrafting || isSaving) return false
+        if (hasUnsavedChanges && !replaceExisting) {
+            set({ error: "저장하지 않은 일기가 있습니다. 먼저 확인해 주세요." })
+            return false
+        }
+        const draftVersion = get().draftVersion + 1
+        set({ isDrafting: true, error: null, draftVersion })
         try {
-            const draft = await diaryApi.draftFromConversation(selectedConversationId, localToday())
+            const draft = await diaryApi.draftFromConversation(id, localToday())
+            if (get().draftVersion !== draftVersion) return false
+            if (get().revision !== revision) {
+                set({ error: "작성 중인 일기를 보호하기 위해 초안을 적용하지 않았습니다. 일기를 저장한 뒤 다시 시도해 주세요." })
+                return false
+            }
             const { conversation_id, source_last_message_at, entry_date, ...form } = draft
-            const conversationTitle = conversations.find((c) => c.id === conversation_id)?.title ?? ""
-            set({ form, source: { origin: { conversation_id, source_last_message_at, entry_date }, conversationTitle }, editingId: null })
+            set({
+                form,
+                source: { origin: { conversation_id, source_last_message_at, entry_date }, conversationTitle: title },
+                selectedConversationId: id,
+                editingId: null,
+                hasUnsavedChanges: true,
+                revision: revision + 1,
+            })
+            return true
         } catch (caught) {
-            set({ error: errorMessage(caught, "초안을 만들지 못했습니다.") })
+            if (get().draftVersion === draftVersion) set({ error: errorMessage(caught, "초안을 만들지 못했습니다.") })
+            return false
         } finally {
-            set({ isDrafting: false })
+            if (get().draftVersion === draftVersion) set({ isDrafting: false })
         }
     },
 
-    discardDraft: () => set({ form: emptyForm(), source: null, error: null }),
+    discardDraft: () => set((state) => ({ form: emptyForm(), source: null, error: null, hasUnsavedChanges: false, revision: state.revision + 1 })),
 
-    setForm: (form) => set({ form }),
+    setForm: (form) => set((state) => ({ form, hasUnsavedChanges: true, revision: state.revision + 1 })),
 
     startEditing: (entry) =>
         set({
@@ -104,12 +158,15 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
                 next_plan: entry.next_plan ?? "",
             },
             error: null,
+            hasUnsavedChanges: false,
+            revision: get().revision + 1,
         }),
 
-    cancelEditing: () => set({ editingId: null, form: emptyForm(), error: null }),
+    cancelEditing: () => set((state) => ({ editingId: null, form: emptyForm(), error: null, hasUnsavedChanges: false, revision: state.revision + 1 })),
 
     save: async () => {
-        const { editingId, form, source } = get()
+        const { editingId, form, source, revision, sessionVersion, isSaving, isDrafting } = get()
+        if (isSaving || isDrafting) return
         set({ isSaving: true, error: null })
         try {
             if (editingId) {
@@ -119,14 +176,15 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
             } else {
                 await diaryApi.createEntry({ ...form, entry_date: localToday() })
             }
-            // 목록을 먼저 새로 읽고 나서 입력칸을 비운다.
-            // 순서를 바꾸면 비우는 처리가 뒤늦게 도착해 사용자가 이어서 쓰던 내용을 지울 수 있다.
+            if (get().sessionVersion !== sessionVersion) return
             await get().load()
-            set({ form: emptyForm(), source: null, editingId: null })
+            if (get().sessionVersion === sessionVersion && get().revision === revision) {
+                set({ form: emptyForm(), source: null, editingId: null, hasUnsavedChanges: false, revision: revision + 1 })
+            }
         } catch (caught) {
-            set({ error: errorMessage(caught, "저장하지 못했습니다.") })
+            if (get().sessionVersion === sessionVersion) set({ error: errorMessage(caught, "저장하지 못했습니다.") })
         } finally {
-            set({ isSaving: false })
+            if (get().sessionVersion === sessionVersion) set({ isSaving: false })
         }
     },
 

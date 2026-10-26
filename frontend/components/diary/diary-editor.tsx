@@ -33,6 +33,7 @@ export function DiaryEditor({
     const bind = (name: keyof DiaryForm) => ({
         id: `diary-${name}`,
         value: value[name],
+        disabled: isSaving,
         onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange({ ...value, [name]: event.target.value }),
     })
 
@@ -118,7 +119,7 @@ export function DiaryEditor({
                     {isSaving ? "저장 중…" : submitLabel}
                 </Button>
                 {onCancel && (
-                    <Button type="button" variant="outline" onClick={onCancel}>
+                    <Button type="button" variant="outline" onClick={onCancel} disabled={isSaving}>
                         취소
                     </Button>
                 )}

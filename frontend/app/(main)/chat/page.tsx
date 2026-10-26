@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { ApplicationChatHeader, applicationChatPresentation } from "@/applications/components"
 
 import { ConversationSidebar } from "@/components/chat/conversation-sidebar"
 import { MessageInput } from "@/components/chat/message-input"
@@ -24,7 +25,8 @@ export default function ChatPage() {
             <ConversationSidebar />
 
             <section className="flex min-w-0 flex-1 flex-col">
-                <MessageList messages={messages} streamingAnswer={streamingAnswer} isStreaming={isStreaming} />
+                <ApplicationChatHeader />
+                <MessageList messages={messages} streamingAnswer={streamingAnswer} isStreaming={isStreaming} {...applicationChatPresentation()} />
 
                 {error && (
                     <p role="alert" className="px-4 pb-2 text-sm text-destructive sm:px-6">
