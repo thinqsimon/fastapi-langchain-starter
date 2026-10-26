@@ -15,7 +15,8 @@
 | 복습 | 어려웠던 내용 모음·학습 원문·메모·완료/다시 복습. 일기 변경·삭제와 연계 |
 | DB | Alembic `e317b6a91d42`까지. 회고·복습 테이블 포함 |
 
-최신 구현 검증은 [CI 40278025625](https://github.com/thinqsimon/fastapi-langchain-starter/actions/runs/40278025625)입니다.
+최신 구현·인수인계 검증은 [CI 40280442756](https://github.com/thinqsimon/fastapi-langchain-starter/actions/runs/40280442756)입니다.
+검증 대상 커밋은 `4323d23724fc9a4528ddf88db62afeb6fe0c8e1e`입니다.
 백엔드 190개, 서비스 E2E 55개, starter E2E 3개와 두 프로필 빌드가 통과했습니다.
 자동 테스트와 지금까지의 화면 검증은 **fake LLM** 기준입니다.
 
