@@ -542,7 +542,7 @@
         "전체 품질 게이트와 두 프로필 E2E 및 독립 검토를 통과한다"
       ],
       "verify": "./scripts/verify.sh 및 두 프로필 E2E·화면 검토",
-      "passes": false
+      "passes": true
     }
   ]
 }

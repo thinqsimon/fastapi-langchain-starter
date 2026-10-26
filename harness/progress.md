@@ -548,10 +548,19 @@ DOC-02보다 이 요청을 우선하며 기존 인수조건은 유지한다.
 - 사용자 요청에 필요한 추가 DB/API 설계는 ADR-0009에 기록하고 브랜치에서만 검증.
   운영 DB·배포·Secret·의존성 변경 없음
 
-**검증 진행**
-- 백엔드 ruff·mypy 64파일·계층 계약 3개 통과
-- 로컬 신규 기능 관련 테스트 11 passed/12 skipped(DB 미기동). DB 통합은 CI에서 확인
-- 프론트엔드 포맷·린트·타입 검사 통과, 운영 빌드와 CI 전체 검증 진행 예정
-- 모든 인수조건 확인 전까지 COACH-02 passes:false 유지
+**검증 결과**
+- 로컬 ruff·mypy 64파일·계층 계약 3개·프론트엔드 전체 품질 검사와 운영 빌드 성공
+- 로컬 신규 기능 관련 테스트 11 passed/12 skipped(DB 미기동). DB 통합은 아래 CI에서 skip 없이 실행
+- 검증 코드 `684ed34d086ecf83833aad2949c1091f0f7c64b6`의
+  [최종 CI 40261121799](https://github.com/thinqsimon/fastapi-langchain-starter/actions/runs/40261121799) 전체 성공
+- 실제 PostgreSQL을 사용한 백엔드 **190 passed**, 커버리지 **97.84%**.
+  기존 일기 보존 downgrade/upgrade, 소유권·중복 주 저장·복습 진행 검증 포함
+- 서비스 E2E **55 passed**, starter E2E **3 passed**. 재시도·skip 없음
+- 독립 test-verifier가 세 job 로그·화면 3개·인수조건 8개를 확인해 모두 PASS 판정. COACH-02만 passes:true
+- 전체 verify.sh와 두 프로필 빌드 통과. 데스크톱 회고·복습 및 모바일 화면 3개 직접 검토
+- 첫 CI의 회고 복원 비교는 innerText 캡처와 textContent 검증의 차이로 실패.
+  내용 기준을 유지하고 두 검증에 useInnerText를 명시해 새로고침·재로그인 경로까지 재검증
+- 마지막 기록 커밋은 README 테스트 수와 완료 상태·검증 기록만 갱신하며 코드 변경은 없다
 
-**다음 할 일**: CI·DB 마이그레이션·두 프로필 E2E·모바일 화면을 확인하고 완료 기록.
+**다음 할 일**: 기존 환경 실행 시 Alembic upgrade head 적용, 실제 LLM으로 팀 사용성 점검.
+독립된 제3자 실행·배포 재현(DOC-02)은 별도 미완료 항목으로 유지한다.
