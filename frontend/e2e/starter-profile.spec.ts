@@ -30,6 +30,7 @@ test("공통 인증·대화·계정 설정을 유지하고 서비스 설정은 �
 test("일기 화면과 API를 직접 열어도 404다", async ({ page, request }) => {
     const response = await page.goto("/diary")
     expect(response?.status()).toBe(404)
+    expect((await request.get("/diary/disabled-path")).status()).toBe(404)
     const backend = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8010"
     expect((await request.get(`${backend}/api/diary`)).status()).toBe(404)
     expect((await request.get(`${backend}/api/me/preferences`)).status()).toBe(404)
