@@ -588,6 +588,11 @@ DOC-02보다 이 요청을 우선하며 기존 인수조건은 유지한다.
 - 읽기 전용 SQL로 새 테이블·head·유일 제약·FK 확인
 - 독립 test-verifier가 로컬 로그인/조회/DB 메타데이터와 cp949 INI 파싱을 확인해 PASS
 - 왕복 마이그레이션 테스트의 downgrade 대상을 고유한 임시 DB로 격리해 공유 로컬 데이터 보호
+- 격리한 왕복 테스트 로컬 1 passed. 실행 뒤 로컬 일기 3편·회고 2편이 유지됨을 SQL로 재확인
+- 검증 코드 `daf09e65af675b9f4293ca508ed9dd333142ab8d`의
+  [최종 CI 40278025625](https://github.com/thinqsimon/fastapi-langchain-starter/actions/runs/40278025625) 전체 성공:
+  백엔드 190 passed(97.84%), 서비스 E2E 55 passed, starter 3 passed, 두 프로필 빌드 통과. 재시도 없음
+- 독립 test-verifier가 임시 DB 격리와 최종 CI를 확인해 PASS. 이 완료 기록만의 커밋은 CI 재실행 생략
 - 저장소 변경은 INI 주석·테스트 격리·문서이며 앱 기능과 설정값은 유지
 
 **다음 할 일**: 사용자가 로컬 체험 후 실제 LLM 연결과 배포 여부를 결정.
