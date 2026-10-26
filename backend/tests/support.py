@@ -13,9 +13,9 @@ from app.core.config import settings
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 
 
-def run_alembic(*args: str) -> subprocess.CompletedProcess[str]:
+def run_alembic(*args: str, database_url: str | None = None) -> subprocess.CompletedProcess[str]:
     # 하위 프로세스도 테스트 DB를 보게 한다(환경 변수가 .env보다 우선한다).
-    env = {**os.environ, "DATABASE_URL": settings.TEST_DATABASE_URL}
+    env = {**os.environ, "DATABASE_URL": database_url or settings.TEST_DATABASE_URL}
     return subprocess.run(
         ["alembic", *args],
         cwd=BACKEND_DIR,

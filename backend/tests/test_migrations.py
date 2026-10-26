@@ -5,8 +5,10 @@ CI는 항상 DB를 띄우므로 여기서 걸러진다.
 """
 
 import uuid
+from collections.abc import Generator
 
-from sqlalchemy import Engine, inspect, text
+import pytest
+from sqlalchemy import Engine, create_engine, inspect, text
 
 from tests.support import run_alembic
 
@@ -43,11 +45,33 @@ def test_refresh_token_cascades_on_user_delete(migrated_database: Engine) -> Non
     assert user_fk["options"]["ondelete"] == "CASCADE"
 
 
-def test_learning_migration_can_roundtrip_without_losing_existing_diary(
+@pytest.fixture
+def migration_sandbox(
     migrated_database: Engine,
+) -> Generator[Engine]:
+    """downgrade는 공유 테스트/미리보기 DB 대신 이 테스트가 만든 DB에서만 실행한다."""
+    name = f"diary_migration_test_{uuid.uuid4().hex}"
+    admin = create_engine(migrated_database.url, isolation_level="AUTOCOMMIT")
+    with admin.connect() as connection:
+        connection.execute(text(f'CREATE DATABASE "{name}"'))
+    sandbox = create_engine(migrated_database.url.set(database=name))
+    try:
+        yield sandbox
+    finally:
+        sandbox.dispose()
+        with admin.connect() as connection:
+            connection.execute(text(f'DROP DATABASE "{name}"'))
+        admin.dispose()
+
+
+def test_learning_migration_can_roundtrip_without_losing_existing_diary(
+    migration_sandbox: Engine,
 ) -> None:
+    database_url = migration_sandbox.url.render_as_string(hide_password=False)
+    initialized = run_alembic("upgrade", "head", database_url=database_url)
+    assert initialized.returncode == 0, initialized.stdout + initialized.stderr
     user_id, entry_id = uuid.uuid4(), uuid.uuid4()
-    with migrated_database.begin() as connection:
+    with migration_sandbox.begin() as connection:
         connection.execute(
             text(
                 "INSERT INTO users(id,email,password_hash,display_name) "
@@ -62,21 +86,17 @@ def test_learning_migration_can_roundtrip_without_losing_existing_diary(
             ),
             {"id": entry_id, "user_id": user_id},
         )
-    try:
-        result = run_alembic("downgrade", "c85195cc050f")
-        assert result.returncode == 0, result.stdout + result.stderr
-        assert "diary_weekly_reviews" not in inspect(migrated_database).get_table_names()
-        with migrated_database.connect() as connection:
-            assert (
-                connection.scalar(
-                    text("SELECT title FROM diary_entries WHERE id=:id"), {"id": entry_id}
-                )
-                == "보존할 일기"
+    result = run_alembic("downgrade", "c85195cc050f", database_url=database_url)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "diary_weekly_reviews" not in inspect(migration_sandbox).get_table_names()
+    with migration_sandbox.connect() as connection:
+        assert (
+            connection.scalar(
+                text("SELECT title FROM diary_entries WHERE id=:id"), {"id": entry_id}
             )
-    finally:
-        upgraded = run_alembic("upgrade", "head")
-        assert upgraded.returncode == 0, upgraded.stdout + upgraded.stderr
-        with migrated_database.begin() as connection:
-            connection.execute(text("DELETE FROM users WHERE id=:id"), {"id": user_id})
-    tables = set(inspect(migrated_database).get_table_names())
+            == "보존할 일기"
+        )
+    upgraded = run_alembic("upgrade", "head", database_url=database_url)
+    assert upgraded.returncode == 0, upgraded.stdout + upgraded.stderr
+    tables = set(inspect(migration_sandbox).get_table_names())
     assert {"diary_weekly_reviews", "diary_study_progress"} <= tables

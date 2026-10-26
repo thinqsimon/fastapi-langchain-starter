@@ -201,6 +201,10 @@ Windows 기본 인코딩에서 `alembic current`와 `alembic check`로 검증했
 프론트엔드 `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:18000`.
 프론트엔드 포트가 3000이면 CORS에는 화면 주소 `http://localhost:3000`을 허용합니다.
 
+**마이그레이션 테스트 격리** downgrade/upgrade 왕복 검증은 매번 생성하는
+`diary_migration_test_<UUID>` 전용 DB에서만 실행합니다. 공유 DB의 회고·복습 테이블은
+되돌리지 않습니다. 이 검증은 DB 생성 권한이 있는 프로젝트의 로컬/CI PostgreSQL 역할을 사용합니다.
+
 ---
 
 ## 정리: 무엇이 문제를 찾아냈나
