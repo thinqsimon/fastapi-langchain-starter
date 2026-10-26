@@ -187,6 +187,22 @@ DB의 `alembic_version`은 존재하지 않는 리비전을 가리키게 됐습�
 
 ---
 
+## 9. Windows 로컬 실행: Alembic 인코딩과 예약 포트
+
+**증상** Alembic이 `UnicodeDecodeError: cp949`로 설정을 읽지 못했습니다.
+Alembic의 INI 로더가 기본 로캘 인코딩을 명시해서 UTF-8 한글 주석을 읽다 실패한 것입니다.
+
+**해결** `backend/alembic.ini`의 주석을 ASCII 영문으로 유지합니다. 활성 설정 값은 바꾸지 않습니다.
+Windows 기본 인코딩에서 `alembic current`와 `alembic check`로 검증했습니다.
+
+**포트** Docker/WSL 시작 뒤 Windows의 예약 범위에 8000·8010이 포함되면 사용 중인 프로세스가
+없어도 `WinError 10013`이 납니다. `netsh interface ipv4 show excludedportrange protocol=tcp`로
+확인하고 예약 범위 밖의 포트를 사용합니다. 예: 백엔드 `--host 127.0.0.1 --port 18000`,
+프론트엔드 `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:18000`.
+프론트엔드 포트가 3000이면 CORS에는 화면 주소 `http://localhost:3000`을 허용합니다.
+
+---
+
 ## 정리: 무엇이 문제를 찾아냈나
 
 | 검증 수단 | 찾아낸 문제 |
