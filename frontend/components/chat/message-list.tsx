@@ -41,7 +41,7 @@ export function MessageList({
     }
 
     return (
-        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4 sm:p-6" aria-label="채팅 메시지">
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4 sm:p-6" role="region" aria-label="대화 내용">
             {messages.map((message) => (
                 <Bubble key={message.id} role={message.role} assistant={assistant}>
                     {message.role === "assistant" ? <MarkdownView>{message.content}</MarkdownView> : message.content}
