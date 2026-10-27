@@ -738,3 +738,16 @@ DOC-02보다 이 요청을 우선하며 기존 인수조건은 유지한다.
 
 **다음 할 일**
 - `make migrate` 원격 가드, e2e.sh 개발 서버 공존·포트 해제 대기(세션 22 후속)
+
+## 2026-10-28 · 세션 23 후속 · NOTE-03 학습장 목록 너비 끌어서 조절
+
+**요청**: 학습장 주제 목록과 본문 사이를 드래그해 목록을 넓히거나 좁힐 수 있게.
+
+**한 일**: `store/notebook.ts`에 `listWidth`(220~640px, localStorage `notebook_list_width`, `reset()`에도 유지)와
+`restoreListWidth`·`setListWidth`·`resetListWidth` 추가. `app/(main)/notebook/page.tsx`에 `role="separator"` 손잡이
+(`data-slot="notebook-resizer"`, 포인터 캡처 드래그, 화살표·Home·End 키, 더블클릭 기본값, 본문 최소 320px 보장,
+md 미만에서는 숨김). 너비는 CSS 변수 `--notebook-list-width`로 `md:w-[var(...)]`에만 적용해 모바일 `w-full`을 유지.
+E2E `notebook.spec.ts`에 넓은 화면 시나리오 추가(끌기 → 새로고침 유지 → 키보드 → 더블클릭).
+
+**검증**: `./scripts/verify.sh frontend` 통과, 학습장 E2E 8 passed(새 시나리오 포함), 개발 서버에서 끌어 넓힌 화면 캡처.
+E2E는 세션 22·23과 같이 프로덕션 빌드를 :3100에 띄워 재사용했다.

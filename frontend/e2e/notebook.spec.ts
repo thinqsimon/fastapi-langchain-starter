@@ -345,6 +345,35 @@ test("업로드 없이 학습장과 주제를 직접 만들고, 이름을 바꾸
     await expect(topics(page)).toHaveCount(0)
 })
 
+test("넓은 화면에서는 목록과 본문 사이를 끌어 목록 너비를 바꾸고, 새로고침·키보드·두 번 누르기에도 맞게 동작한다", async ({ page }) => {
+    await signUp(page, "notebook-resize")
+    await openNotebook(page)
+    const handle = page.locator('[data-slot="notebook-resizer"]')
+    const width = async () => (await list(page).boundingBox())!.width
+    const initial = await width()
+
+    const box = (await handle.boundingBox())!
+    await page.mouse.move(box.x + box.width / 2, box.y + 200)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width / 2 + 120, box.y + 200, { steps: 8 })
+    await page.mouse.up()
+    const widened = await width()
+    expect(widened).toBeGreaterThan(initial + 100)
+    await expect(handle).toHaveAttribute("aria-valuenow", String(Math.round(widened)))
+
+    await page.reload()
+    await expect(page.getByRole("heading", { name: "학습장", exact: true })).toBeVisible()
+    await expect.poll(width).toBeCloseTo(widened, 0)
+
+    await handle.focus()
+    await page.keyboard.press("ArrowLeft")
+    await expect.poll(width).toBeCloseTo(widened - 16, 0)
+
+    await handle.dblclick()
+    await expect.poll(width).toBeCloseTo(initial, 0)
+    await expect(page.locator('[data-slot="topic-detail"]')).toBeVisible()
+})
+
 test.describe("터치 폰(390px)", () => {
     test.use({ viewport: PHONE, hasTouch: true, isMobile: true })
 

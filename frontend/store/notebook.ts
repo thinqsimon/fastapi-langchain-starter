@@ -16,6 +16,33 @@ export type NotebookFilter = "all" | "todo" | "done"
 
 /** 서버 NotebookUpload.content 상한. 넘기면 영어 422가 오므로 여기서 먼저 거른다. */
 export const MAX_UPLOAD_CHARS = 500_000
+/** 넓은 화면(md 이상)에서 왼쪽 목록의 너비(px). 브라우저마다 따로 기억한다. */
+export const LIST_WIDTH = { default: 320, min: 220, max: 640, step: 16 } as const
+const LIST_WIDTH_KEY = "notebook_list_width"
+
+function clampListWidth(width: number) {
+    return Math.min(LIST_WIDTH.max, Math.max(LIST_WIDTH.min, Math.round(width)))
+}
+
+/** localStorage는 시크릿 창·차단 설정에서 실패할 수 있으므로 읽고 쓰기 모두 감싼다. */
+function readStoredListWidth(): number | null {
+    try {
+        const raw = localStorage.getItem(LIST_WIDTH_KEY)
+        const width = raw === null ? Number.NaN : Number(raw)
+        return Number.isFinite(width) ? clampListWidth(width) : null
+    } catch {
+        return null
+    }
+}
+
+function writeStoredListWidth(width: number | null) {
+    try {
+        if (width === null) localStorage.removeItem(LIST_WIDTH_KEY)
+        else localStorage.setItem(LIST_WIDTH_KEY, String(width))
+    } catch {
+        // 저장하지 못해도 이번 화면에서는 동작한다.
+    }
+}
 const MAX_TAGS = 20
 const MAX_TAG_LENGTH = 50
 
@@ -88,6 +115,8 @@ type NotebookData = {
 
 type NotebookState = NotebookData & {
     /** 로그아웃·계정 전환 뒤 늦게 온 응답을 버리기 위한 세대 번호 */
+    /** 넓은 화면의 목록 너비(px). reset()에도 유지되는 브라우저 설정이다. */
+    listWidth: number
     sessionVersion: number
     /** 목록을 다시 읽는 동안 먼저 보낸 요청의 응답을 버린다. */
     loadVersion: number
@@ -113,6 +142,11 @@ type NotebookState = NotebookData & {
     toggleCompleted: () => Promise<void>
     deleteTopic: (id: string) => Promise<void>
     setFilter: (filter: NotebookFilter) => void
+    /** 저장된 목록 너비를 불러온다(화면이 뜰 때 한 번). */
+    restoreListWidth: () => void
+    /** 범위를 벗어나면 잘라서 저장한다. */
+    setListWidth: (width: number) => void
+    resetListWidth: () => void
 }
 
 const emptyState = (): NotebookData => ({
@@ -142,6 +176,7 @@ const clearSelection = (state: NotebookState) => ({
 
 export const useNotebookStore = create<NotebookState>((set, get) => ({
     ...emptyState(),
+    listWidth: LIST_WIDTH.default,
     sessionVersion: 0,
     loadVersion: 0,
     topicVersion: 0,
@@ -393,4 +428,20 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
     },
 
     setFilter: (filter) => set({ filter }),
+
+    restoreListWidth: () => {
+        const stored = readStoredListWidth()
+        if (stored !== null && stored !== get().listWidth) set({ listWidth: stored })
+    },
+
+    setListWidth: (width) => {
+        const next = clampListWidth(width)
+        if (next !== get().listWidth) set({ listWidth: next })
+        writeStoredListWidth(next)
+    },
+
+    resetListWidth: () => {
+        set({ listWidth: LIST_WIDTH.default })
+        writeStoredListWidth(null)
+    },
 }))
