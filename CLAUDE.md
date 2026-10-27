@@ -18,6 +18,7 @@ AX 풀스택 2차 프로젝트 (10/20 ~ 11/03 제출). 요구사항 원문: `doc
 | 서버 | `make dev-backend` (:8000, /docs) · `make dev-frontend` (:3000) |
 | 품질 게이트 | `./scripts/verify.sh [backend\|frontend]` |
 | 재사용성 검증 | `make fork-verify` |
+| 테스트 계정 정리 | `make clean-test-accounts` (목록) / `args="--delete"` (삭제) |
 
 ## 구조
 ```
@@ -41,6 +42,7 @@ harness/      feature_list.json(할 일·인수조건) · progress.md(인수인�
 - LLM 호출은 `app.llm.providers.get_chat_model()`만 사용. 테스트는 `LLM_PROVIDER=fake`로 실제 API 호출 금지
 - 설정 추가 시 `core/config.py`와 `.env.example`을 함께 수정. `.env`는 읽거나 커밋하지 않는다
 - 새 도메인은 `/new-feature` 스킬로 스캐폴드한다
+- 테스트·수동 확인용 계정은 `@example.com`만 쓰고, 수동 확인 뒤 `make clean-test-accounts args="--delete"`로 지운다(E2E는 자동 정리)
 
 ## 사람 확인이 필요한 일
 DB 스키마·API 계약 확정, feature_list의 acceptance 변경, 배포·Secret 설정, 의존성 대규모 추가.

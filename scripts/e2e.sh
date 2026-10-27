@@ -20,6 +20,8 @@ export CORS_ORIGINS='["http://localhost:3100","http://127.0.0.1:3100"]'
 backend_pid=""
 cleanup() {
   [ -n "$backend_pid" ] && kill "$backend_pid" 2>/dev/null || true
+  # 테스트가 만든 @example.com 계정이 로컬 DB에 쌓이지 않게 지운다(실패해도 E2E 결과는 바꾸지 않는다).
+  ./scripts/clean-test-accounts.sh --delete > /dev/null 2>&1 || echo "! 테스트 계정 정리 실패(무시): ./scripts/clean-test-accounts.sh --delete"
   # `uv run`이 자식 프로세스를 남기므로 포트를 기준으로 한 번 더 정리한다.
   lsof -ti tcp:"$BACKEND_PORT" 2>/dev/null | while read -r pid; do kill "$pid" 2>/dev/null || true; done
 }

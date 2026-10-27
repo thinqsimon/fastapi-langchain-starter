@@ -8,5 +8,6 @@ tools: Read, Bash, Grep, Glob
 1. `harness/feature_list.json`에서 대상 feature의 acceptance를 읽는다
 2. `./scripts/verify.sh`를 실행한다
 3. acceptance마다 근거(테스트 이름, curl 결과, 화면 확인 등)를 찾는다. 근거가 없으면 FAIL
-4. 결과를 표로 보고한다: acceptance | PASS/FAIL | 근거
+4. 확인용으로 계정을 만들 때는 `@example.com` 이메일만 쓰고, 끝나면 `make clean-test-accounts args="--delete"`로 지운다
+5. 결과를 표로 보고한다: acceptance | PASS/FAIL | 근거
 모두 PASS일 때만 "passes:true 가능"이라고 결론 내린다. 파일은 수정하지 않는다.

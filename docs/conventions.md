@@ -58,6 +58,10 @@ event: error   data: {"code": "LLM_ERROR", "message": "..."}
 - 새 모델을 만들면 `app/models.py`에 import한다. 빠뜨리면 등록 검사 테스트가 실패한다
 - DB가 필요한 테스트는 트랜잭션을 열고 끝나면 되돌린다(`db_session` 픽스처). 데이터가 남지 않는다
 - 브라우저 흐름은 `./scripts/e2e.sh`(Playwright). 단위 테스트가 놓친 실제 결함을 여기서 여러 번 잡았다
+- 테스트·수동 확인(curl, 스모크)용 계정은 **반드시 `@example.com`**을 쓴다(RFC 2606 예약 도메인이라 실제 사용자와 겹치지 않는다).
+  `make clean-test-accounts`가 이 도메인만 골라 지우므로 다른 도메인을 쓰면 DB에 남는다. 도메인 규칙은 테스트가 검사한다
+- `./scripts/e2e.sh`는 끝날 때 로컬 DB의 테스트 계정을 자동으로 지운다. 수동 스모크 뒤에는 `make clean-test-accounts args="--delete"`를 직접 실행한다.
+  원격(Supabase 등)을 가리키면 `--remote`를 추가로 줘야 하며, 그 전에 팀원이 쓰는 계정이 아닌지 확인한다
 
 ## 로컬·운영 DB 분리
 - `DATABASE_URL` = 앱이 쓰는 DB (로컬 개발이든 Supabase든)

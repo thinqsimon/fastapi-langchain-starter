@@ -83,6 +83,7 @@ make verify                              # 린트·타입·테스트·빌드
 | 개발 서버 | `make dev-backend` · `make dev-frontend` |
 | 품질 검사(커밋 전) | `make verify` |
 | 브라우저 E2E | `./scripts/e2e.sh` |
+| 테스트 계정 정리 | `make clean-test-accounts` (목록) · `make clean-test-accounts args="--delete"` (삭제) |
 | 재사용성 검증 | `make fork-verify` |
 
 ## 새 서비스로 바꾸기

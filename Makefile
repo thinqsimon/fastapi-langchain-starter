@@ -1,5 +1,5 @@
 # 사람·에이전트·CI가 모두 같은 진입점을 쓴다.
-.PHONY: init db dev-backend dev-frontend migrate migration verify fork-verify
+.PHONY: init db dev-backend dev-frontend migrate migration verify fork-verify clean-test-accounts
 
 init:            ## 최초 1회: .env 생성, 의존성 설치, DB 기동, 마이그레이션
 	./scripts/init.sh
@@ -24,3 +24,6 @@ verify:          ## 단일 품질 게이트 (커밋 전·CI 동일)
 
 fork-verify:     ## 새 폴더에 clone해 문서대로 실행되는지 검증
 	./scripts/fork-verify.sh
+
+clean-test-accounts: ## @example.com 테스트 계정 정리. 기본은 목록만, 삭제: make clean-test-accounts args="--delete"
+	./scripts/clean-test-accounts.sh $(args)

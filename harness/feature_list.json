@@ -543,6 +543,23 @@
       ],
       "verify": "./scripts/verify.sh 및 두 프로필 E2E·화면 검토",
       "passes": true
+    },
+    {
+      "id": "TEST-01",
+      "phase": 7,
+      "owner": "backend-dev",
+      "title": "테스트 계정 정리(하네스): 테스트·수동 확인용 계정이 DB에 쌓이지 않게 한다",
+      "requirement": "2026-10-27 사용자 요청(Supabase users에 남은 rag-real-* 계정 발견)",
+      "acceptance": [
+        "테스트·수동 확인용 계정은 @example.com 도메인만 쓴다. E2E·백엔드 테스트의 이메일 도메인을 테스트가 검사한다",
+        "make clean-test-accounts(scripts/clean-test-accounts.sh)가 @example.com 계정과 연관 데이터를 삭제한다. 인자 없으면 대상만 보여주고(dry-run) --delete로 삭제한다",
+        "DATABASE_URL이 원격을 가리키면 --remote 없이는 종료 코드 2로 거부하고 비밀번호를 출력하지 않는다. 테스트가 검사한다",
+        "./scripts/e2e.sh가 종료 시 로컬 DB의 테스트 계정을 자동으로 정리한다. 테스트가 검사한다",
+        "conventions·CLAUDE.md·handoff 스킬·test-verifier 에이전트·README에 규칙과 정리 절차가 기록된다",
+        "./scripts/verify.sh 통과"
+      ],
+      "verify": "./scripts/verify.sh 및 backend/tests/test_test_account_hygiene.py, 로컬 DB에서 dry-run→--delete 실행 확인",
+      "passes": false
     }
   ]
 }

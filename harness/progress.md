@@ -626,3 +626,34 @@ DOC-02보다 이 요청을 우선하며 기존 인수조건은 유지한다.
 
 **다음 할 일**: 담당 팀원이 제공자·모델·Base URL·인증을 설정하고 세 LLM 흐름을 실제 호출로 확인한다.
 기존 기능 인수조건과 DOC-02 상태는 변경하지 않는다.
+
+## 2026-10-27 · 세션 21 · TEST-01 테스트 계정 정리(하네스)
+
+**요청**: Supabase `users`에 `rag-real-450e87@example.com`이 남아 있는 것을 보고, 테스트 계정이 DB에 쌓이지 않도록
+하네스에 반영. 원격의 해당 계정은 사용자가 직접 삭제하기로 함.
+
+**원인 분석**
+- 백엔드 pytest는 트랜잭션 롤백이라 안 남는다. 쌓이는 경로는 ① Playwright E2E(매 실행 새 계정, 정리 없음 → 로컬 DB에 512개 누적)
+  ② 수동 curl 스모크(`rag-real-*`처럼 서버가 가리키는 DB에 그대로 남음)
+- 모든 테스트 계정이 `@example.com`(RFC 2606 예약 도메인)을 쓰고, users 참조 테이블이 전부 `ON DELETE CASCADE`라 users 행 삭제만으로 정리 가능
+
+**한 일**
+- `backend/scripts/clean_test_accounts.py` + `scripts/clean-test-accounts.sh` + `make clean-test-accounts`:
+  기본 dry-run(목록), `--delete`로 삭제, 원격 DB는 `--remote` 없이는 종료 코드 2로 거부. 비밀번호는 출력하지 않음
+- `scripts/e2e.sh` 종료 trap에서 `--delete` 자동 호출(로컬 DB 고정, 실패해도 E2E 결과에 영향 없음)
+- `backend/tests/test_test_account_hygiene.py` 6개: E2E·백엔드 테스트의 이메일 도메인 검사, e2e.sh 정리 호출 검사,
+  원격 거부 검사(subprocess), dry-run이 지우지 않는지 검사(DB 있을 때)
+- 규칙·절차: `docs/conventions.md`, `CLAUDE.md`, `/handoff` 스킬(2단계 추가), `test-verifier` 에이전트, README, usage.md ④
+- 로컬 테스트 DB(localhost:5432/app)의 `@example.com` 계정 512개 삭제 후 0개 확인
+
+**검증**
+- `./scripts/verify.sh` 전체 통과: 백엔드 196 passed(98%), 프론트 포맷·린트·타입·빌드 통과
+- `./scripts/e2e.sh e2e/auth.spec.ts` 5 passed, 실행 전·후 `@example.com` 계정 0개(자동 정리 동작 확인)
+- `make clean-test-accounts args="--delete"`에 Supabase 형식 URL을 주면 거부(exit 2) 확인
+
+**막힌 점**: `make db`가 5433 포트 충돌로 실패(`diary-coach-local-db-1`이 점유). 테스트 DB는 이미 5432로 접근 가능해 영향 없음.
+원격 Supabase에는 접근하지 않았고 `.env`는 읽지 않았다.
+
+**다음 할 일**
+- 사용자: Supabase의 `rag-real-450e87@example.com` 직접 삭제(또는 `make clean-test-accounts args="--delete --remote"`)
+- LLM 연동 팀원 인수인계 후속(세션 20의 다음 할 일) 유지

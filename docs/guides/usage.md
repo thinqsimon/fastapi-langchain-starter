@@ -128,6 +128,14 @@ curl -s http://localhost:8000/api/usage/me -H "Authorization: Bearer $TOKEN"
 
 화면에서는 http://localhost:3000 에 접속해 가입 → 채팅 → 일기 순서로 확인합니다.
 
+확인용 계정은 위처럼 `@example.com` 이메일로 만들고, 끝나면 지웁니다. 다른 도메인으로 만들면 정리 대상에서 빠집니다.
+
+```bash
+make clean-test-accounts                   # 지울 계정 목록만 표시
+make clean-test-accounts args="--delete"   # 로컬 DB에서 삭제(연관 데이터도 함께)
+# .env의 DATABASE_URL이 Supabase 등 원격이면 --remote 를 추가해야 실행된다
+```
+
 ---
 
 ## ⑤ 로그 확인
