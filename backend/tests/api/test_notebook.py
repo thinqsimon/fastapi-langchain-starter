@@ -145,7 +145,10 @@ def test_upload_same_filename_conflicts_until_deleted(
     duplicate = api_client.post(
         "/api/notebooks/upload",
         headers=owner,
-        json={"filename": f"folder/{FILENAME}", "content": "# 다른 내용\n\n본문"},
+        json={
+            "filename": f"folder/{FILENAME}",
+            "content": "---\nproject: SpaceXyzDiary\n---\n# 다른 내용\n\n본문",
+        },
     )
     assert duplicate.status_code == 409, duplicate.text
     assert duplicate.json()["error"]["code"] == "CONFLICT"
@@ -158,6 +161,39 @@ def test_upload_same_filename_conflicts_until_deleted(
     upload(api_client, owner)
     titles = [item["filename"] for item in api_client.get("/api/notebooks", headers=owner).json()]
     assert sorted(titles) == sorted([FILENAME, "2026-10-28_01.md"])
+
+
+def test_same_filename_from_other_project_is_allowed(
+    api_client: TestClient, owner: dict[str, str]
+) -> None:
+    upload(api_client, owner)
+    other_project = SAMPLE.replace("project: SpaceXyzDiary", "project: ai-one-park").replace(
+        "title: SpaceXyzDiary 배움노트 #01", "title: ai-one-park 배움노트 #01"
+    )
+    second = upload(api_client, owner, content=other_project)
+
+    assert (second["project"], second["filename"]) == ("ai-one-park", FILENAME)
+    listed = api_client.get("/api/notebooks", headers=owner).json()
+    assert sorted(item["project"] for item in listed) == ["SpaceXyzDiary", "ai-one-park"]
+
+    # 같은 프로젝트의 같은 파일은 여전히 거부된다.
+    duplicate = api_client.post(
+        "/api/notebooks/upload",
+        headers=owner,
+        json={"filename": FILENAME, "content": other_project},
+    )
+    assert duplicate.status_code == 409, duplicate.text
+
+
+def test_plain_markdown_without_project_can_repeat(
+    api_client: TestClient, owner: dict[str, str]
+) -> None:
+    first = upload(api_client, owner, filename="memo.md", content="# 메모\n\n첫 단락\n")
+    second = upload(api_client, owner, filename="memo.md", content="# 메모\n\n둘째 단락\n")
+
+    assert first["id"] != second["id"]
+    listed = api_client.get("/api/notebooks", headers=owner).json()
+    assert [item["project"] for item in listed] == [None, None]
 
 
 def test_upload_rejects_empty_and_invalid_payloads(
@@ -355,7 +391,7 @@ def test_concurrent_upload_collision_becomes_conflict(
     assert user is not None
     service = NotebookService(db_session)
     # 중복 검사는 통과했지만 INSERT 직전에 다른 요청이 먼저 저장한 상황
-    monkeypatch.setattr(service.notebooks, "get_by_filename", lambda *_args: None)
+    monkeypatch.setattr(service.notebooks, "get_by_project_filename", lambda *_args: None)
 
     def collision(*_args: object, **_kwargs: object) -> None:
         raise IntegrityError("insert", {}, Exception("duplicate"))
@@ -363,5 +399,5 @@ def test_concurrent_upload_collision_becomes_conflict(
     monkeypatch.setattr(service.notebooks, "create", collision)
 
     with pytest.raises(ConflictError):
-        service.upload(user.id, FILENAME, "# a\n\nb")
+        service.upload(user.id, FILENAME, "---\nproject: p\n---\n# a\n\nb")
     assert api_client.get("/api/notebooks", headers=owner).json() == []

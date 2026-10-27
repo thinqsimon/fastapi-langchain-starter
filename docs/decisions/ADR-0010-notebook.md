@@ -24,9 +24,13 @@
   주제가 없으면 본문 전체가 주제 하나, 내용이 없으면 400이다. 닫히지 않은 펜스는 파일 끝까지 본문이다.
 - 업로드는 브라우저가 파일을 읽어 JSON `{filename, content}`로 보낸다(RAG 문서 업로드와 같은 방식, 50만 자 제한).
   multipart와 새 의존성을 쓰지 않는다.
-- 같은 계정에 같은 파일명을 다시 올리면 **409**로 거부한다(`uq_notebooks_user_filename`). 앱에서 고친 내용과
-  완료 표시가 실수로 지워지지 않게 하기 위해서다. 덮어쓰기로 바꾸려면 `NotebookService.upload`의 중복 검사
-  한 곳만 고치면 된다. 직접 만든 학습장은 `filename`이 NULL이라 충돌하지 않는다.
+- 같은 계정·**같은 프로젝트**(frontmatter `project`)에 같은 파일명을 다시 올리면 **409**로 거부한다
+  (`uq_notebooks_user_project_filename`, NOTE-02에서 `(user_id, filename)`에서 변경). 앱에서 고친 내용과 완료 표시가
+  실수로 지워지지 않게 하기 위해서다. `/study-notes` 노트는 프로젝트마다 `YYYY-MM-DD_NN.md`로 이름이 같아
+  파일명만으로는 다른 프로젝트의 노트까지 막혔다. `project`가 없는 일반 md와 직접 만든 학습장(`filename` NULL)은
+  PostgreSQL이 유니크 비교에서 NULL을 서로 다르게 보므로 중복 검사 없이 추가된다. 덮어쓰기로 바꾸려면
+  `NotebookService.upload`의 중복 검사 한 곳만 고치면 된다. 스킬 v1.3.0부터는 새 노트 파일명에
+  `<프로젝트>_` 접두사가 붙어 파일명 자체도 겹치지 않는다(기존 노트는 이름을 바꾸지 않는다).
 - 원본 md 파일은 저장하지 않는다. 앱에서 수정한 제목·유형·태그·난이도·본문과 완료 표시는 DB에만 있다.
 - 태그는 쉼표로 이어 Text에 저장하고 API에서는 `list[str]`로 다룬다(배열 컬럼을 쓰지 않아 이식성이 높다).
 - 학습장 삭제는 ORM cascade와 FK `ON DELETE CASCADE`로 주제를 함께 지운다. 주제 번호(`position`)는 최댓값+1로
@@ -36,14 +40,14 @@
 ## API와 데이터
 
 - `GET /api/notebooks`: 본인 학습장 목록(최근순). 주제는 본문 없이 요약만
-- `POST /api/notebooks/upload {filename, content}`: 파일 → 학습장 1 + 주제 N (400 내용 없음, 409 중복)
+- `POST /api/notebooks/upload {filename, content}`: 파일 → 학습장 1 + 주제 N (400 내용 없음, 409 같은 프로젝트의 같은 파일)
 - `POST /api/notebooks {title}`: 빈 학습장
 - `PATCH /api/notebooks/{id} {title}` · `DELETE /api/notebooks/{id}`
 - `POST /api/notebooks/{id}/topics {title, content?, kind?, tags?, difficulty?}`
 - `GET /api/notebooks/topics/{topic_id}`: 본문 포함 상세
 - `PATCH /api/notebooks/topics/{topic_id}`: 보낸 필드만 수정(`completed` 포함) · `DELETE /api/notebooks/topics/{topic_id}`
 
-`notebooks(user_id)` 인덱스와 `(user_id, filename)` 유일 제약, `notebook_topics(notebook_id)` 인덱스를 둔다.
+`notebooks(user_id)` 인덱스와 `(user_id, project, filename)` 유일 제약, `notebook_topics(notebook_id)` 인덱스를 둔다.
 주제의 소유자는 학습장과 JOIN해 확인하며 타인 ID는 404, 비로그인은 401이다.
 라우터는 `api.py`의 `diary_enabled` 블록 안에서만 지연 import 한다(starter가 샘플 코드를 import하지 않는다는
 기존 테스트를 유지).

@@ -7,6 +7,7 @@ import { logOut, newAccount, signUp } from "./helpers"
 const backend = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8010"
 const FILENAME = "2026-10-27_01.md"
 const TITLE = "테스트 배움노트 #01"
+const OTHER_TITLE = "다른 프로젝트 배움노트 #01"
 const PHONE = { width: 390, height: 844 }
 
 /** /study-notes가 만드는 노트 형식. 목차 표, 메타 줄, 코드 블록 안의 '## '과 '---'를 담는다. */
@@ -59,6 +60,9 @@ const SAMPLE = [
     "설계도 없이 벽돌부터 쌓으면 고치기 어렵다.",
     "",
 ].join("\n")
+
+/** 다른 프로젝트(frontmatter project)의 같은 날짜 노트. 파일명은 같지만 따로 올라가야 한다(NOTE-02). */
+const OTHER_PROJECT_SAMPLE = SAMPLE.replace("project: SpaceXyzDiary", "project: ai-one-park").split(TITLE).join(OTHER_TITLE)
 
 const list = (page: Page) => page.locator('[data-slot="notebook-list"]')
 const detail = (page: Page) => page.locator('[data-slot="topic-detail"]')
@@ -157,7 +161,7 @@ test("md 파일을 올리면 주제별로 나뉘고 본문·메타가 새로고�
     await expect(meta(page)).toContainText("워크플로")
 })
 
-test("같은 파일을 다시 올리면 거부하고, 학습장을 삭제한 뒤에는 다시 올릴 수 있다", async ({ page }) => {
+test("같은 파일을 다시 올리면 거부하고, 학습장을 삭제한 뒤에는 다시 올릴 수 있으며, 다른 프로젝트의 같은 파일명은 따로 올라간다", async ({ page }) => {
     await signUp(page, "notebook-duplicate")
     await seed(page)
     await openNotebook(page)
@@ -191,6 +195,20 @@ test("같은 파일을 다시 올리면 거부하고, 학습장을 삭제한 뒤
     await page.reload()
     await expect(groups(page)).toHaveCount(1)
     await expect(topics(page)).toHaveCount(2)
+
+    // 다른 프로젝트의 같은 파일명은 따로 올라간다. 같은 프로젝트의 같은 파일은 여전히 거부된다.
+    await uploadFile(page, FILENAME, OTHER_PROJECT_SAMPLE)
+    await expect(status(page)).toHaveText("학습장을 올렸어요. 주제 2개")
+    await expect(alert(page)).toHaveCount(0)
+    await expect(groups(page)).toHaveCount(2)
+    await expect(groups(page).first()).toContainText("ai-one-park")
+    await expect(groups(page).first()).toContainText(OTHER_TITLE)
+    await uploadFile(page, FILENAME, OTHER_PROJECT_SAMPLE)
+    await expect(alert(page)).toContainText("이미 올렸습니다")
+    await expect(groups(page)).toHaveCount(2)
+    await page.reload()
+    await expect(groups(page)).toHaveCount(2)
+    await expect(topics(page)).toHaveCount(4)
 })
 
 test("주제를 수정하고 학습 완료를 표시하면 재로그인 뒤에도 유지되고 필터로 나눠 본다", async ({ page }) => {

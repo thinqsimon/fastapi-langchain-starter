@@ -17,7 +17,9 @@ from app.domain.notebook.schemas import TopicCreate, TopicUpdate
 
 logger = logging.getLogger(__name__)
 
-DUPLICATE_MESSAGE = "같은 이름의 파일을 이미 올렸습니다. 기존 학습장을 삭제한 뒤 다시 올려 주세요."
+DUPLICATE_MESSAGE = (
+    "같은 프로젝트의 같은 파일을 이미 올렸습니다. 기존 학습장을 삭제한 뒤 다시 올려 주세요."
+)
 MAX_FILENAME = 200
 
 
@@ -56,8 +58,13 @@ class NotebookService:
         # 내용이 없으면 400. DB를 건드리기 전에 끝난다.
         parsed = parse_notebook(content, filename)
         name = base_filename(filename)
-        if self.notebooks.get_by_filename(user_id, name) is not None:
-            # 중복 정책: 거부. 덮어쓰기로 바꾸려면 여기서 기존 학습장을 지우면 된다.
+        if (
+            parsed.project is not None
+            and self.notebooks.get_by_project_filename(user_id, parsed.project, name) is not None
+        ):
+            # 중복 정책: 같은 프로젝트의 같은 파일만 거부(앱에서 고친 내용·완료 표시 보호).
+            # project가 없는 일반 md는 항상 추가된다.
+            # 덮어쓰기로 바꾸려면 여기서 기존 학습장을 지우면 된다.
             raise ConflictError(DUPLICATE_MESSAGE)
         try:
             notebook = self.notebooks.create(

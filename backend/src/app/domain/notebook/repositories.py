@@ -30,9 +30,19 @@ class NotebookRepository:
             .options(selectinload(Notebook.topics))
         )
 
-    def get_by_filename(self, user_id: uuid.UUID, filename: str) -> Notebook | None:
+    def get_by_project_filename(
+        self, user_id: uuid.UUID, project: str, filename: str
+    ) -> Notebook | None:
+        """같은 프로젝트의 같은 파일.
+
+        project가 없는 일반 md는 중복 검사를 하지 않으므로 이 메서드를 호출하지 않는다.
+        """
         return self.db.scalar(
-            select(Notebook).where(Notebook.user_id == user_id, Notebook.filename == filename)
+            select(Notebook).where(
+                Notebook.user_id == user_id,
+                Notebook.project == project,
+                Notebook.filename == filename,
+            )
         )
 
     def create(self, user_id: uuid.UUID, **fields: object) -> Notebook:

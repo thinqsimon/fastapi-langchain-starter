@@ -61,7 +61,8 @@ export function NotebookGroup({ notebook }: { notebook: Notebook }) {
                             {notebook.title}
                         </h2>
                         <p className="truncate text-xs text-muted-foreground">
-                            {notebook.filename ?? "직접 만든 학습장"} · 완료 {completedCount}/{notebook.topics.length}
+                            {[notebook.project, notebook.filename ?? "직접 만든 학습장"].filter(Boolean).join(" · ")} · 완료 {completedCount}/
+                            {notebook.topics.length}
                         </p>
                     </>
                 )}

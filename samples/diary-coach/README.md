@@ -46,7 +46,7 @@
 | 구름 코치 화면 | `frontend/applications/diary-coach/chat-experience.tsx`, `frontend/public/coach/cloud-coach.png` | 제공된 구름 이미지, 추천 질문, 응답 아바타, 현재 채팅으로 일기 만들기. 프로필 조립 지점에서 주입 |
 | 회고 보관·복습 | `frontend/components/diary/learning-workbench.tsx`, `frontend/store/learning.ts`, `frontend/api/learning.ts` | 주별 회고 생성·저장·조회·삭제, 원문 기반 메모·완료·재복습. 계정과 지연 응답 격리 |
 | 회고·복습 데이터 | `backend/src/app/domain/diary/`, Alembic `e317b6a91d42` | 계정·주별 회고 snapshot, 일기별 진행 상태. 소유권 검사, 원문 삭제 FK cascade |
-| 학습장 업로드·주제 관리 | `backend/src/app/domain/notebook/`, Alembic `37929cca196b` | `/study-notes` md를 JSON으로 올려 펜스 밖 `## 주제`로 나눠 저장(목차·코드 블록 제외, 메타 줄 → 유형·태그·난이도). 파일명 중복 409, 소유권 404, 학습장 삭제 시 주제 cascade |
+| 학습장 업로드·주제 관리 | `backend/src/app/domain/notebook/`, Alembic `37929cca196b` | `/study-notes` md를 JSON으로 올려 펜스 밖 `## 주제`로 나눠 저장(목차·코드 블록 제외, 메타 줄 → 유형·태그·난이도). 같은 프로젝트의 파일명 중복 409, 소유권 404, 학습장 삭제 시 주제 cascade |
 | 학습장 화면 | `frontend/app/(main)/notebook/`, `frontend/components/notebook/`, `frontend/store/notebook.ts`, `frontend/api/notebook.ts` | 왼쪽 학습장별 주제 목록(완료 필터)·오른쪽 마크다운 본문, 수정(작성/미리보기)·학습 완료·삭제 확인, 모바일은 한 창씩 |
 | 코치 페르소나·일기 프롬프트 | `backend/src/app/llm/prompts/diary_coach.py` | 새 대화/이전 대화(맥락) 구분, 상세 작성 규칙, '내일 할 것'을 지어내지 않는 규칙 |
 | 구조화 출력 체인 | `backend/src/app/llm/chains/diary.py` | `with_structured_output`으로 일기 항목·회고 3항목을 받음. '내일 할 것'은 근거 문장이 대화에 있을 때만 남김 |

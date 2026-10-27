@@ -46,8 +46,14 @@ class Notebook(Base, TimestampMixin):
         order_by="NotebookTopic.position",
     )
 
-    # 같은 계정에 같은 파일을 두 번 올리지 않는다(서비스가 409로 거부한다).
-    __table_args__ = (UniqueConstraint("user_id", "filename", name="uq_notebooks_user_filename"),)
+    # 같은 계정·같은 프로젝트에 같은 파일을 두 번 올리지 않는다(서비스가 409로 거부한다).
+    # /study-notes 노트는 프로젝트마다 같은 날짜 이름이 생기므로 project로 구분한다.
+    # project가 NULL(일반 md)이면 PostgreSQL 유니크 비교에서 서로 다른 값이라 중복 검사가 없다.
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "project", "filename", name="uq_notebooks_user_project_filename"
+        ),
+    )
 
 
 class NotebookTopic(Base, TimestampMixin):
