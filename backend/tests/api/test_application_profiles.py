@@ -30,11 +30,17 @@ def test_profile_exposes_only_its_features(profile: AppProfile) -> None:
     assert ("/api/diary/reviews" in paths) == (profile == "diary-coach")
     assert ("/api/diary/study" in paths) == (profile == "diary-coach")
     assert ("/api/me/preferences" in paths) == (profile == "diary-coach")
+    assert ("/api/notebooks" in paths) == (profile == "diary-coach")
+    assert ("/api/notebooks/upload" in paths) == (profile == "diary-coach")
     if profile == "starter":
         assert client.get("/api/diary").status_code == 404
         assert client.post("/api/diary/draft", json={}).status_code == 404
         assert client.get("/api/me/preferences").status_code == 404
-        assert {tag["name"] for tag in schema["tags"]}.isdisjoint({"diary", "preferences"})
+        assert client.get("/api/notebooks").status_code == 404
+        assert client.post("/api/notebooks/upload", json={}).status_code == 404
+        assert {tag["name"] for tag in schema["tags"]}.isdisjoint(
+            {"diary", "notebook", "preferences"}
+        )
 
 
 def test_starter_does_not_import_sample_service() -> None:
@@ -44,8 +50,9 @@ def test_starter_does_not_import_sample_service() -> None:
             "-c",
             "import sys; from app.main import app; "
             "assert app.state.application_profile == 'starter'; "
-            "assert not any(name.startswith(('app.domain.diary', 'app.domain.preferences', "
-            "'app.llm.prompts.diary_coach', 'app.llm.chains.diary')) for name in sys.modules)",
+            "assert not any(name.startswith(('app.domain.diary', 'app.domain.notebook', "
+            "'app.domain.preferences', 'app.llm.prompts.diary_coach', 'app.llm.chains.diary')) "
+            "for name in sys.modules)",
         ],
         env={**os.environ, "APP_PROFILE": "starter", "LLM_PROVIDER": "fake"},
         capture_output=True,

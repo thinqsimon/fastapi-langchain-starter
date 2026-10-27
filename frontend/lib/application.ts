@@ -25,5 +25,13 @@ export const application = {
     ...definitions[profile],
     profile,
     name: process.env.NEXT_PUBLIC_APP_NAME?.trim() || definitions[profile].name,
-    navigation: [{ href: "/chat", label: "채팅" }, ...(definitions[profile].diaryEnabled ? [{ href: "/diary", label: "일기" }] : [])],
+    navigation: [
+        { href: "/chat", label: "채팅" },
+        ...(definitions[profile].diaryEnabled
+            ? [
+                  { href: "/notebook", label: "학습장" },
+                  { href: "/diary", label: "일기" },
+              ]
+            : []),
+    ],
 }

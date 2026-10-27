@@ -28,6 +28,9 @@
    복사하면 마크다운 글자와 서식이 함께 들어가, 교육 플랫폼·노션에는 서식으로, 메모장·카톡에는 마크다운으로 붙는다
 7. **어려웠던 내용 복습**에서 학습 원문을 펼쳐 보고 메모를 저장한다. 완료한 항목은 별도로 모아 보며
    **다시 복습**으로 되돌릴 수 있다. 원문의 어려움 수정 시 완료만 해제하고 메모는 보존한다
+8. **학습장**에서 Claude Code `/study-notes` 스킬이 만든 md 파일을 올리면 `## 주제`마다 나뉘어 저장된다.
+   왼쪽에서 학습장(파일)별 주제를 고르고(전체/공부할 것/끝낸 것 필터) 오른쪽에서 읽고 고치며 **학습 완료**를 표시한다.
+   업로드 없이 빈 학습장과 주제를 직접 만들 수도 있다. 같은 파일명은 다시 올릴 수 없고, 삭제 후 올린다
 
 우측 상단 계정 버튼을 누르면 오른쪽에서 메뉴가 열린다(계정 정보·사용량·설정·로그아웃).
 설정에서 이름·이메일·비밀번호와 **캐치프레이즈**(헤더 가운데, 넘치면 전광판처럼 흐름)·푸터를 바꾼다.
@@ -43,6 +46,8 @@
 | 구름 코치 화면 | `frontend/applications/diary-coach/chat-experience.tsx`, `frontend/public/coach/cloud-coach.png` | 제공된 구름 이미지, 추천 질문, 응답 아바타, 현재 채팅으로 일기 만들기. 프로필 조립 지점에서 주입 |
 | 회고 보관·복습 | `frontend/components/diary/learning-workbench.tsx`, `frontend/store/learning.ts`, `frontend/api/learning.ts` | 주별 회고 생성·저장·조회·삭제, 원문 기반 메모·완료·재복습. 계정과 지연 응답 격리 |
 | 회고·복습 데이터 | `backend/src/app/domain/diary/`, Alembic `e317b6a91d42` | 계정·주별 회고 snapshot, 일기별 진행 상태. 소유권 검사, 원문 삭제 FK cascade |
+| 학습장 업로드·주제 관리 | `backend/src/app/domain/notebook/`, Alembic `37929cca196b` | `/study-notes` md를 JSON으로 올려 펜스 밖 `## 주제`로 나눠 저장(목차·코드 블록 제외, 메타 줄 → 유형·태그·난이도). 파일명 중복 409, 소유권 404, 학습장 삭제 시 주제 cascade |
+| 학습장 화면 | `frontend/app/(main)/notebook/`, `frontend/components/notebook/`, `frontend/store/notebook.ts`, `frontend/api/notebook.ts` | 왼쪽 학습장별 주제 목록(완료 필터)·오른쪽 마크다운 본문, 수정(작성/미리보기)·학습 완료·삭제 확인, 모바일은 한 창씩 |
 | 코치 페르소나·일기 프롬프트 | `backend/src/app/llm/prompts/diary_coach.py` | 새 대화/이전 대화(맥락) 구분, 상세 작성 규칙, '내일 할 것'을 지어내지 않는 규칙 |
 | 구조화 출력 체인 | `backend/src/app/llm/chains/diary.py` | `with_structured_output`으로 일기 항목·회고 3항목을 받음. '내일 할 것'은 근거 문장이 대화에 있을 때만 남김 |
 | `DiaryEntry` 모델 | `backend/src/app/domain/diary/models.py` | 채팅 단위(`source_last_message_at`), 같은 날 여러 편(`day_sequence`), 제목·상세·푸터 |
@@ -53,7 +58,8 @@
 | 프리뷰·전체 복사 | `frontend/components/diary/diary-preview-actions.tsx`, `diary-document.tsx`, `diary-paste-document.tsx`, `frontend/lib/diary-markdown.ts` | 프리뷰는 문서 형태, 붙여 넣기용 HTML은 항목 제목 단계 통일·빈 줄 구분(플랫폼 편집기용) |
 | 로고·이름 | `frontend/public/brand/logo.svg`, `frontend/components/brand-logo.tsx` | A안 '열정 노트'. 파비콘·홈 화면 아이콘은 `npm run icons`로 생성 |
 
-설계 이유: [ADR-0006](../../docs/decisions/ADR-0006-diary-per-chat-and-preferences.md)
+설계 이유: [ADR-0006](../../docs/decisions/ADR-0006-diary-per-chat-and-preferences.md),
+[ADR-0009](../../docs/decisions/ADR-0009-saved-weekly-review-and-study.md), [ADR-0010](../../docs/decisions/ADR-0010-notebook.md)
 
 ### 함께 개선한 스타터킷 공통 기능
 샘플앱에만 쓰이는 것이 아니라 다른 서비스에도 그대로 쓸 수 있다.

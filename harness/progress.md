@@ -657,3 +657,47 @@ DOC-02보다 이 요청을 우선하며 기존 인수조건은 유지한다.
 **다음 할 일**
 - 사용자: Supabase의 `rag-real-450e87@example.com` 직접 삭제(또는 `make clean-test-accounts args="--delete --remote"`)
 - LLM 연동 팀원 인수인계 후속(세션 20의 다음 할 일) 유지
+
+## 2026-10-27 · 세션 22 · NOTE-01 학습장(/study-notes 노트 업로드·주제 관리)
+
+**요청**: 이 세션 앞부분에서 만든 글로벌 스킬 `/study-notes`(`~/.claude/skills/study-notes/`, AI 대화를 초보자용 학습 노트 md로
+증분 정리)의 결과물을 배움일기에 올려 주제별로 읽고·고치고·학습 완료를 표시하는 **학습장** 메뉴를 채팅과 일기 사이에 추가.
+좌측 주제 목록·우측 본문 편집, CRUD. 사용자 결정: 같은 파일명 재업로드는 409, 완료 토글·유형/태그 편집·직접 작성·완료 필터 포함,
+파일(학습장)별 그룹, diary-coach 전용(starter는 404).
+
+**한 일**
+- 백엔드 새 도메인 `backend/src/app/domain/notebook/`(models·parser·schemas·repositories·services·routers), Alembic `37929cca196b`
+  (`notebooks`·`notebook_topics`), `api.py`의 `diary_enabled` 블록에 지연 등록, `main.py` 태그, import-linter containers.
+  파서는 펜스(```/~~~) 인식, `## 목차` 제외, 번호 선택, 메타 줄 → 유형·태그·난이도 후 본문에서 제거, H2 없으면 주제 1개, 빈 파일 400
+- 프론트 `app/(main)/notebook/`, `components/notebook/` 5개, `store/notebook.ts`(세대·조회·주제 버전 가드), `api/notebook.ts`,
+  메뉴(`lib/application.ts`)·`proxy.ts` 게이팅, 사용자 전환 시 reset. 업로드는 브라우저가 읽은 파일을 JSON으로 전송(multipart 없음)
+- 테스트: 파서 단위 20개, API 20개(401 9경로·분할·409·400·422·CRUD·cascade·타인 404·경합), 프로필·테이블 목록 테스트 갱신,
+  E2E `e2e/notebook.spec.ts` 7개, `starter-profile.spec.ts`에 /notebook·/api/notebooks 404 추가
+- 문서: ADR-0010, 샘플 README(사용 흐름 8·변경 표 2행), application-profiles 가이드, `feature_list.json` NOTE-01(phase 8)
+
+**검증**
+- `./scripts/verify.sh`: 백엔드 236 passed(커버리지 98%), 프론트 포맷·린트·타입·빌드 통과
+- E2E: diary-coach 62 passed(학습장 7·캐치프레이즈 3 포함, 헤더 링크 3개여도 정렬 회귀 없음), starter 3 passed
+- 실제 노트 `~/StudyNotes/SpaceXyzDiary/2026-10-27_01.md` 수동 업로드(개발 서버 :3000/:8000): 주제 8개, 목차 제외, 코드 블록 안
+  `---`·`## ` 보존, 메타 줄 제거, 필터 끝낸 것 1/공부할 것 7/전체 8, 390px 한 창씩·가로 넘침 없음, 콘솔 오류 0.
+  계정 `note-check-*@example.com`은 로컬 5433 DB에서 삭제
+- 독립 test-verifier 검토: 인수조건 8개 모두 PASS(8번은 프론트 게이트 로그 확인 후 확정). 지적한 파서 개선점(닫는 펜스는 여는 펜스와
+  같은 문자·같거나 긴 길이, CommonMark)을 반영하고 테스트 2개를 추가해 백엔드 게이트 재통과(236 passed, 98%)
+
+**막힌 점**
+- 문제: `make migrate`가 **원격 DB(Supabase)** 에 적용됐다. 원인: `backend/.env`의 `DATABASE_URL`이 Supabase 풀러이고
+  `alembic/env.py`가 `settings.DATABASE_URL`을 그대로 쓴다(이전 세션은 `.env`를 읽지 않아 대상 DB를 몰랐다). 해결: 추가 전용
+  마이그레이션(빈 테이블 2개)이라 데이터 영향 없음. 원격은 더 건드리지 않고 사용자 결정에 맡김(되돌리려면
+  `cd backend && uv run alembic downgrade e317b6a91d42`). 개발 서버가 쓰는 로컬 5433과 테스트용 5432에는 각각 적용.
+  재발 방지: `make migrate`/`migration`에 `clean-test-accounts`처럼 원격 URL이면 거부하는 가드(`--remote` 필요) 추가 필요
+- 문제: Next 16이 같은 폴더에서 두 번째 `next dev`(:3100)를 거부해 `e2e.sh`가 실패. 원인: 사용자 개발 서버(:3000)가 dev 락을
+  보유, 다른 사람 프로세스 종료는 권한 정책상 불가. 해결: 프로필별 `next build`(`NEXT_PUBLIC_API_BASE_URL=:8010`) 후
+  `next start -p 3100`을 띄우고 Playwright `reuseExistingServer`로 통과. 재발 방지: e2e.sh에 "개발 서버가 떠 있으면 빌드·start 재사용"
+  분기 검토
+- ruff E501은 한글을 2칸으로 세므로 긴 한글 docstring·description은 줄바꿈이 필요하다
+
+**다음 할 일**
+- 사용자: 원격 DB의 `notebooks`·`notebook_topics` 유지(배포 시 그대로 head) 또는 되돌리기(위 downgrade 명령) 결정
+- `make migrate` 원격 가드, e2e.sh 개발 서버 공존 처리
+- 학습장 개선 후보: 같은 파일 덮어쓰기 옵션, 주제 순서 바꾸기, `~/StudyNotes/index.md` 가져오기
+- DOC-02·TEST-01 passes는 바꾸지 않았다(TEST-01은 세션 21 검증 기록이 있으나 false로 남아 있어 확인 후 갱신)

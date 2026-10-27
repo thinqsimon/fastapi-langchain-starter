@@ -125,3 +125,49 @@ export type UsageSummary = {
     total_tokens: number
     estimated_cost_usd: string
 }
+
+// 학습장(backend/src/app/domain/notebook/schemas.py)
+
+/** 학습장 안의 주제 요약(목록용, 본문 없음). 백엔드 TopicSummary */
+export type NotebookTopicSummary = {
+    id: string
+    notebook_id: string
+    /** 학습장 안에서의 순서(1부터) */
+    position: number
+    title: string
+    /** 개념·문제해결·도구·명령어·설계결정·워크플로 등. 없으면 null */
+    kind: string | null
+    tags: string[]
+    /** ★ 개수(1~5). 없으면 null */
+    difficulty: number | null
+    completed: boolean
+    updated_at: string
+}
+
+/** 주제 상세(본문 포함). 백엔드 TopicRead */
+export type NotebookTopic = NotebookTopicSummary & { content: string; created_at: string }
+
+/** 학습장. 올린 md 파일 하나 또는 직접 만든 것(filename null). 백엔드 NotebookRead */
+export type Notebook = {
+    id: string
+    title: string
+    filename: string | null
+    project: string | null
+    /** H1 뒤의 '>' 요약 */
+    summary: string | null
+    topics: NotebookTopicSummary[]
+    created_at: string
+    updated_at: string
+}
+
+/** 주제 만들기 입력. 백엔드 TopicCreate */
+export type NotebookTopicInput = {
+    title: string
+    content?: string
+    kind?: string | null
+    tags?: string[]
+    difficulty?: number | null
+}
+
+/** 주제 수정 입력(보낸 필드만 바뀐다). 백엔드 TopicUpdate */
+export type NotebookTopicPatch = Partial<NotebookTopicInput> & { completed?: boolean }

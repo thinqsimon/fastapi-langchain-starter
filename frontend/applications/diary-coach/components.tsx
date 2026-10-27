@@ -9,6 +9,7 @@ import { useAuthStore } from "@/store/auth"
 import { usePreferencesStore } from "@/store/preferences"
 import { useDiaryStore } from "@/store/diary"
 import { useLearningStore } from "@/store/learning"
+import { useNotebookStore } from "@/store/notebook"
 
 export function DiaryHeaderMessage() {
     const userId = useAuthStore((state) => state.user?.id)
@@ -16,16 +17,19 @@ export function DiaryHeaderMessage() {
     const load = usePreferencesStore((state) => state.load)
     const resetDiary = useDiaryStore((state) => state.reset)
     const resetLearning = useLearningStore((state) => state.reset)
+    const resetNotebook = useNotebookStore((state) => state.reset)
 
     useEffect(() => {
         resetDiary()
         resetLearning()
+        resetNotebook()
         if (userId) void load()
         return () => {
             resetDiary()
             resetLearning()
+            resetNotebook()
         }
-    }, [userId, load, resetDiary, resetLearning])
+    }, [userId, load, resetDiary, resetLearning, resetNotebook])
 
     return <CatchphraseMarquee text={catchphrase} className="mx-3 sm:mx-10" />
 }

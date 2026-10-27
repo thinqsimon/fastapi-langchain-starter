@@ -10,4 +10,4 @@ export function proxy(request: NextRequest) {
     return NextResponse.next()
 }
 
-export const config = { matcher: ["/diary/:path*"] }
+export const config = { matcher: ["/diary/:path*", "/notebook/:path*"] }

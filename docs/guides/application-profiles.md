@@ -40,8 +40,8 @@ node scripts/dev.mjs diary-coach frontend
 ## 제공 기능
 
 starter는 회원·계정 설정, 대화·SSE, LLM 공급자, 사용량과 선택적 RAG를 제공한다.
-diary-coach는 여기에 일기, 회고, 캐치프레이즈와 푸터 설정을 추가한다.
-starter에서 `/api/diary`, `/api/me/preferences`, 화면 `/diary`는 404다.
+diary-coach는 여기에 일기, 회고, 학습장(마크다운 노트 업로드), 캐치프레이즈와 푸터 설정을 추가한다.
+starter에서 `/api/diary`, `/api/notebooks`, `/api/me/preferences`, 화면 `/diary`·`/notebook`은 404다.
 공통 API 주소와 요청·응답 형식은 기존과 같다.
 
 기존 테이블과 Alembic 이력은 두 모드에서 보존한다. 프로필은 기능 노출을 선택하며

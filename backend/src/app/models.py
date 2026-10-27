@@ -9,6 +9,7 @@ from app.core.database import Base
 from app.domain.auth.models import RefreshToken, User
 from app.domain.chat.models import Conversation, Message
 from app.domain.diary.models import DiaryEntry, DiaryStudyProgress, SavedWeeklyReview
+from app.domain.notebook.models import Notebook, NotebookTopic
 from app.domain.preferences.models import UserPreference
 from app.domain.rag.models import DocumentChunk
 
@@ -19,6 +20,8 @@ __all__ = [
     "DiaryStudyProgress",
     "DocumentChunk",
     "Message",
+    "Notebook",
+    "NotebookTopic",
     "RefreshToken",
     "SavedWeeklyReview",
     "User",

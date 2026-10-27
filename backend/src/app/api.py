@@ -26,10 +26,12 @@ def build_api_router(
     if application.diary_enabled:
         # 스타터킷 실행 시 일기 서비스와 전용 개인 설정을 불러오지 않는다.
         from app.domain.diary.routers import router as diary_router
+        from app.domain.notebook.routers import router as notebook_router
         from app.domain.preferences.routers import router as preferences_router
 
         router.include_router(diary_router)
         router.include_router(preferences_router)
+        router.include_router(notebook_router)
 
     enabled = settings.RAG_ENABLED if rag_enabled is None else rag_enabled
     if enabled:

@@ -28,6 +28,12 @@ OPENAPI_TAGS = [
         "name": "diary",
         "description": "샘플 서비스(배움일기 코치) 전용 API. 새 서비스를 만들 때 참고하세요.",
     },
+    {
+        "name": "notebook",
+        "description": (
+            "샘플 서비스 전용. /study-notes로 만든 학습장(마크다운)을 올려 주제별로 관리합니다."
+        ),
+    },
     {"name": "usage", "description": "내 LLM 토큰 사용량과 추정 비용."},
     {"name": "preferences", "description": "개인 화면 설정(캐치프레이즈, 일기 푸터)."},
     {"name": "system", "description": "상태 확인용."},
@@ -67,7 +73,7 @@ def create_app(rag_enabled: bool | None = None, app_profile: AppProfile | None =
         openapi_tags=[
             tag
             for tag in OPENAPI_TAGS
-            if application.diary_enabled or tag["name"] not in {"diary", "preferences"}
+            if application.diary_enabled or tag["name"] not in {"diary", "preferences", "notebook"}
         ],
         swagger_ui_parameters={"docExpansion": "none", "persistAuthorization": True},
     )

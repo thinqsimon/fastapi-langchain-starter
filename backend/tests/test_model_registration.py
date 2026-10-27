@@ -67,6 +67,8 @@ def test_current_schema_is_as_expected() -> None:
         "diary_entries",
         "diary_weekly_reviews",
         "diary_study_progress",
+        "notebooks",
+        "notebook_topics",
         "document_chunks",
         "user_preferences",
     }
