@@ -62,3 +62,20 @@ test("대화를 삭제하면 목록에서 사라진다", async ({ page }) => {
 
     await expect(page.getByRole("button", { name: "지울 대화", exact: true })).toHaveCount(0)
 })
+
+test("대화가 길어져도 헤더와 입력칸은 화면에 남고 메시지 영역만 스크롤된다", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 600 })
+    await signUpAndOpenChat(page)
+    for (const text of ["첫 질문", "두 번째 질문", "세 번째 질문", "네 번째 질문", "다섯 번째 질문"]) {
+        await page.getByLabel("메시지").fill(text)
+        await page.getByRole("button", { name: "보내기" }).click()
+        await expect(savedAssistant(page).last()).not.toBeEmpty()
+        await expect(page.locator('[data-role="user"]').last()).toContainText(text)
+    }
+
+    // 페이지 전체는 스크롤되지 않는다(헤더가 밀려 올라가지 않음).
+    expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true)
+    const header = (await page.locator("header").boundingBox())!
+    expect(header.y).toBe(0)
+    await expect(page.getByLabel("메시지")).toBeInViewport()
+})
