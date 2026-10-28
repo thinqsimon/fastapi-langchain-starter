@@ -41,3 +41,6 @@ logs/
 /frontend/test-results/
 /frontend/playwright-report/
 /frontend/blob-report/
+
+# 다른 팀 발표 자료·스크린샷(참고용, 저장소에 올리지 않음)
+/docs/pt/
