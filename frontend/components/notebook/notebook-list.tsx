@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useNotebookStore, type NotebookFilter, type NotebookView } from "@/store/notebook"
 
-/** 보기 세그먼트. 보관함 버튼에는 보관한 주제 수를 붙인다("보관함 12"). */
+/** 보기 세그먼트. 신규·보관함 버튼에는 해당 주제 수를 붙인다("신규 6", "보관함 12"). */
 const VIEWS: { value: NotebookView; label: string }[] = [
+    { value: "new", label: "신규" },
     { value: "all", label: "전체" },
     { value: "kept", label: "보관함" },
 ]
@@ -29,6 +30,7 @@ export function NotebookList() {
     const selecting = useNotebookStore((state) => state.selecting)
     const selectedCount = useNotebookStore((state) => state.selectedIds.length)
     const keptCount = useNotebookStore((state) => state.notebooks.reduce((count, notebook) => count + notebook.topics.filter((topic) => topic.kept).length, 0))
+    const newCount = useNotebookStore((state) => state.notebooks.reduce((count, notebook) => count + notebook.topics.filter((topic) => !topic.kept).length, 0))
     const isLoading = useNotebookStore((state) => state.isLoading)
     const isUploading = useNotebookStore((state) => state.isUploading)
     const busy = useNotebookStore((state) => state.isUploading || state.isSaving || state.isDeleting)
@@ -53,8 +55,8 @@ export function NotebookList() {
         return () => window.removeEventListener("keydown", onKeyDown)
     }, [selecting, cancelSelecting])
 
-    // 보관함 보기에서는 보관한 주제가 있는 학습장만 보인다.
-    const shown = view === "kept" ? notebooks.filter((notebook) => notebook.topics.some((topic) => topic.kept)) : notebooks
+    // 신규/보관함 보기에서는 해당 주제가 있는 학습장만 보인다.
+    const shown = view === "all" ? notebooks : notebooks.filter((notebook) => notebook.topics.some((topic) => (view === "kept") === topic.kept))
 
     const onFile = (event: ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
@@ -142,7 +144,11 @@ export function NotebookList() {
                                 aria-pressed={view === item.value}
                                 onClick={() => setView(item.value)}
                             >
-                                {item.value === "kept" && keptCount > 0 ? `${item.label} ${keptCount}` : item.label}
+                                {item.value === "kept" && keptCount > 0
+                                    ? `${item.label} ${keptCount}`
+                                    : item.value === "new" && newCount > 0
+                                      ? `${item.label} ${newCount}`
+                                      : item.label}
                             </Button>
                         ))}
                     </div>
@@ -170,7 +176,9 @@ export function NotebookList() {
                     <p className="px-2 py-4 text-sm leading-6 text-muted-foreground">아직 올린 학습장이 없습니다. /study-notes로 만든 md 파일을 올려 보세요.</p>
                 )}
                 {!isLoading && notebooks.length > 0 && shown.length === 0 && (
-                    <p className="px-2 py-4 text-sm leading-6 text-muted-foreground">보관한 주제가 없어요. 전체 보기에서 주제를 골라 보관하세요.</p>
+                    <p className="px-2 py-4 text-sm leading-6 text-muted-foreground">
+                        {view === "kept" ? "보관한 주제가 없어요. 전체 보기에서 주제를 골라 보관하세요." : "새 주제가 없어요. 올린 주제를 모두 보관했어요."}
+                    </p>
                 )}
                 {shown.map((notebook) => (
                     <NotebookGroup key={notebook.id} notebook={notebook} />

@@ -75,6 +75,7 @@ const viewGroup = (page: Page) => list(page).getByRole("group", { name: "보기"
 const allView = (page: Page) => viewGroup(page).getByRole("button", { name: "전체", exact: true })
 /** 보관한 주제가 있으면 "보관함 N"이라 앞부분만 맞춘다. */
 const keptView = (page: Page) => viewGroup(page).getByRole("button", { name: /^보관함/ })
+const newView = (page: Page) => viewGroup(page).getByRole("button", { name: /^신규/ })
 const meta = (page: Page) => detail(page).locator('[data-slot="topic-meta"]')
 const document = (page: Page) => detail(page).locator('[data-slot="diary-document"]')
 const alert = (page: Page) => page.locator('p[role="alert"]')
@@ -303,6 +304,7 @@ test("주제를 골라 보관하면 보관함에만 모이고, 보기는 새로�
     await expect(topics(page)).toHaveCount(2)
     await expect(allView(page)).toHaveAttribute("aria-pressed", "true")
     await expect(keptView(page)).toHaveText("보관함")
+    await expect(newView(page)).toHaveText("신규 2")
     await expect(keptTopics(page)).toHaveCount(0)
 
     // 선택 모드: Esc로 끝낼 수 있고, 고른 주제 수가 하단 막대에 보인다.
@@ -330,6 +332,13 @@ test("주제를 골라 보관하면 보관함에만 모이고, 보기는 새로�
     await expect(keptTopics(page)).toContainText("1. Claude Code 스킬 만들기")
     await expect(keptView(page)).toHaveText("보관함 1")
     await expect(groups(page)).toContainText("보관 1")
+
+    // 신규 보기: 아직 보관하지 않은 주제만 보인다.
+    await expect(newView(page)).toHaveText("신규 1")
+    await newView(page).click()
+    await expect(topics(page)).toHaveCount(1)
+    await expect(topics(page)).toContainText("2. 플랜 모드")
+    await expect(keptTopics(page)).toHaveCount(0)
 
     // 보관함 보기: 보관한 주제만 보이고 새로고침 뒤에도 그 보기 그대로다.
     await keptView(page).click()
@@ -380,10 +389,13 @@ test("주제를 골라 보관하면 보관함에만 모이고, 보기는 새로�
     await list(page).getByRole("button", { name: "끝낸 것", exact: true }).click()
     await expect(topics(page)).toHaveCount(2)
 
-    // 파일을 올리면 전체 보기로 돌아온다.
+    // 보관함 보기에서 파일을 올리면 새 주제가 바로 보이도록 신규 보기로 바뀐다.
     await uploadFile(page, FILENAME, OTHER_PROJECT_SAMPLE)
     await expect(status(page)).toHaveText("학습장을 올렸어요. 주제 2개")
-    await expect(allView(page)).toHaveAttribute("aria-pressed", "true")
+    await expect(newView(page)).toHaveAttribute("aria-pressed", "true")
+    await expect(topics(page)).toHaveCount(2)
+    await expect(keptTopics(page)).toHaveCount(0)
+    await allView(page).click()
     await expect(groups(page)).toHaveCount(2)
     await expect(topics(page)).toHaveCount(4)
     await expect(keptTopics(page)).toHaveCount(2)

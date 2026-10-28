@@ -15,7 +15,8 @@ export type TopicForm = {
  *  화면에는 공부할 것·끝낸 것 두 칩만 있고, 눌린 칩을 다시 누르면 "all"(모두)로 돌아간다. */
 export type NotebookFilter = "all" | "todo" | "done"
 /** 왼쪽 목록의 보기: 전체 / 보관함(보관한 주제만). 상태 필터와 독립된 축이다. */
-export type NotebookView = "all" | "kept"
+/** 보기: 신규(아직 보관하지 않은 주제) / 전체 / 보관함(보관한 주제) */
+export type NotebookView = "new" | "all" | "kept"
 
 /** 서버 NotebookUpload.content 상한. 넘기면 영어 422가 오므로 여기서 먼저 거른다. */
 export const MAX_UPLOAD_CHARS = 500_000
@@ -52,7 +53,7 @@ function writeStoredListWidth(width: number | null) {
 function readStoredView(): NotebookView | null {
     try {
         const raw = localStorage.getItem(VIEW_KEY)
-        return raw === "all" || raw === "kept" ? raw : null
+        return raw === "new" || raw === "all" || raw === "kept" ? raw : null
     } catch {
         return null
     }
@@ -106,7 +107,8 @@ function validate(input: NotebookTopicInput): string | null {
 
 /** 보기(전체/보관함)와 상태 칩을 함께 적용해 목록에 보일 주제만 고른다. 보관함 보기에서는 보관한 주제만 남긴다. */
 export function visibleTopics(topics: NotebookTopicSummary[], view: NotebookView, filter: NotebookFilter): NotebookTopicSummary[] {
-    return topics.filter((topic) => (view === "all" || topic.kept) && (filter === "all" || (filter === "done") === topic.completed))
+    // 신규 = 보관 안 함, 보관함 = 보관함. 전체는 둘 다.
+    return topics.filter((topic) => (view === "all" || (view === "kept") === topic.kept) && (filter === "all" || (filter === "done") === topic.completed))
 }
 
 /** 목록에는 본문 없이 요약만 둔다. */
@@ -291,8 +293,8 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
         try {
             const notebook = await notebookApi.uploadNotebook(filename, content)
             if (get().sessionVersion !== sessionVersion) return
-            // 올린 학습장이 바로 보이도록 전체 보기로 돌아오고, 선택 모드는 끝낸다.
-            get().setView("all")
+            // 보관함 보기에서는 새 주제가 안 보이므로 신규 보기로 바꾼다. 신규·전체 보기는 그대로 둔다. 선택 모드는 끝낸다.
+            if (get().view === "kept") get().setView("new")
             set({ selecting: false })
             await get().load()
             if (get().sessionVersion !== sessionVersion) return
