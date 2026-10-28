@@ -50,6 +50,14 @@ class TopicUpdate(BaseModel):
     tags: list[Tag] | None = Field(default=None, max_length=MAX_TAGS)
     difficulty: Difficulty | None = None
     completed: bool | None = None
+    kept: bool | None = None
+
+
+class TopicKeepRequest(BaseModel):
+    """여러 주제를 한 번에 보관하거나 보관 해제한다."""
+
+    topic_ids: list[uuid.UUID] = Field(min_length=1, max_length=200)
+    kept: bool
 
 
 class TopicSummary(BaseModel):
@@ -65,6 +73,9 @@ class TopicSummary(BaseModel):
     tags: list[str]
     difficulty: int | None
     completed: bool
+    # 보관함(나중에 공부할 주제)
+    kept: bool
+    kept_at: datetime | None
     updated_at: datetime
 
     @field_validator("tags", mode="before")

@@ -93,6 +93,7 @@ def upload(
         ("POST", "/api/notebooks", {"title": "a"}),
         ("GET", f"/api/notebooks/topics/{uuid.uuid4()}", None),
         ("PATCH", f"/api/notebooks/topics/{uuid.uuid4()}", {"completed": True}),
+        ("PATCH", "/api/notebooks/topics/keep", {"topic_ids": [str(uuid.uuid4())], "kept": True}),
         ("DELETE", f"/api/notebooks/topics/{uuid.uuid4()}", None),
         ("POST", f"/api/notebooks/{uuid.uuid4()}/topics", {"title": "a"}),
         ("PATCH", f"/api/notebooks/{uuid.uuid4()}", {"title": "a"}),
@@ -329,6 +330,68 @@ def test_manual_notebook_and_topic_crud(api_client: TestClient, owner: dict[str,
     assert api_client.delete(f"/api/notebooks/{notebook['id']}", headers=owner).status_code == 204
     assert api_client.get("/api/notebooks", headers=owner).json() == []
     assert api_client.get(f"/api/notebooks/topics/{third['id']}", headers=owner).status_code == 404
+
+
+def test_keep_topics_in_bulk_and_one_by_one(api_client: TestClient, owner: dict[str, str]) -> None:
+    notebook = upload(api_client, owner)
+    first, second = (topic["id"] for topic in notebook["topics"])
+    assert all(topic["kept"] is False and topic["kept_at"] is None for topic in notebook["topics"])
+
+    kept = api_client.patch(
+        "/api/notebooks/topics/keep",
+        headers=owner,
+        json={"topic_ids": [second, first, first], "kept": True},
+    )
+    assert kept.status_code == 200, kept.text
+    assert [topic["id"] for topic in kept.json()] == [second, first]
+    assert all(topic["kept"] is True and topic["kept_at"] for topic in kept.json())
+    assert "content" not in kept.json()[0]
+
+    listed = api_client.get("/api/notebooks", headers=owner).json()[0]["topics"]
+    assert [topic["kept"] for topic in listed] == [True, True]
+
+    released = api_client.patch(
+        "/api/notebooks/topics/keep", headers=owner, json={"topic_ids": [first], "kept": False}
+    ).json()
+    assert (released[0]["kept"], released[0]["kept_at"]) == (False, None)
+
+    single = api_client.patch(
+        f"/api/notebooks/topics/{second}", headers=owner, json={"kept": False}
+    ).json()
+    assert (single["kept"], single["kept_at"], single["title"]) == (False, None, "유니코드 정규화")
+    assert single["completed"] is False
+
+    assert (
+        api_client.patch(
+            "/api/notebooks/topics/keep", headers=owner, json={"topic_ids": [], "kept": True}
+        ).status_code
+        == 422
+    )
+
+
+def test_keep_rejects_foreign_topic_and_changes_nothing(
+    api_client: TestClient, owner: dict[str, str], other: dict[str, str]
+) -> None:
+    mine = upload(api_client, owner)["topics"][0]["id"]
+    theirs = upload(api_client, other)["topics"][0]["id"]
+
+    response = api_client.patch(
+        "/api/notebooks/topics/keep",
+        headers=owner,
+        json={"topic_ids": [mine, theirs], "kept": True},
+    )
+    assert response.status_code == 404, response.text
+
+    assert api_client.get(f"/api/notebooks/topics/{mine}", headers=owner).json()["kept"] is False
+    assert api_client.get(f"/api/notebooks/topics/{theirs}", headers=other).json()["kept"] is False
+    assert (
+        api_client.patch(
+            "/api/notebooks/topics/keep",
+            headers=owner,
+            json={"topic_ids": [str(uuid.uuid4())], "kept": True},
+        ).status_code
+        == 404
+    )
 
 
 def test_delete_notebook_cascades_topics(

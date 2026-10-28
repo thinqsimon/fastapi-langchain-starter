@@ -1,5 +1,5 @@
 import { httpClient } from "./client"
-import type { Notebook, NotebookTopic, NotebookTopicInput, NotebookTopicPatch } from "./types"
+import type { Notebook, NotebookTopic, NotebookTopicInput, NotebookTopicPatch, NotebookTopicSummary } from "./types"
 
 export async function listNotebooks(): Promise<Notebook[]> {
     return (await httpClient.get<Notebook[]>("/api/notebooks")).data
@@ -36,4 +36,9 @@ export async function updateTopic(topicId: string, patch: NotebookTopicPatch): P
 
 export async function deleteTopic(topicId: string): Promise<void> {
     await httpClient.delete(`/api/notebooks/topics/${topicId}`)
+}
+
+/** 여러 주제를 한 번에 보관(true)·보관 해제(false)한다. 하나라도 내 주제가 아니면 404이고 아무것도 바뀌지 않는다. */
+export async function keepTopics(topicIds: string[], kept: boolean): Promise<NotebookTopicSummary[]> {
+    return (await httpClient.patch<NotebookTopicSummary[]>("/api/notebooks/topics/keep", { topic_ids: topicIds, kept })).data
 }

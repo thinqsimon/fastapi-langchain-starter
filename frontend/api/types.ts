@@ -141,6 +141,10 @@ export type NotebookTopicSummary = {
     /** ★ 개수(1~5). 없으면 null */
     difficulty: number | null
     completed: boolean
+    /** 보관함(나중에 공부할 주제)에 넣었는지 */
+    kept: boolean
+    /** 보관한 시각. 보관하지 않았으면 null */
+    kept_at: string | null
     updated_at: string
 }
 
@@ -170,4 +174,4 @@ export type NotebookTopicInput = {
 }
 
 /** 주제 수정 입력(보낸 필드만 바뀐다). 백엔드 TopicUpdate */
-export type NotebookTopicPatch = Partial<NotebookTopicInput> & { completed?: boolean }
+export type NotebookTopicPatch = Partial<NotebookTopicInput> & { completed?: boolean; kept?: boolean }

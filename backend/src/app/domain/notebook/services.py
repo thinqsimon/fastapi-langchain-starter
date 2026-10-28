@@ -5,6 +5,7 @@
 
 import logging
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -28,6 +29,12 @@ def blank_to_none(value: str | None) -> str | None:
         return None
     stripped = value.strip()
     return stripped or None
+
+
+def apply_kept(topic: NotebookTopic, kept: bool) -> None:
+    """보관함에 넣거나 뺀다. 보관 시각은 넣을 때만 기록한다."""
+    topic.kept = kept
+    topic.kept_at = datetime.now(UTC) if kept else None
 
 
 def base_filename(filename: str) -> str:
@@ -164,8 +171,26 @@ class NotebookService:
             topic.difficulty = patch.difficulty
         if "completed" in changed and patch.completed is not None:
             topic.completed = patch.completed
+        if "kept" in changed and patch.kept is not None:
+            apply_kept(topic, patch.kept)
         self.db.commit()
         return topic
+
+    def set_kept(
+        self, topic_ids: list[uuid.UUID], user_id: uuid.UUID, kept: bool
+    ) -> list[NotebookTopic]:
+        """여러 주제를 한 번에 보관/해제한다. 하나라도 남의 것이거나 없으면 전부 거부한다."""
+        wanted = list(dict.fromkeys(topic_ids))  # 순서를 지키며 중복 제거
+        topics = self.topics.list_owned(wanted, user_id)
+        if len(topics) != len(wanted):
+            raise NotFoundError("주제를 찾을 수 없습니다.")
+        by_id = {topic.id: topic for topic in topics}
+        ordered = [by_id[topic_id] for topic_id in wanted]
+        for topic in ordered:
+            apply_kept(topic, kept)
+        self.db.commit()
+        logger.info("notebook_topics_kept user_id=%s count=%s kept=%s", user_id, len(ordered), kept)
+        return ordered
 
     def delete_topic(self, topic_id: uuid.UUID, user_id: uuid.UUID) -> None:
         self.topics.delete(self.get_topic(topic_id, user_id))

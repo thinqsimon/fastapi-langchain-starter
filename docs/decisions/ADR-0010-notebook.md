@@ -36,6 +36,9 @@
 - 학습장 삭제는 ORM cascade와 FK `ON DELETE CASCADE`로 주제를 함께 지운다. 주제 번호(`position`)는 최댓값+1로
   매겨 지운 번호를 다시 쓰지 않는다.
 - 완료 표시는 주제 단위이며 일기 복습(`diary_study_progress`)과 독립이다.
+- **보관함**(NOTE-04): 올린 노트는 스테이지처럼 "방금 올린 것을 확인하는 곳"이고, 나중에 공부할 주제만 골라 `kept`로 표시한다.
+  `kept`는 주제 단위 플래그, `kept_at`은 보관한 시각(해제하면 NULL)이며 정렬에는 쓰지 않는다. 여러 주제의 일괄 변경은 전부 성공하거나
+  전부 실패한다(남의 주제가 섞이면 404, 아무것도 바꾸지 않음). '전체/보관함' 보기와 목록 너비는 브라우저(localStorage)에만 기억한다.
 
 ## API와 데이터
 
@@ -45,7 +48,8 @@
 - `PATCH /api/notebooks/{id} {title}` · `DELETE /api/notebooks/{id}`
 - `POST /api/notebooks/{id}/topics {title, content?, kind?, tags?, difficulty?}`
 - `GET /api/notebooks/topics/{topic_id}`: 본문 포함 상세
-- `PATCH /api/notebooks/topics/{topic_id}`: 보낸 필드만 수정(`completed` 포함) · `DELETE /api/notebooks/topics/{topic_id}`
+- `PATCH /api/notebooks/topics/{topic_id}`: 보낸 필드만 수정(`completed`·`kept` 포함) · `DELETE /api/notebooks/topics/{topic_id}`
+- `PATCH /api/notebooks/topics/keep {topic_ids, kept}`: 여러 주제 보관/보관 해제(요약 목록 반환, 하나라도 없으면 404)
 
 `notebooks(user_id)` 인덱스와 `(user_id, project, filename)` 유일 제약, `notebook_topics(notebook_id)` 인덱스를 둔다.
 주제의 소유자는 학습장과 JOIN해 확인하며 타인 ID는 404, 비로그인은 401이다.

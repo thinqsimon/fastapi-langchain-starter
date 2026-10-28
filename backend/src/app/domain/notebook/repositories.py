@@ -68,6 +68,16 @@ class TopicRepository:
             .where(NotebookTopic.id == topic_id, Notebook.user_id == user_id)
         )
 
+    def list_owned(self, topic_ids: list[uuid.UUID], user_id: uuid.UUID) -> list[NotebookTopic]:
+        """여러 주제를 소유자 조건과 함께 한 번에 읽는다."""
+        return list(
+            self.db.scalars(
+                select(NotebookTopic)
+                .join(Notebook, Notebook.id == NotebookTopic.notebook_id)
+                .where(NotebookTopic.id.in_(topic_ids), Notebook.user_id == user_id)
+            )
+        )
+
     def next_position(self, notebook_id: uuid.UUID) -> int:
         """지운 번호는 다시 쓰지 않도록 최댓값 + 1."""
         current = self.db.scalar(

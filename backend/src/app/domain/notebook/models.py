@@ -6,9 +6,11 @@
 """
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
+    DateTime,
     ForeignKey,
     Integer,
     String,
@@ -78,5 +80,10 @@ class NotebookTopic(Base, TimestampMixin):
     completed: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+    # 보관함: 나중에 공부하려고 골라 둔 주제. kept_at은 보관한 시각(해제하면 NULL).
+    kept: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    kept_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     notebook: Mapped["Notebook"] = relationship(back_populates="topics")

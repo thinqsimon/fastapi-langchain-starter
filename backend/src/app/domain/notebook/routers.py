@@ -11,7 +11,9 @@ from app.domain.notebook.schemas import (
     NotebookUpdate,
     NotebookUpload,
     TopicCreate,
+    TopicKeepRequest,
     TopicRead,
+    TopicSummary,
     TopicUpdate,
 )
 from app.domain.notebook.services import NotebookService
@@ -68,6 +70,22 @@ def create_notebook(
     return NotebookRead.model_validate(
         NotebookService(db).create_notebook(current_user.id, payload.title)
     )
+
+
+@router.patch(
+    "/topics/keep",
+    response_model=list[TopicSummary],
+    summary="여러 주제 보관·보관 해제",
+    description=(
+        "고른 주제를 한 번에 보관함에 넣거나 뺍니다. "
+        "하나라도 찾을 수 없으면 아무것도 바꾸지 않고 404로 답합니다."
+    ),
+)
+def keep_topics(
+    payload: TopicKeepRequest, current_user: CurrentUser, db: DbSession
+) -> list[TopicSummary]:
+    topics = NotebookService(db).set_kept(payload.topic_ids, current_user.id, payload.kept)
+    return [TopicSummary.model_validate(topic) for topic in topics]
 
 
 @router.get("/topics/{topic_id}", response_model=TopicRead, summary="주제 상세(본문 포함)")

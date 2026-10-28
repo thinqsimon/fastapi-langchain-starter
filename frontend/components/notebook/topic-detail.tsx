@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ArrowLeft, CheckCircle2, RotateCcw } from "lucide-react"
+import { ArrowLeft, Bookmark, BookmarkCheck, CheckCircle2, RotateCcw } from "lucide-react"
 
 import { DiaryDocument } from "@/components/diary/diary-document"
 import { ConfirmDeleteDialog } from "@/components/notebook/confirm-delete-dialog"
@@ -29,6 +29,7 @@ export function TopicDetail() {
     const setForm = useNotebookStore((state) => state.setForm)
     const saveTopic = useNotebookStore((state) => state.saveTopic)
     const toggleCompleted = useNotebookStore((state) => state.toggleCompleted)
+    const toggleKept = useNotebookStore((state) => state.toggleKept)
     const deleteTopic = useNotebookStore((state) => state.deleteTopic)
     const [confirming, setConfirming] = useState(false)
 
@@ -90,6 +91,10 @@ export function TopicDetail() {
                             {topic.completed ? <RotateCcw /> : <CheckCircle2 />}
                             {topic.completed ? "완료 취소" : "학습 완료"}
                         </Button>
+                        <Button size="sm" variant="outline" disabled={busy} onClick={() => void toggleKept()}>
+                            {topic.kept ? <BookmarkCheck /> : <Bookmark />}
+                            {topic.kept ? "보관 해제" : "보관"}
+                        </Button>
                         <Button size="sm" variant="outline" aria-label={`${topic.title} 삭제`} disabled={busy} onClick={() => setConfirming(true)}>
                             삭제
                         </Button>
@@ -113,6 +118,7 @@ export function TopicDetail() {
                         {topic.tags.length > 0 && <span>태그 {topic.tags.join(", ")}</span>}
                         {topic.difficulty ? <span>난이도 {"★".repeat(topic.difficulty)}</span> : null}
                         {topic.completed && <span className="text-sky-700 dark:text-sky-300">학습 완료</span>}
+                        {topic.kept && <span className="text-amber-700 dark:text-amber-300">보관됨</span>}
                     </p>
                     <DiaryDocument markdown={topic.content} />
                 </>

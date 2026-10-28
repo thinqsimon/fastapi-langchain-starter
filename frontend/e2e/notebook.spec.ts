@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test"
 
 import { logOut, newAccount, signUp } from "./helpers"
 
-/** NOTE-01 학습장: /study-notes md 업로드와 주제별 관리 */
+/** NOTE-01 학습장: /study-notes md 업로드와 주제별 관리 · NOTE-04 보관함(선택 보관·보관함 보기) */
 
 const backend = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8010"
 const FILENAME = "2026-10-27_01.md"
@@ -69,6 +69,12 @@ const detail = (page: Page) => page.locator('[data-slot="topic-detail"]')
 const groups = (page: Page) => page.locator('[data-slot="notebook-group"]')
 const topics = (page: Page) => page.locator('[data-slot="notebook-topic"]')
 const completedTopics = (page: Page) => page.locator('[data-slot="notebook-topic"][data-completed="true"]')
+const keptTopics = (page: Page) => page.locator('[data-slot="notebook-topic"][data-kept="true"]')
+const selectBar = (page: Page) => page.locator('[data-slot="notebook-select-bar"]')
+const viewGroup = (page: Page) => list(page).getByRole("group", { name: "보기", exact: true })
+const allView = (page: Page) => viewGroup(page).getByRole("button", { name: "전체", exact: true })
+/** 보관한 주제가 있으면 "보관함 N"이라 앞부분만 맞춘다. */
+const keptView = (page: Page) => viewGroup(page).getByRole("button", { name: /^보관함/ })
 const meta = (page: Page) => detail(page).locator('[data-slot="topic-meta"]')
 const document = (page: Page) => detail(page).locator('[data-slot="diary-document"]')
 const alert = (page: Page) => page.locator('p[role="alert"]')
@@ -270,6 +276,7 @@ test("주제를 수정하고 학습 완료를 표시하면 재로그인 뒤에�
     await expect(topics(page)).toHaveCount(1)
     await expect(topics(page).getByRole("button", { name: "2. 플랜 모드 다시 보기", exact: true })).toBeVisible()
     await list(page).getByRole("button", { name: "공부할 것", exact: true }).click()
+    await expect(list(page).getByRole("button", { name: "끝낸 것", exact: true })).toHaveAttribute("aria-pressed", "false")
     await expect(topics(page)).toHaveCount(1)
     await expect(topics(page).getByRole("button", { name: "1. Claude Code 스킬 만들기", exact: true })).toBeVisible()
 
@@ -281,10 +288,105 @@ test("주제를 수정하고 학습 완료를 표시하면 재로그인 뒤에�
     await list(page).getByRole("button", { name: "끝낸 것", exact: true }).click()
     await expect(topics(page)).toHaveCount(0)
     await expect(groups(page)).toContainText("주제가 없습니다.")
-    await list(page).getByRole("button", { name: "전체", exact: true }).click()
+    // 눌린 칩을 다시 누르면 꺼져서 모두 보인다(상태 칩에는 '전체'가 없다).
+    await list(page).getByRole("button", { name: "끝낸 것", exact: true }).click()
+    await expect(list(page).getByRole("button", { name: "끝낸 것", exact: true })).toHaveAttribute("aria-pressed", "false")
     await expect(topics(page)).toHaveCount(2)
     await page.reload()
     await expect(completedTopics(page)).toHaveCount(0)
+})
+
+test("주제를 골라 보관하면 보관함에만 모이고, 보기는 새로고침 뒤에도 기억된다", async ({ page }) => {
+    await signUp(page, "notebook-keep")
+    await seed(page)
+    await openNotebook(page)
+    await expect(topics(page)).toHaveCount(2)
+    await expect(allView(page)).toHaveAttribute("aria-pressed", "true")
+    await expect(keptView(page)).toHaveText("보관함")
+    await expect(keptTopics(page)).toHaveCount(0)
+
+    // 선택 모드: Esc로 끝낼 수 있고, 고른 주제 수가 하단 막대에 보인다.
+    await list(page).getByRole("button", { name: "선택", exact: true }).click()
+    await expect(selectBar(page)).toContainText("0개 선택")
+    await expect(selectBar(page).getByRole("button", { name: "보관", exact: true })).toBeDisabled()
+    await page.keyboard.press("Escape")
+    await expect(selectBar(page)).toHaveCount(0)
+    await expect(topics(page).getByRole("checkbox")).toHaveCount(0)
+
+    // 줄을 누르면 본문이 열리는 대신 체크가 바뀐다. 일부만 고르면 학습장 체크박스는 indeterminate다.
+    await list(page).getByRole("button", { name: "선택", exact: true }).click()
+    const groupCheckbox = groups(page).getByRole("checkbox", { name: `${TITLE} 모두 선택`, exact: true })
+    const firstCheckbox = topics(page).getByRole("checkbox", { name: "1. Claude Code 스킬 만들기 선택", exact: true })
+    await expect(groupCheckbox).not.toBeChecked()
+    await topics(page).getByText("1. Claude Code 스킬 만들기", { exact: true }).click()
+    await expect(firstCheckbox).toBeChecked()
+    await expect(selectBar(page)).toContainText("1개 선택")
+    await expect(groupCheckbox).toHaveJSProperty("indeterminate", true)
+    await expect(detail(page)).toContainText("왼쪽에서 주제를 고르세요.")
+    await selectBar(page).getByRole("button", { name: "보관", exact: true }).click()
+    await expect(status(page)).toHaveText("주제 1개를 보관했어요.")
+    await expect(selectBar(page)).toHaveCount(0)
+    await expect(keptTopics(page)).toHaveCount(1)
+    await expect(keptTopics(page)).toContainText("1. Claude Code 스킬 만들기")
+    await expect(keptView(page)).toHaveText("보관함 1")
+    await expect(groups(page)).toContainText("보관 1")
+
+    // 보관함 보기: 보관한 주제만 보이고 새로고침 뒤에도 그 보기 그대로다.
+    await keptView(page).click()
+    await expect(keptView(page)).toHaveAttribute("aria-pressed", "true")
+    await expect(allView(page)).toHaveAttribute("aria-pressed", "false")
+    await expect(topics(page)).toHaveCount(1)
+    await expect(keptTopics(page)).toHaveCount(1)
+    await page.reload()
+    await expect(keptView(page)).toHaveAttribute("aria-pressed", "true")
+    await expect(topics(page)).toHaveCount(1)
+    await expect(topics(page)).toContainText("1. Claude Code 스킬 만들기")
+
+    // 본문 툴바에서 보관 해제하면 보관함이 빈다.
+    await topics(page).getByRole("button", { name: "1. Claude Code 스킬 만들기", exact: true }).click()
+    await expect(meta(page)).toContainText("보관됨")
+    await detail(page).getByRole("button", { name: "보관 해제", exact: true }).click()
+    await expect(status(page)).toHaveText("보관함에서 뺐어요.")
+    await expect(meta(page)).not.toContainText("보관됨")
+    await expect(detail(page).getByRole("button", { name: "보관", exact: true })).toBeVisible()
+    await expect(topics(page)).toHaveCount(0)
+    await expect(groups(page)).toHaveCount(0)
+    await expect(list(page)).toContainText("보관한 주제가 없어요. 전체 보기에서 주제를 골라 보관하세요.")
+    await expect(keptView(page)).toHaveText("보관함")
+
+    // 전체 보기에서 학습장의 '모두 선택'으로 한 번에 보관한다.
+    await allView(page).click()
+    await expect(topics(page)).toHaveCount(2)
+    await list(page).getByRole("button", { name: "선택", exact: true }).click()
+    await groupCheckbox.check()
+    await expect(selectBar(page)).toContainText("2개 선택")
+    await expect(firstCheckbox).toBeChecked()
+    await expect(topics(page).getByRole("checkbox", { name: "2. 플랜 모드 선택", exact: true })).toBeChecked()
+    await selectBar(page).getByRole("button", { name: "보관", exact: true }).click()
+    await expect(status(page)).toHaveText("주제 2개를 보관했어요.")
+    await expect(keptTopics(page)).toHaveCount(2)
+    await expect(keptView(page)).toHaveText("보관함 2")
+    await expect(groups(page)).toContainText("보관 2")
+
+    // 보관함 안에서도 상태 칩으로 좁힐 수 있다.
+    await keptView(page).click()
+    await expect(topics(page)).toHaveCount(2)
+    await topics(page).getByRole("button", { name: "2. 플랜 모드", exact: true }).click()
+    await detail(page).getByRole("button", { name: "학습 완료", exact: true }).click()
+    await expect(status(page)).toHaveText("학습 완료로 표시했어요.")
+    await list(page).getByRole("button", { name: "끝낸 것", exact: true }).click()
+    await expect(topics(page)).toHaveCount(1)
+    await expect(topics(page)).toContainText("2. 플랜 모드")
+    await list(page).getByRole("button", { name: "끝낸 것", exact: true }).click()
+    await expect(topics(page)).toHaveCount(2)
+
+    // 파일을 올리면 전체 보기로 돌아온다.
+    await uploadFile(page, FILENAME, OTHER_PROJECT_SAMPLE)
+    await expect(status(page)).toHaveText("학습장을 올렸어요. 주제 2개")
+    await expect(allView(page)).toHaveAttribute("aria-pressed", "true")
+    await expect(groups(page)).toHaveCount(2)
+    await expect(topics(page)).toHaveCount(4)
+    await expect(keptTopics(page)).toHaveCount(2)
 })
 
 test("업로드 없이 학습장과 주제를 직접 만들고, 이름을 바꾸고, 주제를 삭제한다", async ({ page }) => {
@@ -409,6 +511,16 @@ test.describe("터치 폰(390px)", () => {
         await detail(page).getByRole("button", { name: "취소", exact: true }).click()
         await expect(list(page)).toBeVisible()
         await expect(detail(page)).toBeHidden()
+
+        // 선택 모드: 하단 막대가 화면 안에 보이고 가로 넘침이 없다.
+        await list(page).getByRole("button", { name: "선택", exact: true }).click()
+        await expect(selectBar(page)).toBeInViewport()
+        await topics(page).getByRole("checkbox", { name: "1. Claude Code 스킬 만들기 선택", exact: true }).check()
+        await expect(selectBar(page)).toContainText("1개 선택")
+        expect(await hasHorizontalScroll(page)).toBe(false)
+        await selectBar(page).getByRole("button", { name: "취소", exact: true }).click()
+        await expect(selectBar(page)).toHaveCount(0)
+        await expect(topics(page).getByRole("button", { name: "1. Claude Code 스킬 만들기", exact: true })).toBeVisible()
     })
 })
 

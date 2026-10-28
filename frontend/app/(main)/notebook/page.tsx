@@ -19,16 +19,28 @@ export default function NotebookPage() {
     // 주제를 골랐거나 새 주제를 쓰는 중이면 좁은 화면에서 오른쪽 칸만 보인다.
     const showDetail = useNotebookStore((state) => state.selectedTopicId !== null || state.creatingIn !== null)
     const listWidth = useNotebookStore((state) => state.listWidth)
-    const restoreListWidth = useNotebookStore((state) => state.restoreListWidth)
+    const restorePreferences = useNotebookStore((state) => state.restorePreferences)
     const setListWidth = useNotebookStore((state) => state.setListWidth)
     const resetListWidth = useNotebookStore((state) => state.resetListWidth)
+    const root = useRef<HTMLDivElement>(null)
     const container = useRef<HTMLDivElement>(null)
     const [dragging, setDragging] = useState(false)
 
     useEffect(() => {
-        restoreListWidth()
+        restorePreferences()
         void load()
-    }, [restoreListWidth, load])
+    }, [restorePreferences, load])
+
+    // 넓은 화면에서는 페이지를 "뷰포트 높이 - 페이지 상단 위치"로 묶어 목록과 본문이 각각 안에서 스크롤되게 한다.
+    // 헤더 높이가 고정값이 아니라 실제 위치를 재서 CSS 변수로 넣는다(창 크기가 바뀌면 다시 잰다).
+    useEffect(() => {
+        const element = root.current
+        if (!element) return
+        const measure = () => element.style.setProperty("--notebook-top", `${element.getBoundingClientRect().top + window.scrollY}px`)
+        measure()
+        window.addEventListener("resize", measure)
+        return () => window.removeEventListener("resize", measure)
+    }, [])
 
     /** 포인터 위치를 목록 너비로 바꾼다. 본문이 너무 좁아지지 않게 상한을 둔다. */
     const resizeTo = (clientX: number) => {
@@ -68,7 +80,7 @@ export default function NotebookPage() {
     }
 
     return (
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div ref={root} className="flex min-h-0 flex-1 flex-col md:h-[calc(100dvh-var(--notebook-top,0px))] md:flex-none md:overflow-hidden">
             {(error || notice) && (
                 <div className="flex flex-col gap-1 border-b px-4 py-2 sm:px-6">
                     {error && (
