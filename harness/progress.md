@@ -797,3 +797,12 @@ feature_list NOTE-04 2·3번 문구, ADR-0010, 샘플 README 갱신.
 E2E 시나리오에 확장자·비스킬 md 거부·도움말 창 확인 추가. feature_list NOTE-01 3번·NOTE-02 3번 문구 조정, ADR-0010, 샘플 README.
 **검증**: `./scripts/verify.sh` 백엔드 233 passed(98%), 프론트 통과. 학습장 E2E 9 passed. `~/StudyNotes`의 실제 노트 6개 전부 201(주제 8·8·16·7·8·12개), txt·README.md는 400.
 **다음 할 일**: 보기 탭·상태 칩·보관/완료 변경 시 열린 주제가 목록에서 사라지면 오른쪽도 비우는 동기화 정책(사용자 요청, 바로 이어서 진행).
+
+## 2026-10-28 · 세션 25 후속 · NOTE-04 목록·본문 동기화 정책
+
+**요청**: 보기 탭(신규/보관함)을 바꿔도 오른쪽에 선택되지 않은 주제의 본문이 남아 있어 목록과 본문이 따로 놂.
+**정책**: 보기 탭·상태 칩 변경, 보관/완료 토글, 일괄 보관으로 열린 주제가 현재 목록에서 사라지면 오른쪽도 비우고 "왼쪽에서 주제를 고르세요"를 보여 준다.
+목록에 남아 있으면 그대로 둔다(모바일에서 탭을 누르자마자 본문으로 튀지 않게 자동 선택은 하지 않음).
+**한 일**: `store/notebook.ts`에 `reconcileSelection`(열린 주제가 `visibleTopics`에 없으면 `clearSelection`)을 두고 `setView`·`setFilter`·`toggleKept`·`toggleCompleted`·`keepSelected`에 적용.
+E2E: 보관 주제를 연 채 신규 보기로 바꾸면 본문이 비는지, 보관 해제·공부할 것 칩 적용 뒤 본문이 비는지 확인(기존 두 시나리오의 기대값 조정).
+**검증**: `./scripts/verify.sh frontend` 통과, 학습장 E2E 9 passed.

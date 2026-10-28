@@ -280,8 +280,12 @@ test("주제를 수정하고 학습 완료를 표시하면 재로그인 뒤에�
     await expect(list(page).getByRole("button", { name: "끝낸 것", exact: true })).toHaveAttribute("aria-pressed", "false")
     await expect(topics(page)).toHaveCount(1)
     await expect(topics(page).getByRole("button", { name: "1. Claude Code 스킬 만들기", exact: true })).toBeVisible()
+    // 열어 둔 완료 주제가 목록에서 사라졌으므로 본문도 비워진다(목록·본문 동기화).
+    await expect(detail(page)).toContainText("왼쪽에서 주제를 고르세요")
 
-    // 완료 취소하면 '공부할 것'에 다시 나오고 '끝낸 것'은 비어 있다.
+    // 완료 취소하면 '공부할 것'에 다시 나오고 '끝낸 것'은 비어 있다. (칩을 끄고 주제를 다시 연다)
+    await list(page).getByRole("button", { name: "공부할 것", exact: true }).click()
+    await topics(page).getByRole("button", { name: "2. 플랜 모드 다시 보기", exact: true }).click()
     await detail(page).getByRole("button", { name: "완료 취소", exact: true }).click()
     await expect(status(page)).toHaveText("완료를 취소했어요.")
     await expect(topics(page)).toHaveCount(2)
@@ -333,9 +337,12 @@ test("주제를 골라 보관하면 보관함에만 모이고, 보기는 새로�
     await expect(keptView(page)).toHaveText("보관함 1")
     await expect(groups(page)).toContainText("보관 1")
 
-    // 신규 보기: 아직 보관하지 않은 주제만 보인다.
+    // 보관한 주제를 열어 둔 채 신규 보기로 바꾸면 목록에서 사라지므로 본문도 비운다(목록·본문 동기화).
+    await topics(page).filter({ hasText: "1. Claude Code 스킬 만들기" }).getByRole("button").click()
+    await expect(detail(page)).toContainText("Claude Code 스킬 만들기")
     await expect(newView(page)).toHaveText("신규 1")
     await newView(page).click()
+    await expect(detail(page)).toContainText("왼쪽에서 주제를 고르세요")
     await expect(topics(page)).toHaveCount(1)
     await expect(topics(page)).toContainText("2. 플랜 모드")
     await expect(keptTopics(page)).toHaveCount(0)
@@ -356,8 +363,7 @@ test("주제를 골라 보관하면 보관함에만 모이고, 보기는 새로�
     await expect(meta(page)).toContainText("보관됨")
     await detail(page).getByRole("button", { name: "보관 해제", exact: true }).click()
     await expect(status(page)).toHaveText("보관함에서 뺐어요.")
-    await expect(meta(page)).not.toContainText("보관됨")
-    await expect(detail(page).getByRole("button", { name: "보관", exact: true })).toBeVisible()
+    await expect(detail(page)).toContainText("왼쪽에서 주제를 고르세요")
     await expect(topics(page)).toHaveCount(0)
     await expect(groups(page)).toHaveCount(0)
     await expect(list(page)).toContainText("보관한 주제가 없어요. 전체 보기에서 주제를 골라 보관하세요.")

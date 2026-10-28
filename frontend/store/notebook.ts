@@ -236,6 +236,15 @@ const clearSelection = (state: NotebookState) => ({
     topicVersion: state.topicVersion + 1,
 })
 
+/** 목록과 본문이 따로 놀지 않게: 열린 주제가 바뀐 보기·상태 칩·보관/완료 상태로는 목록에 안 보이면 오른쪽도 비운다. */
+const reconcileSelection = (state: NotebookState, patch: Partial<NotebookState> = {}): Partial<NotebookState> => {
+    const next = { ...state, ...patch }
+    if (next.selectedTopicId === null) return patch
+    const summary = next.notebooks.flatMap((notebook) => notebook.topics).find((topic) => topic.id === next.selectedTopicId)
+    const visible = summary !== undefined && visibleTopics([summary], next.view, next.filter).length === 1
+    return visible ? patch : { ...patch, ...clearSelection(state) }
+}
+
 export const useNotebookStore = create<NotebookState>((set, get) => ({
     ...emptyState(),
     listWidth: LIST_WIDTH.default,
@@ -468,11 +477,13 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
         try {
             const updated = await notebookApi.updateTopic(topic.id, { completed })
             if (get().sessionVersion !== sessionVersion) return
-            set((state) => ({
-                notebooks: replaceTopic(state.notebooks, updated),
-                ...(state.topicVersion === topicVersion ? { topic: updated } : {}),
-                notice: completed ? "학습 완료로 표시했어요." : "완료를 취소했어요.",
-            }))
+            set((state) =>
+                reconcileSelection(state, {
+                    notebooks: replaceTopic(state.notebooks, updated),
+                    ...(state.topicVersion === topicVersion ? { topic: updated } : {}),
+                    notice: completed ? "학습 완료로 표시했어요." : "완료를 취소했어요.",
+                })
+            )
         } catch (caught) {
             if (get().sessionVersion === sessionVersion) set({ error: errorMessage(caught, "완료 상태를 저장하지 못했습니다.") })
         } finally {
@@ -488,11 +499,13 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
         try {
             const updated = await notebookApi.updateTopic(topic.id, { kept })
             if (get().sessionVersion !== sessionVersion) return
-            set((state) => ({
-                notebooks: replaceTopic(state.notebooks, updated),
-                ...(state.topicVersion === topicVersion ? { topic: updated } : {}),
-                notice: kept ? "보관함에 넣었어요." : "보관함에서 뺐어요.",
-            }))
+            set((state) =>
+                reconcileSelection(state, {
+                    notebooks: replaceTopic(state.notebooks, updated),
+                    ...(state.topicVersion === topicVersion ? { topic: updated } : {}),
+                    notice: kept ? "보관함에 넣었어요." : "보관함에서 뺐어요.",
+                })
+            )
         } catch (caught) {
             if (get().sessionVersion === sessionVersion) set({ error: errorMessage(caught, "보관 상태를 저장하지 못했습니다.") })
         } finally {
@@ -520,11 +533,11 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
         }
     },
 
-    setFilter: (filter) => set({ filter }),
+    setFilter: (filter) => set((state) => reconcileSelection(state, { filter })),
 
     setView: (view) => {
         writeStoredView(view)
-        set({ view, selectedIds: [] })
+        set((state) => reconcileSelection(state, { view, selectedIds: [] }))
     },
 
     startSelecting: () => set({ selecting: true, selectedIds: [] }),
@@ -553,13 +566,13 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
             set((state) => {
                 // 열어 둔 주제가 포함돼 있으면 본문 쪽 보관 표시도 맞춘다.
                 const open = state.topic && updated.find((summary) => summary.id === state.topic?.id)
-                return {
+                return reconcileSelection(state, {
                     notebooks: mergeSummaries(state.notebooks, updated),
                     ...(state.topic && open ? { topic: { ...state.topic, ...open } } : {}),
                     selecting: false,
                     selectedIds: [],
                     notice: kept ? `주제 ${updated.length}개를 보관했어요.` : `주제 ${updated.length}개의 보관을 해제했어요.`,
-                }
+                })
             })
         } catch (caught) {
             if (get().sessionVersion === sessionVersion)
