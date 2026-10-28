@@ -8,7 +8,7 @@ import { NotebookHelp } from "@/components/notebook/notebook-help"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useNotebookStore, type NotebookFilter, type NotebookView } from "@/store/notebook"
+import { useNotebookStore, visibleTopics, type NotebookFilter, type NotebookView } from "@/store/notebook"
 
 /** 보기 세그먼트. 신규·보관함 버튼에는 해당 주제 수를 붙인다("신규 6", "보관함 12"). */
 const VIEWS: { value: NotebookView; label: string }[] = [
@@ -56,8 +56,10 @@ export function NotebookList() {
         return () => window.removeEventListener("keydown", onKeyDown)
     }, [selecting, cancelSelecting])
 
-    // 신규/보관함 보기에서는 해당 주제가 있는 학습장만 보인다.
-    const shown = view === "all" ? notebooks : notebooks.filter((notebook) => notebook.topics.some((topic) => (view === "kept") === topic.kept))
+    // 보기나 상태 칩이 걸려 있으면 보이는 주제가 없는 학습장은 숨긴다.
+    // 아무 조건도 없는 전체 보기에서만 빈 학습장을 보여 준다(새로 만든 학습장에 주제를 추가할 수 있게).
+    const filtering = view !== "all" || filter !== "all"
+    const shown = filtering ? notebooks.filter((notebook) => visibleTopics(notebook.topics, view, filter).length > 0) : notebooks
 
     const onFile = (event: ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
@@ -184,7 +186,11 @@ export function NotebookList() {
                 )}
                 {!isLoading && notebooks.length > 0 && shown.length === 0 && (
                     <p className="px-2 py-4 text-sm leading-6 text-muted-foreground">
-                        {view === "kept" ? "보관한 주제가 없어요. 전체 보기에서 주제를 골라 보관하세요." : "새 주제가 없어요. 올린 주제를 모두 보관했어요."}
+                        {filter !== "all"
+                            ? "지금 상태 칩에 맞는 주제가 없어요. 칩을 다시 누르면 모두 보입니다."
+                            : view === "kept"
+                              ? "보관한 주제가 없어요. 전체 보기에서 주제를 골라 보관하세요."
+                              : "새 주제가 없어요. 올린 주제를 모두 보관했어요."}
                     </p>
                 )}
                 {shown.map((notebook) => (

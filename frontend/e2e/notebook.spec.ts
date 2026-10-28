@@ -292,7 +292,9 @@ test("주제를 수정하고 학습 완료를 표시하면 재로그인 뒤에�
     await expect(completedTopics(page)).toHaveCount(0)
     await list(page).getByRole("button", { name: "끝낸 것", exact: true }).click()
     await expect(topics(page)).toHaveCount(0)
-    await expect(groups(page)).toContainText("주제가 없습니다.")
+    // 조건에 맞는 주제가 없는 학습장은 머리글도 숨긴다.
+    await expect(groups(page)).toHaveCount(0)
+    await expect(list(page)).toContainText("지금 상태 칩에 맞는 주제가 없어요")
     // 눌린 칩을 다시 누르면 꺼져서 모두 보인다(상태 칩에는 '전체'가 없다).
     await list(page).getByRole("button", { name: "끝낸 것", exact: true }).click()
     await expect(list(page).getByRole("button", { name: "끝낸 것", exact: true })).toHaveAttribute("aria-pressed", "false")

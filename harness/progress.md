@@ -806,3 +806,11 @@ E2E 시나리오에 확장자·비스킬 md 거부·도움말 창 확인 추가.
 **한 일**: `store/notebook.ts`에 `reconcileSelection`(열린 주제가 `visibleTopics`에 없으면 `clearSelection`)을 두고 `setView`·`setFilter`·`toggleKept`·`toggleCompleted`·`keepSelected`에 적용.
 E2E: 보관 주제를 연 채 신규 보기로 바꾸면 본문이 비는지, 보관 해제·공부할 것 칩 적용 뒤 본문이 비는지 확인(기존 두 시나리오의 기대값 조정).
 **검증**: `./scripts/verify.sh frontend` 통과, 학습장 E2E 9 passed.
+
+## 2026-10-28 · 세션 25 후속 2 · NOTE-04 조건에 맞는 주제가 없는 학습장 숨김
+
+**요청**: 상태 칩(끝낸 것 등)을 켰을 때 주제가 하나도 없는 학습장 머리글이 "주제가 없습니다"와 함께 줄줄이 남음.
+**정책**: 보기(신규/보관함)나 상태 칩이 하나라도 걸려 있으면 보이는 주제가 없는 학습장은 머리글째 숨긴다. 아무 조건도 없는 전체 보기에서만
+빈 학습장을 보여 준다(새로 만든 학습장에 주제를 추가할 수 있게). 모두 숨겨지면 조건별 안내 문구(상태 칩/보관함/신규)를 보여 준다.
+**한 일**: `notebook-list.tsx`의 `shown`을 `visibleTopics(topics, view, filter)` 기준으로 통일. E2E 시나리오 3의 기대값(머리글 0개 + 안내 문구) 조정.
+**검증**: `./scripts/verify.sh frontend` 통과, 학습장 E2E 9 passed.
