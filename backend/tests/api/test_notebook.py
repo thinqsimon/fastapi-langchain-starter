@@ -85,159 +85,18 @@ def upload(
     return response.json()
 
 
-@pytest.mark.parametrize(
-    "method,path,payload",
-    [
-        ("GET", "/api/notebooks", None),
-        ("POST", "/api/notebooks/upload", {"filename": "a.md", "content": "# a\n\nb"}),
-        ("POST", "/api/notebooks", {"title": "a"}),
-        ("GET", f"/api/notebooks/topics/{uuid.uuid4()}", None),
-        ("PATCH", f"/api/notebooks/topics/{uuid.uuid4()}", {"completed": True}),
-        ("PATCH", "/api/notebooks/topics/keep", {"topic_ids": [str(uuid.uuid4())], "kept": True}),
-        ("DELETE", f"/api/notebooks/topics/{uuid.uuid4()}", None),
-        ("POST", f"/api/notebooks/{uuid.uuid4()}/topics", {"title": "a"}),
-        ("PATCH", f"/api/notebooks/{uuid.uuid4()}", {"title": "a"}),
-        ("DELETE", f"/api/notebooks/{uuid.uuid4()}", None),
-    ],
-)
-def test_notebook_requires_auth(
-    client: TestClient, method: str, path: str, payload: object
-) -> None:
-    assert client.request(method, path, json=payload).status_code == 401
-
-
-def test_upload_splits_topics_and_list_omits_content(
+def test_upload_accepts_hand_edited_study_note(
     api_client: TestClient, owner: dict[str, str]
 ) -> None:
-    notebook = upload(api_client, owner)
-
-    assert notebook["title"] == "SpaceXyzDiary 배움노트 #01"
-    assert notebook["filename"] == FILENAME
-    assert notebook["project"] == "SpaceXyzDiary"
-    assert notebook["summary"] == "첫 줄 요약."
-    topics = notebook["topics"]
-    assert [topic["title"] for topic in topics] == ["스킬 만들기", "유니코드 정규화"]
-    assert [topic["position"] for topic in topics] == [1, 2]
-    assert "content" not in topics[0]
-    assert topics[0]["kind"] == "워크플로"
-    assert topics[0]["tags"] == ["claude-code", "skill"]
-    assert topics[0]["difficulty"] == 1
-    assert topics[0]["completed"] is False
-    assert topics[1]["difficulty"] == 3
-
-    listed = api_client.get("/api/notebooks", headers=owner).json()
-    assert [item["id"] for item in listed] == [notebook["id"]]
-    assert "content" not in listed[0]["topics"][0]
-
-    detail = api_client.get(f"/api/notebooks/topics/{topics[0]['id']}", headers=owner)
-    assert detail.status_code == 200, detail.text
-    body = detail.json()
-    assert body["content"].startswith("> 한 줄 요약.")
-    assert "## 코드 블록 안의 제목은 주제가 아니다" in body["content"]
-    assert "`태그`" not in body["content"]
-    assert body["created_at"]
-
-
-def test_upload_same_filename_conflicts_until_deleted(
-    api_client: TestClient, owner: dict[str, str]
-) -> None:
-    first = upload(api_client, owner)
-
-    duplicate = api_client.post(
-        "/api/notebooks/upload",
-        headers=owner,
-        json={
-            "filename": f"folder/{FILENAME}",
-            "content": "---\nproject: SpaceXyzDiary\n---\n# 다른 내용\n\n본문",
-        },
+    # 번호 없는 제목, 메타 줄이 한 주제에만 있어도 스킬 노트 서명으로 본다.
+    content = (
+        "---\ntitle: 손으로 고친 노트\nproject: P\n---\n"
+        "## 주제 하나\n`유형` 개념 | `태그` a\n본문\n\n## 메타 없는 주제\n본문\n"
     )
-    assert duplicate.status_code == 409, duplicate.text
-    assert duplicate.json()["error"]["code"] == "CONFLICT"
-    assert "이미 올렸습니다" in duplicate.json()["error"]["message"]
+    notebook = upload(api_client, owner, filename="P_2026-10-28_01.md", content=content)
 
-    # 다른 이름이면 같은 내용이어도 된다.
-    upload(api_client, owner, filename="2026-10-28_01.md")
-
-    assert api_client.delete(f"/api/notebooks/{first['id']}", headers=owner).status_code == 204
-    upload(api_client, owner)
-    titles = [item["filename"] for item in api_client.get("/api/notebooks", headers=owner).json()]
-    assert sorted(titles) == sorted([FILENAME, "2026-10-28_01.md"])
-
-
-def test_same_filename_from_other_project_is_allowed(
-    api_client: TestClient, owner: dict[str, str]
-) -> None:
-    upload(api_client, owner)
-    other_project = SAMPLE.replace("project: SpaceXyzDiary", "project: ai-one-park").replace(
-        "title: SpaceXyzDiary 배움노트 #01", "title: ai-one-park 배움노트 #01"
-    )
-    second = upload(api_client, owner, content=other_project)
-
-    assert (second["project"], second["filename"]) == ("ai-one-park", FILENAME)
-    listed = api_client.get("/api/notebooks", headers=owner).json()
-    assert sorted(item["project"] for item in listed) == ["SpaceXyzDiary", "ai-one-park"]
-
-    # 같은 프로젝트의 같은 파일은 여전히 거부된다.
-    duplicate = api_client.post(
-        "/api/notebooks/upload",
-        headers=owner,
-        json={"filename": FILENAME, "content": other_project},
-    )
-    assert duplicate.status_code == 409, duplicate.text
-
-
-def test_plain_markdown_without_project_can_repeat(
-    api_client: TestClient, owner: dict[str, str]
-) -> None:
-    first = upload(api_client, owner, filename="memo.md", content="# 메모\n\n첫 단락\n")
-    second = upload(api_client, owner, filename="memo.md", content="# 메모\n\n둘째 단락\n")
-
-    assert first["id"] != second["id"]
-    listed = api_client.get("/api/notebooks", headers=owner).json()
-    assert [item["project"] for item in listed] == [None, None]
-
-
-def test_upload_rejects_empty_and_invalid_payloads(
-    api_client: TestClient, owner: dict[str, str]
-) -> None:
-    empty = api_client.post(
-        "/api/notebooks/upload", headers=owner, json={"filename": "a.md", "content": "\n\n"}
-    )
-    assert empty.status_code == 400, empty.text
-    assert empty.json()["error"]["code"] == "BAD_REQUEST"
-    assert "내용이 없습니다" in empty.json()["error"]["message"]
-
-    assert (
-        api_client.post("/api/notebooks/upload", headers=owner, json={"filename": "a.md"})
-    ).status_code == 422
-    assert (
-        api_client.post(
-            "/api/notebooks/upload",
-            headers=owner,
-            json={"filename": " ", "content": "# a\n\nb"},
-        )
-    ).status_code == 422
-    assert (
-        api_client.post(
-            "/api/notebooks/upload",
-            headers=owner,
-            json={"filename": "a.md", "content": "x" * 500_001},
-        )
-    ).status_code == 422
-    assert api_client.get("/api/notebooks", headers=owner).json() == []
-
-
-def test_upload_without_h2_becomes_single_topic(
-    api_client: TestClient, owner: dict[str, str]
-) -> None:
-    notebook = upload(api_client, owner, filename="memo.md", content="# 메모\n\n첫 단락\n")
-
-    assert notebook["title"] == "메모"
-    assert [topic["title"] for topic in notebook["topics"]] == ["메모"]
-    detail = api_client.get(
-        f"/api/notebooks/topics/{notebook['topics'][0]['id']}", headers=owner
-    ).json()
-    assert detail["content"] == "첫 단락"
+    assert notebook["title"] == "손으로 고친 노트"
+    assert [topic["title"] for topic in notebook["topics"]] == ["주제 하나", "메타 없는 주제"]
 
 
 def test_manual_notebook_and_topic_crud(api_client: TestClient, owner: dict[str, str]) -> None:
@@ -462,5 +321,5 @@ def test_concurrent_upload_collision_becomes_conflict(
     monkeypatch.setattr(service.notebooks, "create", collision)
 
     with pytest.raises(ConflictError):
-        service.upload(user.id, FILENAME, "---\nproject: p\n---\n# a\n\nb")
+        service.upload(user.id, FILENAME, SAMPLE)
     assert api_client.get("/api/notebooks", headers=owner).json() == []

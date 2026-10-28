@@ -589,11 +589,27 @@ test("다른 계정에는 보이지 않고, 로그아웃 뒤 늦게 온 업로�
     expect((await page.request.get(`${backend}/api/notebooks/topics/${topicId}`)).status()).toBe(401)
 })
 
-test("빈 파일은 올리지 않고, 업로드가 실패하면 안내한 뒤 다시 시도할 수 있다", async ({ page }) => {
+test("빈 파일·md가 아닌 파일·스킬 노트가 아닌 md는 올리지 않고, 업로드가 실패하면 안내한 뒤 다시 시도할 수 있다", async ({ page }) => {
     await signUp(page, "notebook-retry")
     await openNotebook(page)
     await uploadFile(page, "empty.md", "")
     await expect(alert(page)).toHaveText("학습장에 저장할 내용이 없습니다.")
+    await expect(groups(page)).toHaveCount(0)
+
+    // 올리기 버튼의 안내와 도움말 창
+    await expect(list(page).getByRole("button", { name: "학습장 올리기", exact: true })).toHaveAttribute("title", /study-notes/)
+    await list(page).getByRole("button", { name: "도움말", exact: true }).click()
+    const help = page.getByRole("dialog", { name: "학습장 사용 안내" })
+    await expect(help).toBeVisible()
+    await expect(help).toContainText("/study-notes")
+    await page.keyboard.press("Escape")
+    await expect(help).toBeHidden()
+
+    // 확장자는 화면에서, 스킬 노트 서명은 서버에서 거른다.
+    await uploadFile(page, "notes.txt", SAMPLE)
+    await expect(alert(page)).toHaveText("md 파일(.md, .markdown)만 올릴 수 있습니다.")
+    await uploadFile(page, "memo.md", "# 회의록\n\n오늘 할 일\n")
+    await expect(alert(page)).toContainText("/study-notes로 만든 학습 노트(md)만 올릴 수 있습니다.")
     await expect(groups(page)).toHaveCount(0)
 
     await page.route(

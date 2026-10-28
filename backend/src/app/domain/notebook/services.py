@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ConflictError, NotFoundError
+from app.core.exceptions import AppError, ConflictError, NotFoundError
 from app.domain.notebook.models import Notebook, NotebookTopic
 from app.domain.notebook.parser import join_tags, parse_notebook
 from app.domain.notebook.repositories import NotebookRepository, TopicRepository
@@ -22,6 +22,8 @@ DUPLICATE_MESSAGE = (
     "같은 프로젝트의 같은 파일을 이미 올렸습니다. 기존 학습장을 삭제한 뒤 다시 올려 주세요."
 )
 MAX_FILENAME = 200
+ALLOWED_EXTENSIONS = (".md", ".markdown")
+EXTENSION_MESSAGE = "md 파일(.md, .markdown)만 올릴 수 있습니다."
 
 
 def blank_to_none(value: str | None) -> str | None:
@@ -62,15 +64,18 @@ class NotebookService:
 
     def upload(self, user_id: uuid.UUID, filename: str, content: str) -> Notebook:
         """마크다운 파일 하나를 학습장 1개 + 주제 N개로 저장한다."""
-        # 내용이 없으면 400. DB를 건드리기 전에 끝난다.
-        parsed = parse_notebook(content, filename)
         name = base_filename(filename)
+        if not name.lower().endswith(ALLOWED_EXTENSIONS):
+            raise AppError(EXTENSION_MESSAGE)
+        # 스킬 노트 서명이 없거나 내용이 없으면 400. DB를 건드리기 전에 끝난다.
+        parsed = parse_notebook(content, filename, strict=True)
         if (
             parsed.project is not None
             and self.notebooks.get_by_project_filename(user_id, parsed.project, name) is not None
         ):
             # 중복 정책: 같은 프로젝트의 같은 파일만 거부(앱에서 고친 내용·완료 표시 보호).
-            # project가 없는 일반 md는 항상 추가된다.
+            # strict 검증으로 업로드에는 project가 항상 있다.
+            # 직접 만든 학습장은 filename이 NULL이라 무관하다.
             # 덮어쓰기로 바꾸려면 여기서 기존 학습장을 지우면 된다.
             raise ConflictError(DUPLICATE_MESSAGE)
         try:

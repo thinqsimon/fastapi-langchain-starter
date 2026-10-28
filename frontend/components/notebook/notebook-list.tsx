@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "r
 import { Bookmark, BookmarkX, ListChecks, Plus, Upload, X } from "lucide-react"
 
 import { NotebookGroup } from "@/components/notebook/notebook-group"
+import { NotebookHelp } from "@/components/notebook/notebook-help"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -88,7 +89,12 @@ export function NotebookList() {
                         className="hidden"
                         onChange={onFile}
                     />
-                    <Button size="sm" disabled={busy} onClick={() => fileInput.current?.click()}>
+                    <Button
+                        size="sm"
+                        disabled={busy}
+                        title="/study-notes 스킬로 만든 학습 노트(md)만 올릴 수 있어요. 자세한 내용은 도움말을 보세요."
+                        onClick={() => fileInput.current?.click()}
+                    >
                         <Upload />
                         {isUploading ? "올리는 중…" : "학습장 올리기"}
                     </Button>
@@ -97,6 +103,7 @@ export function NotebookList() {
                             <Plus />새 학습장
                         </Button>
                     )}
+                    <NotebookHelp />
                     <Button
                         size="sm"
                         variant={selecting ? "secondary" : "outline"}

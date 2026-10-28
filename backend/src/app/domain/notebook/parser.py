@@ -7,6 +7,9 @@
 - ``## 목차`` 는 주제가 아니다. ``## 1. 제목`` 의 번호는 있어도 되고 없어도 되며 순서는 등장 순이다
 - 주제 안의 `` `유형` … | `태그` … | `난이도` ★★☆ `` 메타 줄은 필드로 읽고 본문에서 뺀다
 - 주제가 하나도 없으면 본문 전체가 주제 하나가 된다. 저장할 내용이 없으면 AppError(400)
+- ``strict=True`` 면 /study-notes 노트의 서명이 없을 때 AppError(400). 업로드 API가 쓴다.
+  서명 = frontmatter title·project, ``## 주제`` 1개 이상, ``유형``/``태그`` 메타 줄 1개 이상
+- NUL 문자가 섞인 내용은 모드와 무관하게 거부한다
 - 닫는 펜스는 여는 펜스와 같은 문자로 같거나 더 긴 길이여야 한다(CommonMark).
   닫히지 않은 펜스는 파일 끝까지 본문이다
 """
@@ -28,6 +31,11 @@ DIFFICULTY_FIELD = re.compile(r"`난이도`\s*(★+)")
 TOC_TITLE = "목차"
 DEFAULT_TITLE = "학습장"
 EMPTY_MESSAGE = "학습장에 저장할 내용이 없습니다."
+NOT_STUDY_NOTE_MESSAGE = (
+    "/study-notes로 만든 학습 노트(md)만 올릴 수 있습니다. "
+    "frontmatter의 title·project와 `## 주제`, `유형`/`태그` 메타 줄이 필요합니다."
+)
+BINARY_MESSAGE = "텍스트(md) 파일만 올릴 수 있습니다. 이미지·압축 파일은 올릴 수 없습니다."
 MAX_TITLE = 200
 MAX_KIND = 30
 MAX_PROJECT = 100
@@ -81,8 +89,15 @@ def filename_stem(filename: str | None) -> str | None:
     return stem.strip() or None
 
 
-def parse_notebook(text: str, filename: str | None = None) -> ParsedNotebook:
+def parse_notebook(
+    text: str, filename: str | None = None, *, strict: bool = False
+) -> ParsedNotebook:
+    if "\x00" in text:
+        # PostgreSQL은 텍스트에 NUL을 허용하지 않는다. 이미지·압축 파일을 올린 경우다.
+        raise AppError(BINARY_MESSAGE)
     normalized = text.lstrip("﻿").replace("\r\n", "\n").replace("\r", "\n")
+    if not normalized.strip():
+        raise AppError(EMPTY_MESSAGE)
     meta, body = _split_frontmatter(normalized.split("\n"))
     segments = _split_segments(body)
     heading, summary, preamble = _parse_preamble(segments[0][1])
@@ -102,6 +117,9 @@ def parse_notebook(text: str, filename: str | None = None) -> ParsedNotebook:
             )
         )
 
+    if strict:
+        _require_study_note(meta, topics)
+
     title = (meta.get("title") or heading or filename_stem(filename) or DEFAULT_TITLE)[:MAX_TITLE]
     if not topics:
         # 주제 구분이 없는 평범한 마크다운: 제목만 떼고 전체를 주제 하나로
@@ -111,6 +129,14 @@ def parse_notebook(text: str, filename: str | None = None) -> ParsedNotebook:
         topics = [ParsedTopic(title=title, content=content)]
     project = meta.get("project", "")[:MAX_PROJECT] or None
     return ParsedNotebook(title=title, project=project, summary=summary, topics=topics)
+
+
+def _require_study_note(meta: dict[str, str], topics: list[ParsedTopic]) -> None:
+    """/study-notes 노트의 서명을 요구한다. 회의록·txt·json 같은 일반 파일을 거른다."""
+    if not meta.get("title") or not meta.get("project"):
+        raise AppError(NOT_STUDY_NOTE_MESSAGE)
+    if not topics or not any(topic.kind or topic.tags for topic in topics):
+        raise AppError(NOT_STUDY_NOTE_MESSAGE)
 
 
 def _split_frontmatter(lines: list[str]) -> tuple[dict[str, str], list[str]]:

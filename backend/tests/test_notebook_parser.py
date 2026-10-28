@@ -216,6 +216,40 @@ def test_tags_roundtrip_and_cleanup() -> None:
     assert split_tags(join_tags(["x", "y"])) == ["x", "y"]
 
 
+STUDY_NOTE = (
+    "---\ntitle: T\nproject: P\nsession: s\n---\n# T\n\n## 1. 주제\n`유형` 개념 | `태그` a\n본문\n"
+)
+
+
+def test_strict_accepts_study_note_signature() -> None:
+    parsed = parse_notebook(STUDY_NOTE, "P_2026-10-28_01.md", strict=True)
+
+    assert (parsed.title, parsed.project, parsed.topics[0].kind) == ("T", "P", "개념")
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "# 회의록\n\n오늘 할 일\n",
+        "## 1장\n내용\n## 2장\n내용\n",
+        "---\ntitle: T\n---\n# T\n\n## 1. 주제\n`유형` 개념 | `태그` a\n본문\n",
+        "---\nproject: P\n---\n## 1. 주제\n`유형` 개념 | `태그` a\n본문\n",
+        "---\ntitle: T\nproject: P\n---\n## 1. 주제\n본문\n",
+    ],
+)
+def test_strict_rejects_files_that_are_not_study_notes(text: str) -> None:
+    with pytest.raises(AppError) as caught:
+        parse_notebook(text, "x.md", strict=True)
+    assert caught.value.status_code == 400
+    assert "/study-notes" in getattr(caught.value, "message", str(caught.value))
+
+
+def test_nul_character_is_rejected_in_any_mode() -> None:
+    with pytest.raises(AppError) as caught:
+        parse_notebook("PK\x03\x04\x00\x00garbage", "archive.md")
+    assert "텍스트(md) 파일만" in getattr(caught.value, "message", str(caught.value))
+
+
 def test_filename_stem() -> None:
     assert filename_stem("dir/2026-10-27_01.md") == "2026-10-27_01"
     assert filename_stem("C:\\notes\\note.markdown") == "note"

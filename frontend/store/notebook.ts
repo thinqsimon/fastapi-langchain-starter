@@ -281,6 +281,10 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
     upload: async (filename, content) => {
         const { sessionVersion, isUploading } = get()
         if (isUploading) return
+        if (!/\.(md|markdown)$/i.test(filename)) {
+            set({ error: "md 파일(.md, .markdown)만 올릴 수 있습니다.", notice: null })
+            return
+        }
         if (!content.trim()) {
             set({ error: "학습장에 저장할 내용이 없습니다.", notice: null })
             return
