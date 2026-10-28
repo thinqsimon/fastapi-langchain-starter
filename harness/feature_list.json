@@ -489,6 +489,21 @@
       ],
       "verify": "./scripts/verify.sh",
       "passes": true
+    },
+    {
+      "id": "STUDY-01",
+      "phase": 7,
+      "owner": "frontend-dev",
+      "title": "학습장: study-notes 공부 노트를 학습 자료로 (최종 발표 전 개발 예정)",
+      "requirement": "개선",
+      "acceptance": [
+        "(초안·사람 확인 필요) study-notes 스킬이 만든 공부 노트(md)를 올릴 수 있다",
+        "(초안) 노트를 주제별로 나눠 다시 공부하기 좋은 학습 자료로 보여 준다",
+        "(초안) 주제를 공부할 것 / 끝낸 것으로 나누고, 보관과 학습 완료를 표시할 수 있다",
+        "(초안) 배포 서비스에 추가되고 E2E로 확인된다"
+      ],
+      "verify": "./scripts/verify.sh",
+      "passes": false
     }
   ]
 }
