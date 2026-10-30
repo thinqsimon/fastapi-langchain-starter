@@ -3,14 +3,15 @@
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
-import { adminApi, errorMessage, type AdminUser } from "@/lib/api"
+import { adminApi, errorMessage, type AdminUser, type PlanName } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PLANS, planLabel } from "@/lib/llm-labels"
 import { useAuthStore } from "@/store/auth"
 
-/** 사용자를 찾아 그 계정으로 테스트를 시작하는 카드(ADMIN-02). 관리자가 아니면 아무것도 그리지 않는다. */
+/** 사용자를 찾아 요금제를 바꾸거나(ADMIN-03) 그 계정으로 테스트를 시작하는 카드(ADMIN-02). 관리자가 아니면 아무것도 그리지 않는다. */
 export function UserLookup() {
     const router = useRouter()
     const user = useAuthStore((state) => state.user)
@@ -36,6 +37,19 @@ export function UserLookup() {
         }
     }
 
+    async function changePlan(target: AdminUser, plan: PlanName) {
+        setIsBusy(true)
+        setError(null)
+        try {
+            const updated = await adminApi.setUserPlan(target.id, plan)
+            setResults((current) => current?.map((found) => (found.id === updated.id ? updated : found)) ?? null)
+        } catch (caught) {
+            setError(errorMessage(caught, "요금제를 바꾸지 못했습니다."))
+        } finally {
+            setIsBusy(false)
+        }
+    }
+
     async function actAs(target: AdminUser) {
         setIsBusy(true)
         setError(null)
@@ -51,10 +65,10 @@ export function UserLookup() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>사용자 계정으로 테스트</CardTitle>
+                <CardTitle>사용자</CardTitle>
                 <CardDescription>
-                    사용자가 신고한 오류를 그 계정 그대로 재현합니다. 메시지·일기를 만들 수 있고, 삭제와 계정 변경은 막힙니다. 시작과 쓰기 요청은 서버 로그에
-                    남습니다.
+                    요금제를 바꾸면 다음 요청부터 그 요금제의 LLM 라우팅을 탑니다. &quot;이 계정으로 테스트&quot;는 신고된 오류를 그 계정 그대로
+                    재현합니다(메시지·일기 생성 가능, 삭제·계정 변경은 차단, 시작과 쓰기 요청은 서버 로그에 기록).
                 </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
@@ -103,6 +117,19 @@ export function UserLookup() {
                                             {!found.is_active && " · 비활성"}
                                         </p>
                                     </div>
+                                    <select
+                                        aria-label={`${found.email} 요금제`}
+                                        value={found.plan}
+                                        disabled={isBusy}
+                                        onChange={(event) => void changePlan(found, event.target.value as PlanName)}
+                                        className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
+                                    >
+                                        {PLANS.map((plan) => (
+                                            <option key={plan} value={plan}>
+                                                {planLabel(plan)}
+                                            </option>
+                                        ))}
+                                    </select>
                                     <Button
                                         size="sm"
                                         variant="outline"

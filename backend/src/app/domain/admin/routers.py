@@ -1,56 +1,102 @@
 """admin 도메인 - 라우터. 관리자(설정 파일의 ADMIN_EMAILS) 전용."""
 
 import uuid
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Response, status
 
 from app.domain.admin.dependencies import AdminUser
 from app.domain.admin.schemas import (
     ActingTokenResponse,
     AdminUserRead,
     LlmProviderName,
-    ProviderSettingRead,
-    ProviderSettingUpdate,
+    PlanUpdate,
+    ProviderKeyRead,
+    ProviderKeyUpdate,
+    RouteCreate,
+    RouteRead,
+    RouteUpdate,
 )
 from app.domain.admin.services import AdminLlmSettingsService, AdminUserService
 from app.domain.auth.dependencies import DbSession
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
+FORBIDDEN: dict[int | str, dict[str, Any]] = {403: {"description": "관리자가 아님"}}
+
 
 @router.get(
     "/llm-providers",
-    response_model=list[ProviderSettingRead],
-    summary="공급자별 서버 설정 목록",
-    responses={403: {"description": "관리자가 아님"}},
+    response_model=list[ProviderKeyRead],
+    summary="공급자별 API 키 상태",
+    responses=FORBIDDEN,
 )
-def list_providers(_admin: AdminUser, db: DbSession) -> list[ProviderSettingRead]:
-    """OpenAI/Claude/Gemini 세 공급자를 항상 돌려준다(처음이면 빈 설정으로 만들어 둔다)."""
+def list_providers(_admin: AdminUser, db: DbSession) -> list[ProviderKeyRead]:
+    """OpenAI/Claude/Gemini 세 공급자를 항상 돌려준다(처음이면 키 없는 행을 만들어 둔다)."""
     return AdminLlmSettingsService(db).list_providers()
 
 
 @router.patch(
     "/llm-providers/{provider}",
-    response_model=ProviderSettingRead,
-    summary="공급자 설정 변경",
-    description=(
-        "보낸 필드만 바뀝니다. `api_key`를 보내지 않으면 저장된 키를 그대로 둡니다. "
-        "빈 문자열이나 null을 보내면 키를 지웁니다(이 공급자는 더는 쓰이지 않습니다). "
-        "`forced: true`를 보내면 다른 공급자의 강제 사용은 자동으로 꺼집니다."
-    ),
-    responses={
-        403: {"description": "관리자가 아님"},
-        404: {"description": "공급자를 찾을 수 없음"},
-    },
+    response_model=ProviderKeyRead,
+    summary="공급자 API 키 저장/삭제",
+    description="`api_key`를 보내면 암호화해 저장합니다. 빈 문자열이나 null이면 키를 지웁니다.",
+    responses={**FORBIDDEN, 503: {"description": "SETTINGS_ENCRYPTION_KEY 미설정"}},
 )
-def update_provider(
-    provider: LlmProviderName,
-    payload: ProviderSettingUpdate,
-    _admin: AdminUser,
-    db: DbSession,
-) -> ProviderSettingRead:
-    return AdminLlmSettingsService(db).update_provider(provider, payload)
+def update_provider_key(
+    provider: LlmProviderName, payload: ProviderKeyUpdate, _admin: AdminUser, db: DbSession
+) -> ProviderKeyRead:
+    return AdminLlmSettingsService(db).update_provider_key(provider, payload)
+
+
+@router.get(
+    "/llm-routes",
+    response_model=list[RouteRead],
+    summary="요금제별 라우팅 목록",
+    description="요금제(free/pro/max)마다 어느 공급자의 어느 모델을 어떤 순서로 쓰는지.",
+    responses=FORBIDDEN,
+)
+def list_routes(_admin: AdminUser, db: DbSession) -> list[RouteRead]:
+    return AdminLlmSettingsService(db).list_routes()
+
+
+@router.post(
+    "/llm-routes",
+    response_model=RouteRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="라우트 추가",
+    description="그 요금제의 맨 뒤 순서로 추가됩니다. 공급자 키가 없으면 켜도 쓰이지 않습니다.",
+    responses=FORBIDDEN,
+)
+def create_route(payload: RouteCreate, _admin: AdminUser, db: DbSession) -> RouteRead:
+    return AdminLlmSettingsService(db).create_route(payload)
+
+
+@router.patch(
+    "/llm-routes/{route_id}",
+    response_model=RouteRead,
+    summary="라우트 변경",
+    description=(
+        "보낸 필드만 바뀝니다(model, priority, enabled, forced). "
+        "`forced: true`면 같은 요금제의 다른 라우트 강제는 자동으로 꺼집니다."
+    ),
+    responses={**FORBIDDEN, 404: {"description": "라우트를 찾을 수 없음"}},
+)
+def update_route(
+    route_id: uuid.UUID, payload: RouteUpdate, _admin: AdminUser, db: DbSession
+) -> RouteRead:
+    return AdminLlmSettingsService(db).update_route(route_id, payload)
+
+
+@router.delete(
+    "/llm-routes/{route_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="라우트 삭제",
+    responses={**FORBIDDEN, 404: {"description": "라우트를 찾을 수 없음"}},
+)
+def delete_route(route_id: uuid.UUID, _admin: AdminUser, db: DbSession) -> Response:
+    AdminLlmSettingsService(db).delete_route(route_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get(
@@ -58,7 +104,7 @@ def update_provider(
     response_model=list[AdminUserRead],
     summary="사용자 검색",
     description="이메일이나 이름에 `q`가 들어간 사용자를 최근 가입순으로 돌려줍니다.",
-    responses={403: {"description": "관리자가 아님"}},
+    responses=FORBIDDEN,
 )
 def search_users(
     _admin: AdminUser,
@@ -67,6 +113,22 @@ def search_users(
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
 ) -> list[AdminUserRead]:
     return AdminUserService(db).search(q, limit)
+
+
+@router.patch(
+    "/users/{user_id}/plan",
+    response_model=AdminUserRead,
+    summary="사용자 요금제 지정",
+    description=(
+        "free/pro/max. 구독 결제가 붙기 전까지 관리자가 손으로 바꿉니다. "
+        "바로 다음 요청부터 그 요금제의 라우팅을 탑니다."
+    ),
+    responses={**FORBIDDEN, 404: {"description": "사용자를 찾을 수 없음"}},
+)
+def set_user_plan(
+    user_id: uuid.UUID, payload: PlanUpdate, admin: AdminUser, db: DbSession
+) -> AdminUserRead:
+    return AdminUserService(db).set_plan(admin, user_id, payload.plan)
 
 
 @router.post(
@@ -81,7 +143,7 @@ def search_users(
     ),
     responses={
         400: {"description": "자기 계정"},
-        403: {"description": "관리자가 아님"},
+        **FORBIDDEN,
         404: {"description": "사용자를 찾을 수 없음"},
     },
 )

@@ -48,7 +48,7 @@ async def draft_entry(
     payload: DiaryDraftRequest, current_user: CurrentUser, db: DbSession
 ) -> DiaryDraftResponse:
     return await DiaryService(db).draft_from_conversation(
-        payload.conversation_id, current_user.id, payload.entry_date
+        payload.conversation_id, current_user.id, payload.entry_date, plan=current_user.plan
     )
 
 
@@ -87,7 +87,7 @@ def list_entries(current_user: CurrentUser, db: DbSession) -> list[DiaryEntryRea
 async def weekly_review(
     current_user: CurrentUser, db: DbSession, reference: date | None = None
 ) -> WeeklyReviewResponse:
-    return await DiaryService(db).weekly_review(current_user.id, reference)
+    return await DiaryService(db).weekly_review(current_user.id, reference, plan=current_user.plan)
 
 
 @router.get("/reviews", response_model=list[SavedWeeklyReviewRead], summary="저장된 주간 회고 목록")
@@ -110,7 +110,9 @@ async def create_review(
     payload: WeeklyReviewCreate, current_user: CurrentUser, db: DbSession
 ) -> SavedWeeklyReviewRead:
     return SavedWeeklyReviewRead.model_validate(
-        await LearningService(db).create_review(current_user.id, payload.reference)
+        await LearningService(db).create_review(
+            current_user.id, payload.reference, plan=current_user.plan
+        )
     )
 
 

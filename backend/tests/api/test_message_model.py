@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.domain.admin.models import LlmPlanRoute
 from app.domain.chat.models import Message
 from app.llm.pricing import estimate_cost_usd
 from tests.api.test_diary import auth_headers
@@ -27,6 +28,8 @@ def _chat(api_client: TestClient, headers: dict[str, str], text: str) -> str:
 def test_assistant_message_records_provider_and_model(
     api_client: TestClient, db_session: Session
 ) -> None:
+    # 관리자 라우트가 없으면 .env 공급자가 기록된다(E2E가 남긴 라우트는 트랜잭션 안에서 지운다).
+    db_session.query(LlmPlanRoute).delete()
     headers = auth_headers(api_client, ACCOUNT)
     conversation_id = _chat(api_client, headers, "안녕")
 
@@ -38,6 +41,7 @@ def test_assistant_message_records_provider_and_model(
     assert assistant["role"] == "assistant"
     assert assistant["provider"] == settings.LLM_PROVIDER == "fake"
     assert assistant["model"] == settings.LLM_MODEL
+    assert assistant["plan"] == "free" and user["plan"] is None
 
     # 대화 상세에도 같은 값이 실린다.
     detail = api_client.get(f"/api/conversations/{conversation_id}", headers=headers).json()
@@ -45,6 +49,7 @@ def test_assistant_message_records_provider_and_model(
 
 
 def test_usage_is_summed_per_model(api_client: TestClient, db_session: Session) -> None:
+    db_session.query(LlmPlanRoute).delete()
     headers = auth_headers(api_client, ACCOUNT)
     conversation_id = _chat(api_client, headers, "안녕")
 

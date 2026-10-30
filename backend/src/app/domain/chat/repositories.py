@@ -53,6 +53,7 @@ class MessageRepository:
         output_tokens: int | None = None,
         provider: str | None = None,
         model: str | None = None,
+        plan: str | None = None,
     ) -> Message:
         message = Message(
             conversation_id=conversation_id,
@@ -62,6 +63,7 @@ class MessageRepository:
             output_tokens=output_tokens,
             provider=provider,
             model=model,
+            plan=plan,
         )
         self.db.add(message)
         self.db.flush()

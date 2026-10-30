@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundError
+from app.core.plans import DEFAULT_PLAN
 from app.domain.admin.services import AdminLlmSettingsService
 from app.domain.chat.models import Conversation, Message
 from app.domain.chat.repositories import ConversationRepository, MessageRepository
@@ -59,9 +60,16 @@ class ChatService:
         return self.messages.list_for_conversation(conversation_id)
 
     async def stream_answer(
-        self, conversation_id: uuid.UUID, user_id: uuid.UUID, content: str
+        self,
+        conversation_id: uuid.UUID,
+        user_id: uuid.UUID,
+        content: str,
+        plan: str = DEFAULT_PLAN,
     ) -> AsyncIterator[str]:
-        """사용자 메시지를 저장하고, LLM 응답을 토큰 단위로 흘리며, 끝나면 함께 저장한다."""
+        """사용자 메시지를 저장하고, LLM 응답을 토큰 단위로 흘리며, 끝나면 함께 저장한다.
+
+        plan: 사용자의 요금제. 어떤 공급자·모델을 쓸지 이 값으로 고른다(ADMIN-03).
+        """
         conversation = self.get_conversation(conversation_id, user_id)
         history = [
             (message.role, message.content)
@@ -86,7 +94,7 @@ class ChatService:
             nonlocal answered_by
             answered_by = info
 
-        providers = AdminLlmSettingsService(self.db).active_provider_chain()
+        providers = AdminLlmSettingsService(self.db).active_provider_chain(plan)
         try:
             async for chunk in stream_reply(
                 content,
@@ -109,6 +117,7 @@ class ChatService:
                     output_tokens=usage.output_tokens if usage else None,
                     provider=answered_by.provider if answered_by else None,
                     model=answered_by.model if answered_by else None,
+                    plan=plan,
                 )
                 self.db.commit()
                 logger.info(

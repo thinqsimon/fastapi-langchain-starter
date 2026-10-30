@@ -35,7 +35,7 @@ def test_search_is_admin_only_and_matches_email_or_name(
 
     by_email = api_client.get(USERS, params={"q": "MEMBER@"}, headers=admin_headers).json()
     assert [u["email"] for u in by_email] == [MEMBER["email"]]
-    assert set(by_email[0]) == {"id", "email", "display_name", "is_active", "created_at"}
+    assert set(by_email[0]) == {"id", "email", "display_name", "is_active", "plan", "created_at"}
 
     by_name = api_client.get(USERS, params={"q": "일반"}, headers=admin_headers).json()
     assert [u["email"] for u in by_name] == [MEMBER["email"]]

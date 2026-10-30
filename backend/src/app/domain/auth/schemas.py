@@ -56,6 +56,8 @@ class UserRead(BaseModel):
     email: EmailStr
     display_name: str
     is_active: bool
+    # 요금제(free/pro/max). 화면의 계정 메뉴에 표시하고, 서버는 이 값으로 LLM 라우팅을 고른다.
+    plan: str
     created_at: datetime
 
     @computed_field  # type: ignore[prop-decorator]

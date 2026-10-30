@@ -109,7 +109,7 @@ async def stream_message(
     async def events():
         try:
             async for chunk in service.stream_answer(
-                conversation_id, current_user.id, payload.content
+                conversation_id, current_user.id, payload.content, plan=current_user.plan
             ):
                 yield {"event": "token", "data": chunk}
         except AppError as exc:

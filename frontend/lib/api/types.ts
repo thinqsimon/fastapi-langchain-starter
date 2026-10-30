@@ -6,29 +6,40 @@ export type User = {
     email: string
     display_name: string
     is_active: boolean
-    /** 서버 설정(.env ADMIN_EMAILS)에 적힌 관리자인지. "서버 설정" 메뉴를 보여줄지 정한다. */
+    /** 서버 설정(.env ADMIN_EMAILS)에 적힌 관리자인지. "관리자" 메뉴를 보여줄지 정한다. */
     is_admin: boolean
+    /** 요금제(free/pro/max). 서버가 이 값으로 LLM 공급자·모델을 고른다(ADMIN-03). */
+    plan: PlanName
     created_at: string
 }
 
-/** 서버가 langchain에 넘기는 공급자 이름. 화면 표시명은 components/admin에서 붙인다. */
+export type PlanName = "free" | "pro" | "max"
+
+/** 서버가 langchain에 넘기는 공급자 이름. 화면 표시명은 lib/llm-labels.ts에서 붙인다. */
 export type LlmProviderName = "openai" | "anthropic" | "google_genai"
 
-export type LlmProviderSetting = {
+/** 공급자 API 키 상태. 키 원문은 절대 내려오지 않는다. */
+export type LlmProviderKey = {
     provider: LlmProviderName
-    model: string
-    /** 키 원문은 절대 내려오지 않는다. 있는지만 알 수 있다. */
     has_api_key: boolean
-    priority: number
-    enabled: boolean
-    forced: boolean
     updated_at: string
 }
 
-/** 보낸 필드만 바뀐다. api_key를 빈 문자열로 보내면 키를 지운다. */
-export type LlmProviderPatch = Partial<{
+/** 요금제별 라우트 한 줄: 이 요금제에서 이 공급자의 이 모델을 priority 순서로 쓴다. */
+export type LlmRoute = {
+    id: string
+    plan: PlanName
+    priority: number
+    provider: LlmProviderName
     model: string
-    api_key: string
+    enabled: boolean
+    forced: boolean
+    /** 공급자 키가 없으면 켜 두어도 쓰이지 않는다. */
+    has_api_key: boolean
+}
+
+export type LlmRoutePatch = Partial<{
+    model: string
     priority: number
     enabled: boolean
     forced: boolean
@@ -40,6 +51,7 @@ export type AdminUser = {
     email: string
     display_name: string
     is_active: boolean
+    plan: PlanName
     created_at: string
 }
 

@@ -908,3 +908,20 @@ lucide 1.x에는 브랜드 아이콘(Youtube)이 없어 `SquarePlay`(빨간색) 
 E2E는 새로고침 뒤 대화가 자동 선택되지 않아 목록에서 다시 열도록 수정.
 **검증**: `./scripts/verify.sh` 백엔드 260 passed(97.9%), 프론트 통과. E2E chat·coach·admin 18 passed + model-label(수정 후 재실행).
 **운영 적용**: push → Render가 배포 전 마이그레이션 적용(컬럼 2개 추가, nullable). 환경 변수 추가 없음.
+
+## 2026-10-31 · 세션 30 · ADMIN-03 요금제(free/pro/max)별 LLM 라우팅 + 사용자 요금제 지정
+
+**요청**: 향후 구독제(free/pro/max)를 감안해 서버가 요금제별로 다른 모델을 적용하도록 설계·구현. 결정(사용자): 요금제마다 공급자 순서·모델 전부 따로, `users.plan` + 관리자 수동 지정, A(LLM-02) 먼저 배포 후 B 진행.
+**한 일**
+- `core/plans.py`(PlanName/PLANS/DEFAULT_PLAN). 모델 분리: `llm_providers`(공급자 키) / `llm_plan_routes`(plan·priority·provider FK·model·enabled·forced, 요금제당 강제 1행 부분 유니크). `users.plan`(기본 free), `messages.plan`.
+  마이그레이션 `804e78cdbab8`: 기존 `llm_provider_settings` → 키는 providers로, 모델·순서·사용·강제는 free 라우트로 이전 후 테이블 삭제(downgrade는 free 첫 라우트 기준 복원)
+- `AdminLlmSettingsService`: 키 저장/삭제, 라우트 CRUD(요금제 안 순서, forced 배타), `active_provider_chain(plan)`: 요금제 라우트 → free → .env 캐스케이드, 복호화 실패 건너뜀.
+  `AdminUserService.set_plan`(로그 `admin_plan_changed`). chat/diary 라우터가 `current_user.plan`을 넘기고 답변에 plan 기록
+- API: `GET/PATCH /admin/llm-providers`, `GET/POST /admin/llm-routes`, `PATCH/DELETE /admin/llm-routes/{id}`, `PATCH /admin/users/{id}/plan`. `/auth/me`·관리자 사용자 응답에 `plan`
+- 프론트: `store/admin.ts`(키·라우트·순서 바꾸기), `server-settings.tsx` 재작성(요금제별 '지금 동작', 공급자 키 카드, Free/Pro/Max 탭 라우트 목록+추가), `user-lookup.tsx`에 요금제 select, 계정 메뉴에 요금제(Free/Pro/Max), `lib/llm-labels.ts`에 PLANS/planLabel
+- 테스트: `test_admin.py` 재작성(키·라우트·검증·체인 캐스케이드), `test_admin_plan.py`(요금제 지정 + fake에서도 라우트 선택이 메시지에 기록됨), 기존 테스트 갱신. E2E `admin.spec.ts` 재작성(키→라우트→강제→순서→Pro 캐스케이드→새로고침→삭제, 요금제 select→테스트 계정에서 Pro 표시)
+- 중간에 CI만 실패하던 원인 수정: Playwright가 `next dev`로 띄운 서버의 **N 배지(dev indicator)**가 390px에서 입력칸 왼쪽 + 버튼을 덮어 클릭을 가로챔 → E2E 서버에만 `NEXT_HIDE_DEV_INDICATORS=1`로 끔(`b4d4c62`). 그 뒤 CI 통과·Render에 LLM-02 반영 확인
+- ADR-0014, feature_list ADMIN-03, README
+**검증**: `./scripts/verify.sh` 백엔드 262 passed(97.9%), 프론트 통과. E2E admin 4·model-label·account 10 passed, 전체 실행 결과는 아래 커밋 메시지 참고
+**운영 적용**: push → Render가 배포 전 마이그레이션 적용(기존 설정은 free 라우트로 자동 이전). 환경 변수 추가 없음. 관리자 화면에서 Pro/Max 탭에 라우트를 넣기 전까지는 free와 같게 동작
+**다음**: 구독 결제 연동 시 `subscriptions` 테이블이 `users.plan`을 채우고 만료 시 free로(ADR-0014 메모). 요금제별 한도(`plan_limits`)

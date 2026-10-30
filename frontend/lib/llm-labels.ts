@@ -16,3 +16,11 @@ export function answeredByLabel(provider: string | null | undefined, model: stri
     if (provider === "fake") return "테스트 응답"
     return model ? `${providerLabel(provider)} · ${model}` : providerLabel(provider)
 }
+
+/** 요금제 목록과 표시명. 서버의 app/core/plans.py와 같은 순서다. */
+export const PLANS = ["free", "pro", "max"] as const
+const PLAN_LABELS: Record<string, string> = { free: "Free", pro: "Pro", max: "Max" }
+
+export function planLabel(plan: string): string {
+    return PLAN_LABELS[plan] ?? plan
+}

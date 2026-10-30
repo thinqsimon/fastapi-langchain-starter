@@ -53,5 +53,7 @@ class Message(Base, TimestampMixin):
     # 사용자 메시지와 이 컬럼이 생기기 전의 답변은 NULL이다.
     provider: Mapped[str | None] = mapped_column(String(32), nullable=True)
     model: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # 답할 때 사용자의 요금제(ADMIN-03). 요금제별 비용 분석용. 사용자 메시지·예전 답변은 NULL.
+    plan: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
     conversation: Mapped["Conversation"] = relationship(back_populates="messages")

@@ -1,8 +1,10 @@
 """admin 도메인 - 비즈니스 로직.
 
-"서버 설정" 화면(ADMIN-01)에서 관리자가 OpenAI/Claude/Gemini의 키·모델·우선순위·강제 사용을
-정한다. chat/diary 도메인은 `active_provider_chain()`을 불러 `app.llm.chains.*`에 그대로
-넘긴다(비어 있으면 `.env` 설정 하나만 쓰는 기존 동작과 같다).
+관리자 화면(ADMIN-01·02·03)의 세 가지 일:
+1. 공급자별 API 키 보관(`AdminLlmSettingsService.update_provider_key`)
+2. 요금제별 라우팅(어느 공급자의 어느 모델을 어떤 순서로) 관리와, chat/diary가 부르는
+   `active_provider_chain(plan)`
+3. 사용자 검색·요금제 지정·"이 계정으로 테스트" 토큰(`AdminUserService`)
 """
 
 import logging
@@ -12,15 +14,19 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.exceptions import AppError, NotFoundError, ServiceUnavailableError
+from app.core.plans import DEFAULT_PLAN, PLANS
 from app.core.security import create_access_token, decrypt_secret, encrypt_secret
-from app.domain.admin.models import LlmProviderSetting
-from app.domain.admin.repositories import LlmProviderSettingRepository
+from app.domain.admin.models import LlmPlanRoute, LlmProvider
+from app.domain.admin.repositories import LlmPlanRouteRepository, LlmProviderRepository
 from app.domain.admin.schemas import (
     ALLOWED_PROVIDERS,
     ActingTokenResponse,
     AdminUserRead,
-    ProviderSettingRead,
-    ProviderSettingUpdate,
+    ProviderKeyRead,
+    ProviderKeyUpdate,
+    RouteCreate,
+    RouteRead,
+    RouteUpdate,
 )
 from app.domain.auth.models import User
 from app.domain.auth.repositories import UserRepository
@@ -28,111 +34,190 @@ from app.llm.providers import ProviderAttempt
 
 logger = logging.getLogger(__name__)
 
-# 한 번도 설정한 적 없는 공급자에 보여줄 기본 모델. 관리자가 화면에서 바로 바꿀 수 있다.
-DEFAULT_MODELS: dict[str, str] = {
-    "openai": "gpt-4o-mini",
-    "anthropic": "claude-sonnet-4-5",
-    "google_genai": "gemini-2.5-flash",
-}
-
 
 class AdminLlmSettingsService:
     def __init__(self, db: Session) -> None:
         self.db = db
-        self.settings = LlmProviderSettingRepository(db)
+        self.providers = LlmProviderRepository(db)
+        self.routes = LlmPlanRouteRepository(db)
 
-    def _ensure_defaults(self) -> list[LlmProviderSetting]:
-        """세 공급자 행이 항상 있게 한다. 없는 것만 기본값으로 만든다(기존 설정은 그대로 둔다)."""
-        rows = self.settings.list_all()
-        existing = {row.provider for row in rows}
-        missing = [p for p in ALLOWED_PROVIDERS if p not in existing]
-        if not missing:
-            return rows
+    # ----- 공급자 키 -----
 
-        next_priority = len(rows) + 1
-        for offset, provider in enumerate(missing):
-            self.settings.create(
-                provider, DEFAULT_MODELS[provider], priority=next_priority + offset
-            )
-        self.db.commit()
-        return self.settings.list_all()
+    def _ensure_providers(self) -> dict[str, LlmProvider]:
+        """세 공급자 행이 항상 있게 한다. 없는 것만 키 없이 만든다(기존 키는 그대로 둔다)."""
+        rows = {row.provider: row for row in self.providers.list_all()}
+        missing = [p for p in ALLOWED_PROVIDERS if p not in rows]
+        for provider in missing:
+            rows[provider] = self.providers.create(provider)
+        if missing:
+            self.db.commit()
+        return rows
 
-    def list_providers(self) -> list[ProviderSettingRead]:
-        return [_to_read(row) for row in self._ensure_defaults()]
+    def list_providers(self) -> list[ProviderKeyRead]:
+        rows = self._ensure_providers()
+        return [_to_key_read(rows[p]) for p in ALLOWED_PROVIDERS]
 
-    def update_provider(self, provider: str, payload: ProviderSettingUpdate) -> ProviderSettingRead:
-        self._ensure_defaults()
-        row = self.settings.get(provider)
+    def update_provider_key(self, provider: str, payload: ProviderKeyUpdate) -> ProviderKeyRead:
+        row = self._ensure_providers().get(provider)
         if row is None:
             raise NotFoundError("등록되지 않은 공급자입니다.")
+        row.encrypted_api_key = encrypt_secret(payload.api_key) if payload.api_key else None
+        self.db.commit()
+        # 키 값은 로그에 남기지 않는다.
+        logger.info(
+            "llm_provider_key_updated provider=%s has_key=%s",
+            provider,
+            row.encrypted_api_key is not None,
+        )
+        return _to_key_read(row)
+
+    # ----- 요금제별 라우팅 -----
+
+    def list_routes(self) -> list[RouteRead]:
+        keys = self._key_presence()
+        return [_to_route_read(route, keys) for route in self.routes.list_all()]
+
+    def create_route(self, payload: RouteCreate) -> RouteRead:
+        self._ensure_providers()
+        route = self.routes.create(
+            plan=payload.plan,
+            provider=payload.provider,
+            model=payload.model,
+            priority=self.routes.next_priority(payload.plan),
+        )
+        self.db.commit()
+        logger.info(
+            "llm_route_created plan=%s provider=%s model=%s",
+            route.plan,
+            route.provider,
+            route.model,
+        )
+        return _to_route_read(route, self._key_presence())
+
+    def update_route(self, route_id: uuid.UUID, payload: RouteUpdate) -> RouteRead:
+        route = self.routes.get(route_id)
+        if route is None:
+            raise NotFoundError("라우트를 찾을 수 없습니다.")
 
         fields = payload.model_fields_set
         if "model" in fields and payload.model:
-            row.model = payload.model
-        if "api_key" in fields:
-            row.encrypted_api_key = encrypt_secret(payload.api_key) if payload.api_key else None
+            route.model = payload.model
         if "priority" in fields and payload.priority is not None:
-            row.priority = payload.priority
+            route.priority = payload.priority
         if "enabled" in fields and payload.enabled is not None:
-            row.enabled = payload.enabled
+            route.enabled = payload.enabled
         if "forced" in fields and payload.forced is not None:
             if payload.forced:
-                self.settings.clear_forced_except(provider)
-            row.forced = payload.forced
+                self.routes.clear_forced_except(route.plan, route.id)
+            route.forced = payload.forced
 
         self.db.commit()
-        # 어떤 필드를 바꿨는지만 남기고 값(특히 키)은 로그에 남기지 않는다.
-        logger.info("llm_provider_setting_updated provider=%s fields=%s", provider, sorted(fields))
-        return _to_read(row)
+        logger.info(
+            "llm_route_updated id=%s plan=%s fields=%s", route.id, route.plan, sorted(fields)
+        )
+        return _to_route_read(route, self._key_presence())
 
-    def active_provider_chain(self) -> list[ProviderAttempt]:
-        """실제로 호출에 쓸 공급자 순서. 비어 있으면 호출부가 `.env` 설정 하나만 쓴다."""
-        rows = [r for r in self.settings.list_all() if r.enabled and r.encrypted_api_key]
-        forced = next((r for r in rows if r.forced), None)
-        ordered = [forced] if forced is not None else sorted(rows, key=lambda r: r.priority)
+    def delete_route(self, route_id: uuid.UUID) -> None:
+        route = self.routes.get(route_id)
+        if route is None:
+            raise NotFoundError("라우트를 찾을 수 없습니다.")
+        plan, provider = route.plan, route.provider
+        self.routes.delete(route)
+        self.db.commit()
+        logger.info("llm_route_deleted id=%s plan=%s provider=%s", route_id, plan, provider)
+
+    def active_provider_chain(self, plan: str = DEFAULT_PLAN) -> list[ProviderAttempt]:
+        """이 요금제의 요청이 실제로 시도할 공급자 순서.
+
+        1. 그 요금제의 라우트 중 켜져 있고 공급자 키가 있는 것만, 우선순위대로
+        2. 강제 라우트가 있으면 그것 하나만(자동 전환 없음)
+        3. 라우트가 하나도 없으면 free 요금제의 라우트로(새 요금제를 아직 설정하지 않았을 때)
+        4. 그것도 없으면 빈 목록 → 호출부가 `.env`의 공급자 하나를 쓴다(설정을 건드린 적 없는 Fork)
+        """
+        if plan not in PLANS:
+            plan = DEFAULT_PLAN
+        keys = {row.provider: row.encrypted_api_key for row in self.providers.list_all()}
+
+        def usable(candidates: list[LlmPlanRoute]) -> list[LlmPlanRoute]:
+            return [r for r in candidates if r.enabled and keys.get(r.provider)]
+
+        routes = usable(self.routes.list_for_plan(plan))
+        if not routes and plan != DEFAULT_PLAN:
+            routes = usable(self.routes.list_for_plan(DEFAULT_PLAN))
+        forced = next((r for r in routes if r.forced), None)
+        ordered = [forced] if forced is not None else routes
 
         attempts: list[ProviderAttempt] = []
-        for row in ordered:
+        for route in ordered:
             try:
                 attempts.append(
                     ProviderAttempt(
-                        provider=row.provider,
-                        model=row.model,
-                        api_key=decrypt_secret(row.encrypted_api_key)  # type: ignore[arg-type]
-                        if row.encrypted_api_key
-                        else None,
+                        provider=route.provider,
+                        model=route.model,
+                        api_key=decrypt_secret(keys[route.provider] or ""),
                     )
                 )
             except ServiceUnavailableError:
-                # 암호화 키가 바뀌는 등으로 복호화를 못 하면 이 공급자만 건너뛴다.
-                # 여기서 그대로 던지면 설정을 건드린 적 없는 요청까지 전부 막히게 된다.
-                logger.warning("llm_provider_setting_decrypt_failed provider=%s", row.provider)
+                # 암호화 키가 바뀌는 등으로 복호화를 못 하면 이 라우트만 건너뛴다.
+                logger.warning("llm_provider_key_decrypt_failed provider=%s", route.provider)
         return attempts
 
+    def _key_presence(self) -> dict[str, bool]:
+        return {
+            row.provider: row.encrypted_api_key is not None for row in self.providers.list_all()
+        }
 
-def _to_read(row: LlmProviderSetting) -> ProviderSettingRead:
-    return ProviderSettingRead(
+
+def _to_key_read(row: LlmProvider) -> ProviderKeyRead:
+    return ProviderKeyRead(
         provider=row.provider,  # type: ignore[arg-type]
-        model=row.model,
         has_api_key=row.encrypted_api_key is not None,
-        priority=row.priority,
-        enabled=row.enabled,
-        forced=row.forced,
         updated_at=row.updated_at,
     )
 
 
-class AdminUserService:
-    """사용자 검색과 '이 계정으로 테스트'(ADMIN-02).
+def _to_route_read(route: LlmPlanRoute, keys: dict[str, bool]) -> RouteRead:
+    return RouteRead(
+        id=route.id,
+        plan=route.plan,  # type: ignore[arg-type]
+        priority=route.priority,
+        provider=route.provider,  # type: ignore[arg-type]
+        model=route.model,
+        enabled=route.enabled,
+        forced=route.forced,
+        has_api_key=keys.get(route.provider, False),
+    )
 
-    사용자가 신고한 오류를 관리자가 그 계정 그대로 재현하기 위한 것이다. 감사 기록은 서버 로그.
+
+class AdminUserService:
+    """사용자 검색, 요금제 지정(ADMIN-03), '이 계정으로 테스트'(ADMIN-02).
+
+    테스트 토큰은 신고된 오류를 관리자가 그 계정 그대로 재현하기 위한 것. 감사 기록은 서버 로그.
     """
 
     def __init__(self, db: Session) -> None:
+        self.db = db
         self.users = UserRepository(db)
 
     def search(self, query: str, limit: int = 20) -> list[AdminUserRead]:
         return [AdminUserRead.model_validate(u) for u in self.users.search(query.strip(), limit)]
+
+    def set_plan(self, admin: User, target_id: uuid.UUID, plan: str) -> AdminUserRead:
+        """구독 결제가 생기기 전까지는 관리자가 요금제를 손으로 지정한다."""
+        target = self.users.get_by_id(target_id)
+        if target is None:
+            raise NotFoundError("사용자를 찾을 수 없습니다.")
+        previous = target.plan
+        target.plan = plan
+        self.db.commit()
+        logger.info(
+            "admin_plan_changed admin=%s target=%s plan=%s previous=%s",
+            admin.id,
+            target.id,
+            plan,
+            previous,
+        )
+        return AdminUserRead.model_validate(target)
 
     def create_acting_token(self, admin: User, target_id: uuid.UUID) -> ActingTokenResponse:
         target = self.users.get_by_id(target_id)

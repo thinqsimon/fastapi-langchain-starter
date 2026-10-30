@@ -61,7 +61,8 @@ make init            # .env 생성 · 의존성 설치 · DB 기동 · 마이그
 
 운영자가 화면에서 OpenAI·Claude·Gemini 키와 우선순위를 관리하려면 `ADMIN_EMAILS`(관리자 이메일)와
 `SETTINGS_ENCRYPTION_KEY`(키 암호화용, `Fernet.generate_key()`)를 넣고 그 계정으로 로그인해 계정 메뉴의 **서버 설정**을 엽니다.
-자세한 규칙은 `docs/decisions/ADR-0012-admin-llm-providers.md`.
+요금제(free/pro/max)마다 다른 공급자·모델 순서를 둘 수 있고, 사용자 요금제는 관리자가 지정합니다(결제 연동 전).
+자세한 규칙은 `docs/decisions/ADR-0012-admin-llm-providers.md`, `ADR-0014-plan-based-llm-routing.md`.
 
 ```bash
 make dev-backend     # http://localhost:8000  (API 문서: /docs)

@@ -691,6 +691,22 @@
       ],
       "verify": "./scripts/verify.sh 및 ./scripts/e2e.sh e2e/model-label.spec.ts e2e/chat.spec.ts",
       "passes": true
+    },
+    {
+      "id": "ADMIN-03",
+      "phase": 9,
+      "owner": "backend-dev",
+      "title": "요금제(free/pro/max)별 LLM 라우팅 + 사용자 요금제 지정",
+      "requirement": "2026-10-31 사용자 요청(향후 구독제를 감안해 요금제별로 다른 모델 적용). 결정: 요금제마다 공급자 순서·모델 전부 따로, users.plan 추가 + 관리자 수동 지정",
+      "acceptance": [
+        "llm_providers(공급자 키)와 llm_plan_routes(요금제별 라우트)로 나뉘고, 기존 llm_provider_settings는 마이그레이션이 키/free 라우트로 옮긴다. users.plan(기본 free), messages.plan이 생긴다",
+        "active_provider_chain(plan): 그 요금제의 켜진+키 있는 라우트 순서대로, 강제가 있으면 그것만, 없으면 free 라우트, 그것도 없으면 .env. chat·diary가 사용자 요금제를 넘기고 답변에 plan이 기록된다",
+        "관리자 API: 키 GET/PATCH, 라우트 GET/POST/PATCH/DELETE(요금제당 강제 1개, 요금제 안 순서), 사용자 요금제 PATCH(로그 admin_plan_changed). 비관리자 403, 잘못된 요금제·공급자 422",
+        "관리자 화면: 요금제별 '지금 동작', 공급자 키 카드, Free/Pro/Max 탭의 라우트 목록(모델·순서·사용·강제·삭제·추가), 사용자 카드의 요금제 선택. 계정 메뉴에 요금제 표시",
+        "API 테스트(키·라우트·체인·요금제 지정·라우팅 반영), E2E(admin.spec.ts 키·라우트·요금제 시나리오), ADR-0014를 제공하고 ./scripts/verify.sh와 E2E를 통과한다"
+      ],
+      "verify": "./scripts/verify.sh 및 ./scripts/e2e.sh e2e/admin.spec.ts",
+      "passes": true
     }
   ]
 }
