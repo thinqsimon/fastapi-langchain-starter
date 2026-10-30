@@ -18,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ConflictError, NotFoundError
+from app.domain.admin.services import AdminLlmSettingsService
 from app.domain.chat.models import Message
 from app.domain.chat.repositories import ConversationRepository, MessageRepository
 from app.domain.diary.models import DiaryEntry, DiaryStudyProgress, SavedWeeklyReview
@@ -119,6 +120,7 @@ class DiaryService:
         draft = await draft_diary(
             new_messages=[(m.role, m.content) for m in newer],
             context_messages=[(m.role, m.content) for m in earlier],
+            providers=AdminLlmSettingsService(self.db).active_provider_chain(),
         )
 
         # 제목 날짜는 채팅 날짜와 상관없이 오늘이다.
@@ -258,7 +260,8 @@ class DiaryService:
                 f"{entry.title}\n배운 것: {entry.learned}\n어려웠던 것: {entry.difficult}"
                 + (f"\n내일 할 것: {entry.next_plan}" if entry.next_plan else "")
                 for entry in entries
-            ]
+            ],
+            providers=AdminLlmSettingsService(self.db).active_provider_chain(),
         )
         return WeeklyReviewResponse(
             week_start=start,

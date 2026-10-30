@@ -79,7 +79,7 @@ def test_duplicate_review_keeps_snapshot_without_calling_llm(
     source = entry(api_client, owner)
     saved = review(api_client, owner)
 
-    async def fail(*_args: object) -> None:
+    async def fail(*_args: object, **_kwargs: object) -> None:
         raise AssertionError("이미 저장한 주는 LLM을 호출하면 안 된다")
 
     monkeypatch.setattr(services, "review_week", fail)
@@ -108,7 +108,7 @@ def test_llm_failure_leaves_no_saved_review(
 ) -> None:
     entry(api_client, owner)
 
-    async def fail(*_args: object) -> None:
+    async def fail(*_args: object, **_kwargs: object) -> None:
         raise LLMError("일시적인 생성 실패")
 
     monkeypatch.setattr(services, "review_week", fail)

@@ -4,7 +4,9 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints, computed_field
+
+from app.core.config import settings
 
 
 class SignupRequest(BaseModel):
@@ -55,3 +57,9 @@ class UserRead(BaseModel):
     display_name: str
     is_active: bool
     created_at: datetime
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def is_admin(self) -> bool:
+        """ "서버 설정" 화면(ADMIN-01)에 들어갈 수 있는지. DB 컬럼이 아니라 설정 파일로 정한다."""
+        return self.email.lower() in settings.admin_emails

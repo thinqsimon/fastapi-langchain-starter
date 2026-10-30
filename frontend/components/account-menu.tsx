@@ -1,6 +1,6 @@
 "use client"
 
-import { CircleUserRound, LogOut, Settings } from "lucide-react"
+import { CircleUserRound, LogOut, ServerCog, Settings } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
@@ -21,6 +21,11 @@ export function AccountMenu() {
     function goToSettings() {
         setOpen(false)
         router.push("/settings")
+    }
+
+    function goToServerSettings() {
+        setOpen(false)
+        router.push("/admin")
     }
 
     async function handleLogout() {
@@ -63,6 +68,13 @@ export function AccountMenu() {
                 </section>
 
                 <SheetFooter className="pb-[calc(1rem+env(safe-area-inset-bottom))]">
+                    {/* 관리자(.env ADMIN_EMAILS)에게만 보인다. LLM 공급자 키·모델·우선순위를 바꾸는 곳. */}
+                    {user?.is_admin && (
+                        <Button variant="outline" onClick={goToServerSettings}>
+                            <ServerCog />
+                            서버 설정
+                        </Button>
+                    )}
                     <Button variant="outline" onClick={goToSettings}>
                         <Settings />
                         설정

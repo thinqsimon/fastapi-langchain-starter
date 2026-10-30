@@ -56,6 +56,12 @@ class Settings(BaseSettings):
     LLM_PRICE_INPUT_PER_1M: float | None = None
     LLM_PRICE_OUTPUT_PER_1M: float | None = None
 
+    # "서버 설정" 화면(ADMIN-01)에 들어갈 수 있는 이메일. 쉼표로 여러 명. 비우면 아무도 못 본다.
+    ADMIN_EMAILS: str = ""
+    # 관리자가 서버 설정 화면에 입력한 공급자별 API 키를 DB에 암호화해 저장하는 데 쓰는 키.
+    # Fernet.generate_key()로 만든다(app.core.security 참고).
+    SETTINGS_ENCRYPTION_KEY: str = ""
+
     # 선택 기능: 문서를 저장해 두고 질문과 비슷한 대목을 찾아 답변에 쓰는 기능.
     # 끄면 관련 API가 아예 등록되지 않는다.
     RAG_ENABLED: bool = False
@@ -131,6 +137,11 @@ class Settings(BaseSettings):
             "google_genai": self.GOOGLE_API_KEY,
         }
         return by_provider.get(self.LLM_PROVIDER, "")
+
+    @property
+    def admin_emails(self) -> set[str]:
+        """ "서버 설정" 화면에 접근할 수 있는 이메일(소문자, 공백 제거)."""
+        return {email.strip().lower() for email in self.ADMIN_EMAILS.split(",") if email.strip()}
 
     @model_validator(mode="after")
     def _reject_insecure_production_settings(self) -> "Settings":

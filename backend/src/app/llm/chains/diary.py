@@ -1,13 +1,17 @@
 """배움일기 생성 체인. 구조화된 출력을 받아 서비스가 그대로 저장할 수 있게 한다."""
 
+import logging
 import re
 from collections.abc import Sequence
 
+from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel, Field
 
 from app.core.exceptions import LLMError
 from app.llm.prompts.diary_coach import build_draft_prompt, build_weekly_prompt
-from app.llm.providers import get_chat_model
+from app.llm.providers import ProviderAttempt, get_chat_model
+
+logger = logging.getLogger(__name__)
 
 
 class DiaryDraft(BaseModel):
@@ -67,34 +71,74 @@ def keep_grounded_next_plan(draft: DiaryDraft, messages: Sequence[str]) -> Diary
     return draft.model_copy(update={"next_plan": "", "next_plan_evidence": ""})
 
 
+def _build_chat_model(attempt: ProviderAttempt) -> BaseChatModel:
+    if not attempt.provider:
+        return get_chat_model()
+    return get_chat_model(provider=attempt.provider, model=attempt.model, api_key=attempt.api_key)
+
+
 async def draft_diary(
     new_messages: Sequence[tuple[str, str]],
     context_messages: Sequence[tuple[str, str]] = (),
+    providers: Sequence[ProviderAttempt] = (),
 ) -> DiaryDraft:
-    """새로 추가된 대화로 일기 초안을 만든다. 이전 대화는 맥락으로만 넘긴다."""
+    """새로 추가된 대화로 일기 초안을 만든다. 이전 대화는 맥락으로만 넘긴다.
+
+    providers: 관리자가 등록한 공급자 우선순위. 비어 있으면 `.env` 설정 하나만 쓴다.
+    """
     conversation = _format_conversation(new_messages)
-    try:
-        chain = build_draft_prompt() | get_chat_model().with_structured_output(DiaryDraft)
-        result = await chain.ainvoke(
-            {
-                "context": _format_conversation(context_messages) or "(없음)",
-                "conversation": conversation,
-            }
-        )
-    except Exception as exc:
-        raise LLMError("일기 초안을 만들지 못했습니다.") from exc
+    attempts: Sequence[ProviderAttempt] = providers or (ProviderAttempt(),)
+
+    result: object = None
+    last_error: Exception | None = None
+    for index, attempt in enumerate(attempts):
+        try:
+            chain = build_draft_prompt() | _build_chat_model(attempt).with_structured_output(
+                DiaryDraft
+            )
+            result = await chain.ainvoke(
+                {
+                    "context": _format_conversation(context_messages) or "(없음)",
+                    "conversation": conversation,
+                }
+            )
+            break
+        except Exception as exc:
+            last_error = exc
+            if index == len(attempts) - 1:
+                raise LLMError("일기 초안을 만들지 못했습니다.") from exc
+            logger.warning("llm_provider_failed provider=%s error=%s", attempt.provider, exc)
+            continue
+    else:
+        raise LLMError("일기 초안을 만들지 못했습니다.") from last_error
 
     if not isinstance(result, DiaryDraft):
         raise LLMError("일기 초안 형식이 올바르지 않습니다.")
     return keep_grounded_next_plan(result, [content for _, content in new_messages])
 
 
-async def review_week(entries: Sequence[str]) -> WeeklyReview:
-    try:
-        chain = build_weekly_prompt() | get_chat_model().with_structured_output(WeeklyReview)
-        result = await chain.ainvoke({"entries": "\n\n---\n\n".join(entries)})
-    except Exception as exc:
-        raise LLMError("주간 회고를 만들지 못했습니다.") from exc
+async def review_week(
+    entries: Sequence[str], providers: Sequence[ProviderAttempt] = ()
+) -> WeeklyReview:
+    attempts: Sequence[ProviderAttempt] = providers or (ProviderAttempt(),)
+
+    result: object = None
+    last_error: Exception | None = None
+    for index, attempt in enumerate(attempts):
+        try:
+            chain = build_weekly_prompt() | _build_chat_model(attempt).with_structured_output(
+                WeeklyReview
+            )
+            result = await chain.ainvoke({"entries": "\n\n---\n\n".join(entries)})
+            break
+        except Exception as exc:
+            last_error = exc
+            if index == len(attempts) - 1:
+                raise LLMError("주간 회고를 만들지 못했습니다.") from exc
+            logger.warning("llm_provider_failed provider=%s error=%s", attempt.provider, exc)
+            continue
+    else:
+        raise LLMError("주간 회고를 만들지 못했습니다.") from last_error
 
     if not isinstance(result, WeeklyReview):
         raise LLMError("주간 회고 형식이 올바르지 않습니다.")

@@ -9,9 +9,12 @@ requires-python = ">=3.13"
 dependencies = [
     "alembic>=1.20.0",
     "bcrypt>=5.0.0",
+    "cryptography>=46.0.0",
     "fastapi[standard]>=0.143.1",
     "langchain>=1.4.6",
+    "langchain-anthropic>=1.2.0",
     "langchain-core>=1.6.10",
+    "langchain-google-genai>=3.1.0",
     "langchain-openai>=1.7.2",
     "pgvector>=0.5.1",
     "psycopg[binary]>=3.3.6",
@@ -85,6 +88,7 @@ name = "domain 계층: routers -> services -> repositories -> models"
 type = "layers"
 layers = ["routers", "services", "repositories", "models"]
 containers = [
+    "app.domain.admin",
     "app.domain.auth",
     "app.domain.chat",
     "app.domain.diary",

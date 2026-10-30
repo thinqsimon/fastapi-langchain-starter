@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundError
+from app.domain.admin.services import AdminLlmSettingsService
 from app.domain.chat.models import Conversation, Message
 from app.domain.chat.repositories import ConversationRepository, MessageRepository
 from app.llm.chains.chat import TokenUsage, stream_reply
@@ -80,9 +81,14 @@ class ChatService:
             nonlocal usage
             usage = reported
 
+        providers = AdminLlmSettingsService(self.db).active_provider_chain()
         try:
             async for chunk in stream_reply(
-                content, history, system_prompt=self.system_prompt, on_usage=record_usage
+                content,
+                history,
+                system_prompt=self.system_prompt,
+                on_usage=record_usage,
+                providers=providers,
             ):
                 chunks.append(chunk)
                 yield chunk

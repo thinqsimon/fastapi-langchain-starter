@@ -15,6 +15,9 @@ export NEXT_PUBLIC_APP_PROFILE="$APP_PROFILE"
 export LLM_PROVIDER="fake"
 # .env가 원격 DB를 가리켜도 E2E는 로컬 DB에서 돈다(운영 데이터 보호).
 export DATABASE_URL="${E2E_DATABASE_URL:-postgresql+psycopg://app:app@localhost:5432/app}"
+# 관리자 서버 설정(ADMIN-01) E2E. e2e/admin.spec.ts의 계정과 같아야 한다. 암호화 키는 테스트 전용 값이다.
+export ADMIN_EMAILS="${ADMIN_EMAILS:-e2e-admin@example.com}"
+export SETTINGS_ENCRYPTION_KEY="${SETTINGS_ENCRYPTION_KEY:-QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=}"
 export CORS_ORIGINS='["http://localhost:3100","http://127.0.0.1:3100"]' 
 
 backend_pid=""

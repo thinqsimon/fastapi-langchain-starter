@@ -59,6 +59,10 @@ make init            # .env 생성 · 의존성 설치 · DB 기동 · 마이그
 `.env`를 열어 LLM 키를 넣습니다. `OPENAI_API_KEY` 또는 `LLM_API_KEY` 중 하나면 됩니다.
 키 없이 먼저 둘러보려면 `LLM_PROVIDER=fake`로 두세요(정해진 응답이 돌아옵니다).
 
+운영자가 화면에서 OpenAI·Claude·Gemini 키와 우선순위를 관리하려면 `ADMIN_EMAILS`(관리자 이메일)와
+`SETTINGS_ENCRYPTION_KEY`(키 암호화용, `Fernet.generate_key()`)를 넣고 그 계정으로 로그인해 계정 메뉴의 **서버 설정**을 엽니다.
+자세한 규칙은 `docs/decisions/ADR-0012-admin-llm-providers.md`.
+
 ```bash
 make dev-backend     # http://localhost:8000  (API 문서: /docs)
 make dev-frontend    # http://localhost:3000

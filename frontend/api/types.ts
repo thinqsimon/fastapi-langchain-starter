@@ -6,8 +6,33 @@ export type User = {
     email: string
     display_name: string
     is_active: boolean
+    /** 서버 설정(.env ADMIN_EMAILS)에 적힌 관리자인지. "서버 설정" 메뉴를 보여줄지 정한다. */
+    is_admin: boolean
     created_at: string
 }
+
+/** 서버가 langchain에 넘기는 공급자 이름. 화면 표시명은 components/admin에서 붙인다. */
+export type LlmProviderName = "openai" | "anthropic" | "google_genai"
+
+export type LlmProviderSetting = {
+    provider: LlmProviderName
+    model: string
+    /** 키 원문은 절대 내려오지 않는다. 있는지만 알 수 있다. */
+    has_api_key: boolean
+    priority: number
+    enabled: boolean
+    forced: boolean
+    updated_at: string
+}
+
+/** 보낸 필드만 바뀐다. api_key를 빈 문자열로 보내면 키를 지운다. */
+export type LlmProviderPatch = Partial<{
+    model: string
+    api_key: string
+    priority: number
+    enabled: boolean
+    forced: boolean
+}>
 
 export type TokenPair = {
     access_token: string

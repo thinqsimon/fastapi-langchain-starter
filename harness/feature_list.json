@@ -643,6 +643,22 @@
       ],
       "verify": "./scripts/verify.sh 및 학습장 E2E",
       "passes": true
+    },
+    {
+      "id": "ADMIN-01",
+      "phase": 9,
+      "owner": "backend-dev",
+      "title": "관리자 서버 설정: OpenAI·Claude·Gemini 키/모델, 우선순위 자동 전환, 강제 사용",
+      "requirement": "2026-10-30 사용자 요청(관리자 계정에 '서버 설정' 버튼, 공급자별 키·모델, 한도 소진 시 자동 전환, 특정 공급자 강제)",
+      "acceptance": [
+        "ADMIN_EMAILS에 적힌 계정으로 로그인하면 계정 메뉴의 '설정' 위에 '서버 설정' 버튼이 보이고 /admin으로 간다. 다른 계정은 버튼이 없고 /admin·API 모두 막힌다(403, 비로그인 401)",
+        "서버 설정에서 OpenAI/Claude/Gemini 각각 API 키·모델·우선순위·사용 여부를 저장한다. 키는 암호화(SETTINGS_ENCRYPTION_KEY)해 DB에 두고 응답에는 has_api_key만 내려온다",
+        "키가 있고 켜진 공급자를 우선순위대로 시도하고, 앞 공급자가 호출 오류(한도 초과 등)를 내면 다음 공급자로 자동 전환한다. 스트리밍은 첫 글자를 보낸 뒤에는 전환하지 않는다",
+        "'강제 사용'은 한 번에 한 공급자만 켜지고, 켜지면 우선순위·자동 전환을 무시하고 그 공급자만 쓴다. 등록된 공급자가 없으면 .env 설정 하나를 쓰는 기존 동작과 같다",
+        "Alembic 마이그레이션(llm_provider_settings), API·장애 조치 테스트, E2E(admin.spec.ts), ADR-0012를 제공하고 ./scripts/verify.sh와 E2E를 통과한다. LLM_PROVIDER=fake면 어떤 설정이든 실제 API를 부르지 않는다"
+      ],
+      "verify": "./scripts/verify.sh 및 ./scripts/e2e.sh",
+      "passes": true
     }
   ]
 }

@@ -827,3 +827,26 @@ E2E: 보관 주제를 연 채 신규 보기로 바꾸면 본문이 비는지, �
 짧은 화면 측정(1280×600, 390×640): 학습장·일기·설정 모두 문서 스크롤 없음, 헤더 top 0, 안쪽 영역 끝까지 도달. 설정 390×500: 수정 전 버튼 도달 불가 → 수정 후 도달
 **막힌 점**: 새 E2E가 한 번 실패 — 설정 데이터 로딩 후 높이가 바뀌어 스크롤 직후 위치가 밀림. 재발 방지: 레이아웃 단언은 스크롤과 함께 재시도
 **다음 할 일**: push(사용자 확인 대기). `4de3bd7`(발표 자료·STUDY-01 계획)·`f12ddd5`(docs/pt 추적 제외) 문서 커밋은 가져오지 않음 — 필요하면 사용자 결정
+
+## 2026-10-30 · 세션 27 · ADMIN-01 관리자 서버 설정(공급자 키·우선순위·자동 전환·강제 사용)
+
+**요청**: siungryu@gmail.com 관리자로 로그인하면 계정 메뉴의 '설정' 위에 **서버 설정** 버튼. 그 화면에서 OpenAI뿐 아니라 Gemini·Claude API 키와 모델을 각각 설정하고,
+우선순위대로 쓰다가 토큰이 소진되면 다음 모델로 자동 전환, 필요하면 특정 키·모델을 강제로 쓰기.
+**사용자 결정**: 관리자 판별은 설정 파일 이메일 목록(`ADMIN_EMAILS`, DB 컬럼 없음). 소진 판단은 호출 시 실제 오류(429 등)로 → 다음 공급자 재시도.
+**한 일**
+- 백엔드 `domain/admin/`: `llm_provider_settings`(공급자당 1행, Fernet 암호화 키, priority/enabled/forced, forced는 부분 유니크 인덱스로 1행만).
+  `GET/PATCH /api/admin/llm-providers[/{provider}]`(보낸 필드만 변경, 응답은 `has_api_key`만). `AdminUser` 의존성(403). `/auth/me`에 `is_admin` 계산 필드
+- `llm/providers.py`: `get_chat_model(provider, model, api_key)` 인자화 + `ProviderAttempt`. `.env`가 fake면 무엇을 등록했든 fake 반환(테스트·E2E 안전장치)
+- `llm/chains/chat.py`·`diary.py`: `providers` 목록을 순서대로 시도, 실패하면 다음(스트리밍은 첫 글자 뒤에는 전환 안 함), 전부 실패 시 `LLMError`
+- `AdminLlmSettingsService.active_provider_chain()`: 강제 1개 → 우선순위 목록 → 비면 `.env` 기본. 복호화 실패 행은 건너뜀. chat/diary 서비스가 호출부에 넘김
+- 설정 `ADMIN_EMAILS`, `SETTINGS_ENCRYPTION_KEY`(+`.env.example`, README). 의존성 `cryptography`, `langchain-anthropic`, `langchain-google-genai`
+- 마이그레이션 `9f11c3af7799`(로컬 5433·5432 적용, `alembic check` 통과). **원격 DB는 미적용**
+- 프론트: `api/admin.ts`, `store/admin.ts`, `app/(main)/admin/page.tsx`, `components/admin/server-settings.tsx`(지금 동작 요약 + 공급자 카드 3개: 모델·키·우선순위 저장, 사용 켜기/끄기, 강제 사용/해제, 키 지우기),
+  계정 메뉴에 `is_admin`일 때만 '서버 설정' 버튼(설정 위)
+- 테스트: `tests/api/test_admin.py` 11개, `tests/test_llm_failover.py` 4개(기존 mock 2곳에 `**kwargs` 허용, 스키마 목록에 테이블 추가). E2E `e2e/admin.spec.ts` 3개(`e2e.sh`에 `ADMIN_EMAILS`·테스트용 암호화 키).
+  ADR-0012, feature_list ADMIN-01(phase 9)
+**검증**: `./scripts/verify.sh` 백엔드 248 passed(97.9%), 프론트 통과. E2E diary-coach 69개 중 admin 3 포함 68 passed + `coach.spec` 1건 타이밍 플레이크(재실행 10/10), starter 3 passed
+**배포(사용자)**: Render는 `preDeployCommand`로 `alembic upgrade head`를 돌리므로 push만 하면 테이블이 생긴다. 서버 설정 화면을 쓰려면 Render 환경 변수
+`ADMIN_EMAILS=siungryu@gmail.com`, `SETTINGS_ENCRYPTION_KEY=<python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())">`를 넣고 재배포.
+두 값이 없어도 앱은 예전과 같이 동작한다(관리자 없음, `.env` 공급자 하나)
+**다음 할 일**: 사용자가 실제 Gemini/Claude 키로 수동 확인(모델 ID는 화면에서 자유 입력). 필요하면 공급자별 사용량 표시·한도 입력(선제 차단)은 ADR-0012 대안 참고

@@ -6,6 +6,7 @@
 """
 
 from app.core.database import Base
+from app.domain.admin.models import LlmProviderSetting
 from app.domain.auth.models import RefreshToken, User
 from app.domain.chat.models import Conversation, Message
 from app.domain.diary.models import DiaryEntry, DiaryStudyProgress, SavedWeeklyReview
@@ -19,6 +20,7 @@ __all__ = [
     "DiaryEntry",
     "DiaryStudyProgress",
     "DocumentChunk",
+    "LlmProviderSetting",
     "Message",
     "Notebook",
     "NotebookTopic",

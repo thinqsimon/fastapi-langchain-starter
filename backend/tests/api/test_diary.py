@@ -182,6 +182,7 @@ def test_rewrite_covers_only_new_messages(
     async def fake_draft(
         new_messages: Sequence[tuple[str, str]],
         context_messages: Sequence[tuple[str, str]] = (),
+        **_kwargs: object,
     ) -> DiaryDraft:
         seen["new"] = [content for _, content in new_messages]
         seen["context"] = [content for _, content in context_messages]
