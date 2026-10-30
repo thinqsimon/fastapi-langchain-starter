@@ -26,8 +26,9 @@ node scripts/dev.mjs starter frontend
 사용자 → Next.js → FastAPI → PostgreSQL / LangChain → LLM API → SSE 스트리밍 응답
 ```
 
-**배포된 샘플 서비스:** https://fastapi-langchain-starter-delta.vercel.app
-· 백엔드 API: https://diary-coach.onrender.com ([문서](https://diary-coach.onrender.com/docs))
+**배포된 샘플 서비스 (이 브랜치, 배움일기 코치 2):** https://dc.1pk.kr
+· 백엔드 API: https://fastapi-langchain-starter.onrender.com ([문서](https://fastapi-langchain-starter.onrender.com/docs))
+· `main` 브랜치의 코치 1: https://1pk.kr (백엔드 https://diary-coach.onrender.com)
 
 무료 플랜이라 백엔드는 15분간 요청이 없으면 중지됩니다. 첫 요청은 깨어나는 데 약 1분 걸립니다.
 
