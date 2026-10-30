@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export default function SettingsPage() {
     return (
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+        <div className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col gap-6 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] *:shrink-0 sm:p-6 sm:pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
             <h1 className="text-xl font-semibold">설정</h1>
 
             <Card>

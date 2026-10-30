@@ -151,3 +151,21 @@ test("입력칸은 3줄까지 높이가 늘고, 넘으면 안에서 스크롤되
     await expect(input).toHaveValue("")
     expect(await height()).toBe(oneLine)
 })
+
+test("화면 높이가 낮아도 설정·일기 화면의 내용이 잘리지 않고 안쪽에서 스크롤된다", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 500 })
+    await signUp(page, "short-screen")
+    for (const path of ["/settings", "/diary"]) {
+        await page.goto(path)
+        const main = page.locator("main")
+        const last = main.getByRole("button").last()
+        // 카드가 줄어들어 잘리면 마지막 버튼이 아무리 스크롤해도 화면에 들어오지 않는다.
+        // 설정은 불러온 뒤 높이가 바뀌므로 스크롤과 확인을 함께 재시도한다.
+        await expect(async () => {
+            await last.scrollIntoViewIfNeeded()
+            await expect(last).toBeInViewport({ timeout: 500 })
+        }).toPass()
+        expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true)
+        await expect(page.locator("header")).toBeInViewport()
+    }
+})
