@@ -27,6 +27,8 @@ export default defineConfig({
         env: {
             NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8010",
             NEXT_PUBLIC_APP_PROFILE: starter ? "starter" : "diary-coach",
+            // 개발 서버의 N 배지가 폰 화면에서 입력칸 왼쪽 버튼을 덮어 클릭을 가로챈다(next.config.ts 참고).
+            NEXT_HIDE_DEV_INDICATORS: "1",
         },
     },
 })
