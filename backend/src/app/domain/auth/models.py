@@ -36,6 +36,9 @@ class User(Base, TimestampMixin):
     plan: Mapped[str] = mapped_column(
         String(16), nullable=False, default=DEFAULT_PLAN, server_default=DEFAULT_PLAN
     )
+    # 유료 요금제가 끝나는 시각(쿠폰 등록 결과). NULL이면 기한 없음(관리자가 직접 지정한 경우·free).
+    # 지나면 로그인 확인 때 free로 내려간다(auth.services.expire_plan_if_due).
+    plan_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
         back_populates="user",

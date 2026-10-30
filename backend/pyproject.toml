@@ -91,6 +91,7 @@ containers = [
     "app.domain.admin",
     "app.domain.auth",
     "app.domain.chat",
+    "app.domain.coupon",
     "app.domain.diary",
     "app.domain.notebook",
     "app.domain.preferences",

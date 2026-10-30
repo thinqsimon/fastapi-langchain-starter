@@ -24,6 +24,8 @@ type AuthState = {
     updateProfile: (displayName: string) => Promise<void>
     changeEmail: (email: string, currentPassword: string) => Promise<void>
     changePassword: (currentPassword: string, newPassword: string) => Promise<void>
+    /** 서버의 내 정보를 다시 읽는다(쿠폰 등록 뒤 요금제·만료일 갱신). */
+    refreshUser: () => Promise<void>
     /** 관리자: 그 사용자 계정으로 테스트를 시작한다. 이후 모든 요청이 그 계정으로 나간다. */
     startActing: (userId: string) => Promise<void>
     /** 테스트를 끝내고 관리자 계정으로 돌아온다. 토큰이 이미 만료된 경우에도 쓴다. */
@@ -100,6 +102,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     changePassword: async (currentPassword, newPassword) => {
         // 새 토큰은 api 계층이 저장한다. 사용자 정보는 바뀌지 않는다.
         await authApi.changePassword({ current_password: currentPassword, new_password: newPassword })
+    },
+
+    refreshUser: async () => {
+        const user = await authApi.fetchMe()
+        set((state) => ({ user, acting: state.acting ? { ...state.acting, target: user } : null }))
     },
 
     startActing: async (userId) => {

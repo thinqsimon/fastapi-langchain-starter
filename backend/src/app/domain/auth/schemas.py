@@ -58,6 +58,8 @@ class UserRead(BaseModel):
     is_active: bool
     # 요금제(free/pro/max). 화면의 계정 메뉴에 표시하고, 서버는 이 값으로 LLM 라우팅을 고른다.
     plan: str
+    # 유료 요금제 만료 시각. null이면 기한 없음.
+    plan_expires_at: datetime | None = None
     created_at: datetime
 
     @computed_field  # type: ignore[prop-decorator]

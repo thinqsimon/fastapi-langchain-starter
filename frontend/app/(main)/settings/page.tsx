@@ -1,5 +1,6 @@
 import { ApplicationSettingsSection } from "@/applications/components"
 import { EmailForm, PasswordForm, ProfileForm } from "@/components/settings/account-forms"
+import { PlanCouponCard } from "@/components/settings/plan-coupon-card"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function SettingsPage() {
@@ -18,6 +19,8 @@ export default function SettingsPage() {
                     <PasswordForm />
                 </CardContent>
             </Card>
+
+            <PlanCouponCard />
 
             <ApplicationSettingsSection />
         </div>

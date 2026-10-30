@@ -10,6 +10,8 @@ export type User = {
     is_admin: boolean
     /** 요금제(free/pro/max). 서버가 이 값으로 LLM 공급자·모델을 고른다(ADMIN-03). */
     plan: PlanName
+    /** 유료 요금제 만료 시각(쿠폰으로 생긴 기한). null이면 기한 없음. */
+    plan_expires_at: string | null
     created_at: string
 }
 
@@ -52,7 +54,47 @@ export type AdminUser = {
     display_name: string
     is_active: boolean
     plan: PlanName
+    plan_expires_at: string | null
     created_at: string
+}
+
+// 요금제 쿠폰(backend/src/app/domain/coupon/schemas.py)
+export type CouponPlan = "pro" | "max"
+export type CouponDuration = "7d" | "15d" | "1m" | "3m" | "6m" | "12m"
+export type CouponStatus = "active" | "redeemed" | "expired" | "revoked"
+export type CouponValidDays = 7 | 14 | 30 | 90
+
+export type Coupon = {
+    id: string
+    /** XXXX-XXXX-XXXX */
+    code: string
+    plan: CouponPlan
+    duration: CouponDuration
+    duration_label: string
+    /** 이 시각까지 등록해야 한다. */
+    expires_at: string
+    memo: string | null
+    batch_id: string
+    status: CouponStatus
+    created_at: string
+    redeemed_at: string | null
+    redeemed_by_email: string | null
+    plan_until: string | null
+    revoked_at: string | null
+}
+
+export type CouponCreate = {
+    plan: CouponPlan
+    duration: CouponDuration
+    valid_days: CouponValidDays
+    quantity: number
+    memo?: string
+}
+
+export type CouponRedeemResult = {
+    plan: PlanName
+    plan_expires_at: string
+    message: string
 }
 
 /** "이 계정으로 테스트" 토큰. 리프레시 토큰은 없다. */

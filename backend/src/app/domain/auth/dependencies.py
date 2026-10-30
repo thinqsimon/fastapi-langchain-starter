@@ -56,7 +56,7 @@ def get_current_user(
     except ValueError as exc:
         raise UnauthorizedError("토큰이 유효하지 않습니다.") from exc
 
-    user = auth_service.get_active_user(parsed_id)
+    user = auth_service.expire_plan_if_due(auth_service.get_active_user(parsed_id))
 
     if claims.actor:
         if blocked_while_acting(request.method, request.url.path):

@@ -209,6 +209,8 @@ class AdminUserService:
             raise NotFoundError("사용자를 찾을 수 없습니다.")
         previous = target.plan
         target.plan = plan
+        # 관리자가 손으로 정한 요금제는 기한이 없다(쿠폰으로 생긴 기한은 지운다).
+        target.plan_expires_at = None
         self.db.commit()
         logger.info(
             "admin_plan_changed admin=%s target=%s plan=%s previous=%s",

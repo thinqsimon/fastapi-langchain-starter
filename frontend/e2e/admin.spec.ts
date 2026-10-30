@@ -162,7 +162,7 @@ test.describe("관리자", () => {
         await expect(page.getByRole("navigation", { name: "대화 목록" })).toContainText("대상 사용자의 질문입니다")
         const menu = await openAccountMenu(page)
         await expect(menu.getByText(member.email)).toBeVisible()
-        await expect(menu.locator('[data-slot="account-plan"]')).toHaveText("Pro")
+        await expect(menu.locator('[data-slot="account-plan"]')).toContainText("Pro")
         await page.keyboard.press("Escape")
 
         // 재현을 위해 쓰기는 된다(그 사용자 계정에 남는다).
@@ -193,7 +193,7 @@ test.describe("관리자", () => {
         await page.getByRole("navigation", { name: "대화 목록" }).getByRole("button", { name: "대상 사용자의 질문입니다", exact: true }).click()
         await expect(page.getByText("관리자가 재현하며 보낸 메시지")).toBeVisible()
         const memberMenu = await openAccountMenu(page)
-        await expect(memberMenu.locator('[data-slot="account-plan"]')).toHaveText("Pro")
+        await expect(memberMenu.locator('[data-slot="account-plan"]')).toContainText("Pro")
     })
 
     test("관리자 화면은 좁은 화면에서도 가로로 넘치지 않는다", async ({ page }) => {

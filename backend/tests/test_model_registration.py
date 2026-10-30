@@ -73,4 +73,5 @@ def test_current_schema_is_as_expected() -> None:
         "user_preferences",
         "llm_providers",
         "llm_plan_routes",
+        "coupons",
     }

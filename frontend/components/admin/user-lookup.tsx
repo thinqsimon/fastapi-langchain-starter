@@ -114,6 +114,8 @@ export function UserLookup() {
                                         <p className="truncate font-medium">{found.email}</p>
                                         <p className="truncate text-xs text-muted-foreground">
                                             {found.display_name} · 가입 {new Date(found.created_at).toLocaleDateString("ko-KR")}
+                                            {found.plan_expires_at &&
+                                                ` · ${planLabel(found.plan)} ${new Date(found.plan_expires_at).toLocaleDateString("ko-KR")}까지`}
                                             {!found.is_active && " · 비활성"}
                                         </p>
                                     </div>

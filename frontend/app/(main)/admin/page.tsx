@@ -1,3 +1,4 @@
+import { CouponAdmin } from "@/components/admin/coupon-admin"
 import { ServerSettings } from "@/components/admin/server-settings"
 import { UserLookup } from "@/components/admin/user-lookup"
 
@@ -8,6 +9,8 @@ export default function AdminPage() {
             <h1 className="text-xl font-semibold">관리자</h1>
 
             <UserLookup />
+
+            <CouponAdmin />
 
             <section aria-labelledby="admin-llm-heading" className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1">

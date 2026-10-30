@@ -26,6 +26,7 @@ class AdminUserRead(BaseModel):
     display_name: str
     is_active: bool
     plan: str
+    plan_expires_at: datetime | None = None
     created_at: datetime
 
 

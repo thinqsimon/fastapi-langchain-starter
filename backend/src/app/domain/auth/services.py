@@ -2,11 +2,13 @@
 
 import logging
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import AppError, ConflictError, UnauthorizedError
+from app.core.plans import DEFAULT_PLAN
 from app.core.security import (
     create_access_token,
     generate_refresh_token,
@@ -92,6 +94,24 @@ class AuthService:
         user = self.users.get_by_id(user_id)
         if user is None or not user.is_active:
             raise UnauthorizedError("사용자를 찾을 수 없습니다.")
+        return user
+
+    def expire_plan_if_due(self, user: User) -> User:
+        """유료 요금제 기한이 지났으면 free로 내린다(COUPON-01).
+
+        배치 없이 요청 때마다 확인한다. 기한이 지난 뒤 첫 요청에서 한 번만 바뀌고 로그가 남는다.
+        """
+        if (
+            user.plan != DEFAULT_PLAN
+            and user.plan_expires_at is not None
+            and user.plan_expires_at <= datetime.now(UTC)
+        ):
+            logger.info(
+                "plan_expired user=%s plan=%s until=%s", user.id, user.plan, user.plan_expires_at
+            )
+            user.plan = DEFAULT_PLAN
+            user.plan_expires_at = None
+            self.db.commit()
         return user
 
     def update_profile(self, user: User, display_name: str) -> User:

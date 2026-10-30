@@ -3,6 +3,7 @@ export { ACTING_ENDED_EVENT, errorMessage, httpClient, tokenStorage } from "./cl
 export * as adminApi from "./admin"
 export * as authApi from "./auth"
 export * as chatApi from "./chat"
+export * as couponApi from "./coupon"
 export * as diaryApi from "./diary"
 export * as learningApi from "./learning"
 export * as notebookApi from "./notebook"
@@ -14,6 +15,13 @@ export type {
     ApiErrorBody,
     Conversation,
     ConversationDetail,
+    Coupon,
+    CouponCreate,
+    CouponDuration,
+    CouponPlan,
+    CouponRedeemResult,
+    CouponStatus,
+    CouponValidDays,
     DiaryDraft,
     DiaryEntry,
     DiaryEntryCreate,

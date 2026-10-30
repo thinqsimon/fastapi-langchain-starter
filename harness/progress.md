@@ -925,3 +925,18 @@ E2E는 새로고침 뒤 대화가 자동 선택되지 않아 목록에서 다시
 **검증**: `./scripts/verify.sh` 백엔드 262 passed(97.9%), 프론트 통과. E2E admin 4·model-label·account 10 passed, 전체 실행 결과는 아래 커밋 메시지 참고
 **운영 적용**: push → Render가 배포 전 마이그레이션 적용(기존 설정은 free 라우트로 자동 이전). 환경 변수 추가 없음. 관리자 화면에서 Pro/Max 탭에 라우트를 넣기 전까지는 free와 같게 동작
 **다음**: 구독 결제 연동 시 `subscriptions` 테이블이 `users.plan`을 채우고 만료 시 free로(ADR-0014 메모). 요금제별 한도(`plan_limits`)
+
+## 2026-10-31 · 세션 31 · COUPON-01 요금제 쿠폰(발급·복사·등록·만료)
+
+**요청**: 카카오톡 선물처럼 유효기한 있는 쿠폰. Pro/Max × 7일·15일·1·3·6·12개월(등록일부터). 발급 시 복사 버튼(기능 설명 + dc.1pk.kr 사용처 포함).
+**결정(사용자)**: 같은 요금제는 남은 기간 뒤에 이어 붙임, 상위는 확인 뒤 지금부터(남은 기간 소멸), 하위는 거부. 등록 기한 7/14/30/90일(기본 30). 수량 1~20장 + 코드별/모두 복사. 등록은 설정 화면 카드.
+**한 일**
+- `domain/coupon/`: `coupons` 테이블(코드 12자 unique, plan, duration, expires_at, memo, batch_id, created_by, redeemed_by/at, plan_until, revoked_at), `users.plan_expires_at`. 마이그레이션 `26e30a2e49cb`
+- `periods.py`: `add_duration`(개월은 달력 기준·말일 보정), `utcnow`. `services.py`: 코드 생성(혼동 글자 제외 32자)·정규화, 발급/목록(상태 계산)/취소, 등록 규칙(Free→적용, 동일→연장, 상위→409 CONFIRM_REQUIRED 후 confirm, 하위·기한없음→거부), 로그 `coupon_issued/revoked/redeemed`
+- `core/exceptions.ConfirmRequiredError`(409). `auth.services.expire_plan_if_due`를 `get_current_user`에서 매 요청 호출 → 기한 지난 유료 요금제는 free로(`plan_expired` 로그). 관리자 수동 요금제 지정은 기한 없음(NULL)
+- API: `POST /api/coupons/redeem`, `GET/POST /api/admin/coupons`, `POST /api/admin/coupons/{id}/revoke`. `/auth/me`·관리자 사용자 응답에 `plan_expires_at`
+- 프론트: `components/admin/coupon-admin.tsx`(발급 폼, 발급된 코드 복사/모두 복사, 목록·상태 필터·취소), `lib/coupon-text.ts`(안내문: 코드·등록 기한·적용 내용·사용처=현재 사이트 주소, 클립보드 복사 폴백), `components/settings/plan-coupon-card.tsx`(현재 요금제·만료일, 코드 등록, 상위 요금제 확인 대화상자), 계정 메뉴 "Pro · 날짜까지", `store/coupon.ts`, auth store `refreshUser`
+- 테스트: `tests/test_coupon_periods.py` 3개, `tests/api/test_coupon.py` 8개. E2E `coupon.spec.ts`(발급→복사 내용 검증(clipboard 권한)→취소→사용자 등록→재사용/취소/없는 코드 거부→Max 확인 대화상자→계정 메뉴). admin.spec의 요금제 표기 기대값 조정(수동 지정은 "기한 없음")
+- ADR-0015, feature_list COUPON-01
+**검증**: `./scripts/verify.sh` 백엔드·프론트 통과(아래 커밋 참고). E2E coupon·admin·account·auth 통과
+**운영 적용**: push → Render가 마이그레이션 적용(coupons 테이블, users.plan_expires_at). 환경 변수 추가 없음

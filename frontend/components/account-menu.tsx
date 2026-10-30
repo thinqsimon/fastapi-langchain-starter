@@ -7,7 +7,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { UsageBadge } from "@/components/usage-badge"
-import { planLabel } from "@/lib/llm-labels"
+import { planPeriodLabel } from "@/lib/llm-labels"
 import { useAuthStore } from "@/store/auth"
 import { usePreferencesStore } from "@/store/preferences"
 
@@ -60,7 +60,7 @@ export function AccountMenu() {
                         <dt className="text-muted-foreground">이메일</dt>
                         <dd className="truncate">{user?.email}</dd>
                         <dt className="text-muted-foreground">요금제</dt>
-                        <dd data-slot="account-plan">{user ? planLabel(user.plan) : ""}</dd>
+                        <dd data-slot="account-plan">{user ? planPeriodLabel(user.plan, user.plan_expires_at) : ""}</dd>
                         <dt className="text-muted-foreground">가입일</dt>
                         <dd>{user ? new Date(user.created_at).toLocaleDateString("ko-KR") : ""}</dd>
                         <dt className="text-muted-foreground">사용량</dt>

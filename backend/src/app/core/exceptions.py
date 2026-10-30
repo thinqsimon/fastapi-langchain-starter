@@ -51,6 +51,13 @@ class ForbiddenError(AppError):
     code = "FORBIDDEN"
 
 
+class ConfirmRequiredError(AppError):
+    """되돌리기 어려운 결과(예: 남은 요금제 기간 소멸)를 사용자가 확인한 뒤 다시 보내야 한다."""
+
+    status_code = 409
+    code = "CONFIRM_REQUIRED"
+
+
 class LLMError(AppError):
     status_code = 502
     code = "LLM_ERROR"

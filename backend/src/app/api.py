@@ -7,6 +7,8 @@ from app.core.config import AppProfile, settings
 from app.domain.admin.routers import router as admin_router
 from app.domain.auth.routers import router as auth_router
 from app.domain.chat.routers import router as chat_router
+from app.domain.coupon.routers import admin_router as coupon_admin_router
+from app.domain.coupon.routers import router as coupon_router
 from app.domain.usage.routers import router as usage_router
 
 
@@ -23,6 +25,8 @@ def build_api_router(
     router.include_router(chat_router)
     router.include_router(usage_router)
     router.include_router(admin_router)
+    router.include_router(coupon_router)
+    router.include_router(coupon_admin_router)
 
     application = resolve_application(app_profile or settings.APP_PROFILE)
     if application.diary_enabled:
