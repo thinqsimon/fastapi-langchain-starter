@@ -34,6 +34,23 @@ export type LlmProviderPatch = Partial<{
     forced: boolean
 }>
 
+/** 관리자 사용자 검색 결과 한 명. */
+export type AdminUser = {
+    id: string
+    email: string
+    display_name: string
+    is_active: boolean
+    created_at: string
+}
+
+/** "이 계정으로 테스트" 토큰. 리프레시 토큰은 없다. */
+export type ActingToken = {
+    access_token: string
+    token_type: string
+    expires_in: number
+    user: AdminUser
+}
+
 export type TokenPair = {
     access_token: string
     refresh_token: string

@@ -3,7 +3,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.domain.auth.models import RefreshToken, User
@@ -24,6 +24,17 @@ class UserRepository:
         self.db.add(user)
         self.db.flush()
         return user
+
+    def search(self, query: str, limit: int = 20) -> list[User]:
+        """이메일·이름에 query가 들어간 사용자를 최근 가입순으로 돌려준다(관리자 검색, ADMIN-02)."""
+        pattern = f"%{query}%"
+        stmt = (
+            select(User)
+            .where(or_(User.email.ilike(pattern), User.display_name.ilike(pattern)))
+            .order_by(User.created_at.desc())
+            .limit(limit)
+        )
+        return list(self.db.execute(stmt).scalars())
 
 
 class RefreshTokenRepository:

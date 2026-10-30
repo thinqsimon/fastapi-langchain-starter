@@ -10,6 +10,7 @@
 
 import hashlib
 import secrets
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import bcrypt
@@ -31,20 +32,33 @@ def verify_password(password: str, password_hash: str) -> bool:
     return bcrypt.checkpw(password.encode()[:_BCRYPT_MAX_BYTES], password_hash.encode())
 
 
-def create_access_token(subject: str) -> str:
-    """subject에는 사용자 ID를 넣는다."""
+@dataclass(frozen=True)
+class AccessClaims:
+    """액세스 토큰에서 읽은 내용."""
+
+    subject: str
+    # 관리자가 다른 계정으로 테스트하는 토큰이면 그 관리자의 사용자 ID(ADMIN-02). 평소에는 None.
+    actor: str | None = None
+
+
+def create_access_token(
+    subject: str, *, actor: str | None = None, expires_minutes: int | None = None
+) -> str:
+    """subject에는 사용자 ID를 넣는다. actor를 주면 '관리자가 대신 쓰는 토큰'이 된다."""
     now = datetime.now(UTC)
-    payload = {
+    payload: dict[str, object] = {
         "sub": subject,
         "type": "access",
         "iat": now,
-        "exp": now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+        "exp": now + timedelta(minutes=expires_minutes or settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     }
+    if actor:
+        payload["act"] = actor
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
-def decode_access_token(token: str) -> str:
-    """유효하면 사용자 ID를 돌려주고, 아니면 UnauthorizedError를 던진다."""
+def decode_access_claims(token: str) -> AccessClaims:
+    """유효하면 토큰 내용을 돌려주고, 아니면 UnauthorizedError를 던진다."""
     try:
         payload = jwt.decode(
             token,
@@ -58,7 +72,13 @@ def decode_access_token(token: str) -> str:
     if payload.get("type") != "access":
         raise UnauthorizedError("토큰이 유효하지 않습니다.")
 
-    return str(payload["sub"])
+    actor = payload.get("act")
+    return AccessClaims(subject=str(payload["sub"]), actor=str(actor) if actor else None)
+
+
+def decode_access_token(token: str) -> str:
+    """유효하면 사용자 ID를 돌려주고, 아니면 UnauthorizedError를 던진다."""
+    return decode_access_claims(token).subject
 
 
 def generate_refresh_token() -> str:

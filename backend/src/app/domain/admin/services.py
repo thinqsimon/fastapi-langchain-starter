@@ -6,18 +6,24 @@
 """
 
 import logging
+import uuid
 
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import NotFoundError, ServiceUnavailableError
-from app.core.security import decrypt_secret, encrypt_secret
+from app.core.config import settings
+from app.core.exceptions import AppError, NotFoundError, ServiceUnavailableError
+from app.core.security import create_access_token, decrypt_secret, encrypt_secret
 from app.domain.admin.models import LlmProviderSetting
 from app.domain.admin.repositories import LlmProviderSettingRepository
 from app.domain.admin.schemas import (
     ALLOWED_PROVIDERS,
+    ActingTokenResponse,
+    AdminUserRead,
     ProviderSettingRead,
     ProviderSettingUpdate,
 )
+from app.domain.auth.models import User
+from app.domain.auth.repositories import UserRepository
 from app.llm.providers import ProviderAttempt
 
 logger = logging.getLogger(__name__)
@@ -114,3 +120,32 @@ def _to_read(row: LlmProviderSetting) -> ProviderSettingRead:
         forced=row.forced,
         updated_at=row.updated_at,
     )
+
+
+class AdminUserService:
+    """사용자 검색과 '이 계정으로 테스트'(ADMIN-02).
+
+    사용자가 신고한 오류를 관리자가 그 계정 그대로 재현하기 위한 것이다. 감사 기록은 서버 로그.
+    """
+
+    def __init__(self, db: Session) -> None:
+        self.users = UserRepository(db)
+
+    def search(self, query: str, limit: int = 20) -> list[AdminUserRead]:
+        return [AdminUserRead.model_validate(u) for u in self.users.search(query.strip(), limit)]
+
+    def create_acting_token(self, admin: User, target_id: uuid.UUID) -> ActingTokenResponse:
+        target = self.users.get_by_id(target_id)
+        if target is None or not target.is_active:
+            raise NotFoundError("사용자를 찾을 수 없습니다.")
+        if target.id == admin.id:
+            raise AppError("자기 계정은 테스트 대상이 될 수 없습니다.")
+
+        minutes = settings.ADMIN_TEST_TOKEN_EXPIRE_MINUTES
+        token = create_access_token(str(target.id), actor=str(admin.id), expires_minutes=minutes)
+        logger.info(
+            "admin_test_started admin=%s target=%s minutes=%s", admin.id, target.id, minutes
+        )
+        return ActingTokenResponse(
+            access_token=token, expires_in=minutes * 60, user=AdminUserRead.model_validate(target)
+        )

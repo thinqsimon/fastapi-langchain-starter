@@ -866,3 +866,18 @@ E2E: 보관 주제를 연 채 신규 보기로 바꾸면 본문이 비는지, �
 (같은 이메일의 계정 가입일이 로컬 10/26·운영 10/19로 다르고, 운영 백엔드로 만든 @example.com 계정이 .env DB에는 없다).
 Render는 `preDeployCommand`로 자기 DB에 마이그레이션을 적용한다(원래 설명이 맞았다). 위에서 돌린 `uv run alembic upgrade head`는 .env DB(로컬 개발용)에 적용된 것이고, 그것도 필요한 일이었다.
 운영 DB의 서버 설정 값은 로컬에서 읽을 수 없다 → dc.1pk.kr/admin의 "지금 동작" 카드로 확인한다.
+
+## 2026-10-30 · 세션 28 · ADMIN-02 관리자가 사용자 계정으로 테스트(오류 재현)
+
+**요청**: 사용자가 오류를 신고하면 관리자가 그 계정으로 들어가 테스트. 결정: 쓰기 허용(재현에 필요)·삭제/계정 변경만 차단, 감사 기록은 서버 로그, 화면·버튼 이름 "관리자".
+**한 일**
+- `core/security.py`: 액세스 토큰에 `act`(행위자 관리자 id) 클레임. `create_access_token(actor=, expires_minutes=)`, `decode_access_claims()` 추가(기존 `decode_access_token`은 그대로)
+- `auth/dependencies.py` `get_current_user`: `act`가 있으면 모든 DELETE와 `/api/auth/*` 쓰기를 403 "테스트 중에는 삭제·계정 변경을 할 수 없습니다."로 막고, 쓰기 요청은 `admin_test_write` 로그. 로그아웃 엔드포인트는 CurrentUser를 쓰지 않아 차단 대상이 아님(프론트가 테스트 토큰을 먼저 버린다)
+- `domain/admin`: `GET /api/admin/users?q=`(이메일·이름 부분 일치, `UserRepository.search`), `POST /api/admin/users/{id}/acting-token`(리프레시 없음, `ADMIN_TEST_TOKEN_EXPIRE_MINUTES`=60, 자기 자신 400, 없음/비활성 404, `admin_test_started` 로그). 라우터 prefix `/admin`으로 통합
+- 프론트: `tokenStorage.acting/actingAdmin/current`(테스트 토큰 별도 저장, 요청은 `current` 사용. **채팅 스트리밍 fetch도 `current`를 쓰게 수정** — 처음엔 관리자 토큰을 그대로 써서 대상 대화를 못 찾는 버그가 E2E에서 잡혔다). 테스트 토큰 401이면 재발급 대신 `auth:acting-ended` 이벤트 → 관리자 계정 복귀.
+  `store/auth.ts` `acting`/`startActing`/`stopActing`(계정 바뀔 때 chat·notebook·diary·learning 스토어 reset, preferences clear), 새로고침 복원.
+  `/admin` 제목 "관리자" + `components/admin/user-lookup.tsx`(검색 → 이 계정으로 테스트) + 아래 "LLM 공급자" 구역. `components/acting-banner.tsx`를 `(main)/layout.tsx` 헤더 아래에. 계정 메뉴 버튼 "관리자"(ShieldCheck)
+- 테스트: `tests/api/test_admin_acting.py` 4개(공용 fixture는 `tests/api/conftest.py`·`accounts.py`로 이동), E2E `admin.spec.ts`에 대상 사용자 대화 보기·메시지 보내기·삭제 403·돌아가기·사용자 재로그인 확인 시나리오. ADR-0013, feature_list ADMIN-02, `.env.example`
+**검증**: `./scripts/verify.sh` 백엔드 252 passed(97.9%), 프론트 통과. E2E admin 4 + auth·account·chat·coach 통과(아래 전체 실행 결과 참고)
+**운영 적용**: push하면 Vercel·Render 자동 배포. 새 테이블 없음(마이그레이션 없음). `ADMIN_TEST_TOKEN_EXPIRE_MINUTES`는 기본 60이라 환경 변수 추가 없이 동작
+**남은 것**: 테스트 중 만든 대화·일기는 사용자 계정에 남는다 → 필요하면 "테스트 흔적 정리" 기능(ADR-0013 주의 참고). 사용량·비용 표시는 여전히 .env 모델 기준(ADMIN-01 후속)

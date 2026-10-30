@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test"
 
-import { newAccount, openAccountMenu, sendChatMessage, signIn, signUp } from "./helpers"
+import { logOut, openAccountMenu, sendChatMessage, signIn, signUp } from "./helpers"
 
-/** ADMIN-01 관리자 서버 설정: 메뉴 노출, 공급자 키·모델·우선순위·강제 사용, 채팅은 계속 동작 */
+/** ADMIN-01 관리자 LLM 공급자 설정, ADMIN-02 사용자 계정으로 테스트 */
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8010"
 // scripts/e2e.sh가 백엔드에 ADMIN_EMAILS로 넘기는 주소와 같아야 한다.
@@ -30,16 +30,17 @@ async function resetProviders(page: Page) {
     }
 }
 
-test("일반 사용자에게는 '서버 설정' 메뉴가 없고 주소로 들어가도 막힌다", async ({ page }) => {
+test("일반 사용자에게는 '관리자' 메뉴가 없고 주소로 들어가도 막힌다", async ({ page }) => {
     await signUp(page, "e2e-member")
 
     const menu = await openAccountMenu(page)
     await expect(menu.getByRole("button", { name: "설정" })).toBeVisible()
-    await expect(menu.getByRole("button", { name: "서버 설정" })).toHaveCount(0)
+    await expect(menu.getByRole("button", { name: "관리자" })).toHaveCount(0)
     await page.keyboard.press("Escape")
 
     await page.goto("/admin")
     await expect(page.locator('p[role="alert"]')).toHaveText("관리자만 볼 수 있는 화면입니다.")
+    await expect(page.getByRole("form", { name: "사용자 검색" })).toHaveCount(0)
 })
 
 test.describe("관리자", () => {
@@ -47,18 +48,18 @@ test.describe("관리자", () => {
         await resetProviders(page)
     })
 
-    test("설정 버튼 위의 '서버 설정'으로 들어가 Gemini 키를 넣고 우선순위·강제 사용을 바꿔도 채팅이 된다", async ({ page }) => {
+    test("설정 버튼 위의 '관리자'로 들어가 Gemini 키를 넣고 우선순위·강제 사용을 바꿔도 채팅이 된다", async ({ page }) => {
         await signInAsAdmin(page)
 
         const menu = await openAccountMenu(page)
-        const serverButton = menu.getByRole("button", { name: "서버 설정" })
+        const adminButton = menu.getByRole("button", { name: "관리자" })
         const settingsButton = menu.getByRole("button", { name: "설정", exact: true })
-        await expect(serverButton).toBeVisible()
-        // '서버 설정'은 '설정' 바로 위에 있다.
-        const serverBox = (await serverButton.boundingBox())!
+        await expect(adminButton).toBeVisible()
+        // '관리자'는 '설정' 바로 위에 있다.
+        const adminBox = (await adminButton.boundingBox())!
         const settingsBox = (await settingsButton.boundingBox())!
-        expect(serverBox.y).toBeLessThan(settingsBox.y)
-        await serverButton.click()
+        expect(adminBox.y).toBeLessThan(settingsBox.y)
+        await adminButton.click()
         await expect(page).toHaveURL(/\/admin$/)
 
         const plan = page.locator('[data-slot="llm-plan"]')
@@ -114,14 +115,66 @@ test.describe("관리자", () => {
         await sendChatMessage(page, "서버 설정을 바꾼 뒤 보내는 메시지")
     })
 
-    test("관리자 설정 화면은 좁은 화면에서도 가로로 넘치지 않는다", async ({ page }) => {
+    test("사용자를 검색해 그 계정으로 테스트하면 그 사용자의 대화가 보이고, 메시지는 보낼 수 있지만 삭제는 막히며, 내 계정으로 돌아온다", async ({ page }) => {
+        // 신고한 사용자: 대화를 하나 남겨 둔다.
+        const member = await signUp(page, "e2e-target")
+        await sendChatMessage(page, "대상 사용자의 질문입니다")
+        await logOut(page)
+
+        await signInAsAdmin(page)
+        await page.goto("/admin")
+        const lookup = page.getByRole("form", { name: "사용자 검색" })
+        await lookup.getByLabel("이메일 또는 이름").fill(member.email)
+        await lookup.getByRole("button", { name: "검색" }).click()
+        const results = page.getByRole("list", { name: "검색 결과" })
+        await expect(results).toContainText(member.email)
+        await results.getByRole("button", { name: `${member.email} 계정으로 테스트` }).click()
+
+        // 그 계정의 채팅 화면으로 가고, 띠가 누구 계정인지 알려 준다.
+        await expect(page).toHaveURL(/\/chat$/)
+        const banner = page.locator('[data-slot="acting-banner"]')
+        await expect(banner).toContainText(member.email)
+        await expect(page.getByRole("navigation", { name: "대화 목록" })).toContainText("대상 사용자의 질문입니다")
+        const menu = await openAccountMenu(page)
+        await expect(menu.getByText(member.email)).toBeVisible()
+        await page.keyboard.press("Escape")
+
+        // 재현을 위해 쓰기는 된다(그 사용자 계정에 남는다).
+        await page.getByRole("navigation", { name: "대화 목록" }).getByText("대상 사용자의 질문입니다").click()
+        await sendChatMessage(page, "관리자가 재현하며 보낸 메시지")
+
+        // 삭제는 서버가 막는다.
+        const actingToken = await page.evaluate(() => localStorage.getItem("acting_access_token"))
+        expect(actingToken).toBeTruthy()
+        const conversations = await (await page.request.get(`${API}/api/conversations`, { headers: { Authorization: `Bearer ${actingToken}` } })).json()
+        const blocked = await page.request.delete(`${API}/api/conversations/${conversations[0].id}`, {
+            headers: { Authorization: `Bearer ${actingToken}` },
+        })
+        expect(blocked.status()).toBe(403)
+
+        // 돌아오면 띠가 사라지고 관리자 계정이다. 관리자 토큰은 그대로 살아 있다.
+        await banner.getByRole("button", { name: "내 계정으로 돌아가기" }).click()
+        await expect(banner).toHaveCount(0)
+        await expect(page).toHaveURL(/\/admin$/)
+        const adminMenu = await openAccountMenu(page)
+        await expect(adminMenu.getByText(ADMIN.email)).toBeVisible()
+        await page.keyboard.press("Escape")
+
+        // 사용자 계정에는 재현 메시지가 남아 있다(사용자가 로그인해 확인).
+        await logOut(page)
+        await signIn(page, member.email, member.password)
+        await expect(page).toHaveURL(/\/chat$/)
+        await page.getByRole("navigation", { name: "대화 목록" }).getByText("대상 사용자의 질문입니다").click()
+        await expect(page.getByText("관리자가 재현하며 보낸 메시지")).toBeVisible()
+    })
+
+    test("관리자 화면은 좁은 화면에서도 가로로 넘치지 않는다", async ({ page }) => {
         await page.setViewportSize({ width: 390, height: 844 })
         await signInAsAdmin(page)
         await page.goto("/admin")
         await expect(page.getByRole("form", { name: "OpenAI 설정" })).toBeVisible()
+        await expect(page.getByRole("form", { name: "사용자 검색" })).toBeVisible()
 
         expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false)
-        // 비관리자 계정 정보가 섞이지 않게 새 계정은 만들지 않는다.
-        expect(newAccount().email).toContain("@example.com")
     })
 })

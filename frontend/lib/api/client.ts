@@ -1,12 +1,18 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios"
 
-import type { ApiErrorBody, TokenPair } from "./types"
+import type { ApiErrorBody, TokenPair, User } from "./types"
 
 // Next.js 클라이언트 환경 변수 규칙 (NEXT_PUBLIC_ 필수)
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"
 
 const ACCESS_TOKEN_KEY = "access_token"
 const REFRESH_TOKEN_KEY = "refresh_token"
+// 관리자가 "이 계정으로 테스트"(ADMIN-02) 중일 때만 있다. 관리자 자신의 토큰은 위 두 키에 그대로 남겨 둔다.
+const ACTING_TOKEN_KEY = "acting_access_token"
+const ACTING_ADMIN_KEY = "acting_admin"
+
+/** 테스트 토큰이 만료돼(401) 자동으로 끝났을 때 창에 알린다. 스토어가 듣고 관리자 계정으로 돌아간다. */
+export const ACTING_ENDED_EVENT = "auth:acting-ended"
 
 export const tokenStorage = {
     get access() {
@@ -24,6 +30,36 @@ export const tokenStorage = {
     clear() {
         localStorage.removeItem(ACCESS_TOKEN_KEY)
         localStorage.removeItem(REFRESH_TOKEN_KEY)
+        this.clearActing()
+    },
+
+    /** 지금 요청에 붙일 토큰. 다른 계정으로 테스트 중이면 그 토큰, 아니면 내 토큰. fetch를 직접 쓰는 곳도 이걸 쓴다. */
+    get current() {
+        return this.acting ?? this.access
+    },
+    /** 다른 계정으로 테스트 중인 토큰. 있으면 모든 요청이 이것을 쓴다. */
+    get acting() {
+        if (typeof window === "undefined") return null
+        return localStorage.getItem(ACTING_TOKEN_KEY)
+    },
+    /** 테스트를 시작한 관리자. 새로고침 뒤에도 띠에 "누가" 테스트 중인지 보여 주려고 저장한다. */
+    get actingAdmin(): User | null {
+        if (typeof window === "undefined") return null
+        const raw = localStorage.getItem(ACTING_ADMIN_KEY)
+        if (!raw) return null
+        try {
+            return JSON.parse(raw) as User
+        } catch {
+            return null
+        }
+    },
+    saveActing(token: string, admin: User) {
+        localStorage.setItem(ACTING_TOKEN_KEY, token)
+        localStorage.setItem(ACTING_ADMIN_KEY, JSON.stringify(admin))
+    },
+    clearActing() {
+        localStorage.removeItem(ACTING_TOKEN_KEY)
+        localStorage.removeItem(ACTING_ADMIN_KEY)
     },
 }
 
@@ -33,9 +69,9 @@ export const httpClient = axios.create({
     headers: { "Content-Type": "application/json" },
 })
 
-// 요청 인터셉터: access token 자동 주입
+// 요청 인터셉터: access token 자동 주입(테스트 중이면 그 계정의 토큰)
 httpClient.interceptors.request.use((config) => {
-    const accessToken = tokenStorage.access
+    const accessToken = tokenStorage.current
     if (accessToken) {
         config.headers.Authorization = `Bearer ${accessToken}`
     }
@@ -77,6 +113,13 @@ httpClient.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
         const request = error.config as RetriableRequest | undefined
+
+        // 테스트 토큰은 리프레시가 없다. 만료되면 테스트를 끝내고 관리자 계정으로 돌아간다(재발급하면 조용히 관리자 화면으로 바뀌어 헷갈린다).
+        if (error.response?.status === 401 && tokenStorage.acting) {
+            tokenStorage.clearActing()
+            window.dispatchEvent(new Event(ACTING_ENDED_EVENT))
+            return Promise.reject(error)
+        }
 
         const canRetry =
             error.response?.status === 401 &&

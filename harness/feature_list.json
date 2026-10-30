@@ -659,6 +659,22 @@
       ],
       "verify": "./scripts/verify.sh 및 ./scripts/e2e.sh",
       "passes": true
+    },
+    {
+      "id": "ADMIN-02",
+      "phase": 9,
+      "owner": "backend-dev",
+      "title": "관리자가 사용자 계정으로 테스트(오류 재현)",
+      "requirement": "2026-10-30 사용자 요청(사용자가 오류를 신고하면 관리자가 그 계정으로 들어가 테스트). 결정: 쓰기 허용·삭제/계정 변경 차단, 감사 기록은 서버 로그, 화면 이름 '관리자'",
+      "acceptance": [
+        "/admin '사용자 계정으로 테스트' 카드에서 이메일·이름 일부로 검색하고 '이 계정으로 테스트'를 누르면 그 사용자 명의의 토큰(리프레시 없음, ADMIN_TEST_TOKEN_EXPIRE_MINUTES)으로 채팅 화면이 열리며 그 사용자의 대화·학습장·일기가 그대로 보인다",
+        "테스트 중에는 헤더 아래 띠에 대상 계정과 '내 계정으로 돌아가기'가 보이고, 돌아가거나 토큰이 만료되면 관리자 계정으로 복귀한다(관리자 토큰은 유지)",
+        "테스트 토큰으로 메시지·일기·학습장 쓰기는 되지만 모든 DELETE와 /api/auth/* 쓰기(이름·이메일·비밀번호)는 403 '테스트 중에는 삭제·계정 변경을 할 수 없습니다.'로 막힌다. 자기 계정은 400, 없는 사용자는 404, 비관리자는 403",
+        "시작(admin_test_started)과 테스트 중 쓰기 요청(admin_test_write: admin·target·method·path)이 서버 로그에 남는다. DB 테이블은 두지 않는다",
+        "계정 메뉴 버튼과 페이지 이름은 '관리자'. API·E2E 테스트, ADR-0013을 제공하고 ./scripts/verify.sh와 E2E를 통과한다"
+      ],
+      "verify": "./scripts/verify.sh 및 ./scripts/e2e.sh e2e/admin.spec.ts",
+      "passes": true
     }
   ]
 }

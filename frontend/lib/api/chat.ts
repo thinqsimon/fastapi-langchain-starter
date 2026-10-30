@@ -45,12 +45,12 @@ export async function streamMessage(conversationId: string, content: string, onT
             signal,
         })
 
-    let response = await send(tokenStorage.access)
+    let response = await send(tokenStorage.current)
 
     if (response.status === 401) {
         // httpClient의 인터셉터를 태워 토큰을 새로 받는다.
         await httpClient.get("/api/auth/me")
-        response = await send(tokenStorage.access)
+        response = await send(tokenStorage.current)
     }
 
     if (!response.ok || !response.body) {

@@ -61,6 +61,8 @@ class Settings(BaseSettings):
     # 관리자가 서버 설정 화면에 입력한 공급자별 API 키를 DB에 암호화해 저장하는 데 쓰는 키.
     # Fernet.generate_key()로 만든다(app.core.security 참고).
     SETTINGS_ENCRYPTION_KEY: str = ""
+    # 관리자가 다른 계정으로 테스트하는 토큰(ADMIN-02)의 수명(분). 지나면 관리자 계정으로 돌아간다.
+    ADMIN_TEST_TOKEN_EXPIRE_MINUTES: int = 60
 
     # 선택 기능: 문서를 저장해 두고 질문과 비슷한 대목을 찾아 답변에 쓰는 기능.
     # 끄면 관련 API가 아예 등록되지 않는다.
