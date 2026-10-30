@@ -850,3 +850,9 @@ E2E: 보관 주제를 연 채 신규 보기로 바꾸면 본문이 비는지, �
 `ADMIN_EMAILS=siungryu@gmail.com`, `SETTINGS_ENCRYPTION_KEY=<python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())">`를 넣고 재배포.
 두 값이 없어도 앱은 예전과 같이 동작한다(관리자 없음, `.env` 공급자 하나)
 **다음 할 일**: 사용자가 실제 Gemini/Claude 키로 수동 확인(모델 ID는 화면에서 자유 입력). 필요하면 공급자별 사용량 표시·한도 입력(선제 차단)은 ADR-0012 대안 참고
+
+## 2026-10-30 · 세션 27 후속 · Vercel Hobby 함수 12개 제한으로 배포 실패 → 루트 페이지 제거
+
+**증상**: `9a7d743` 푸시 뒤 Vercel(diary-coach) 배포 실패 "No more than 12 Serverless Functions can be added to a Deployment on the Hobby plan". 빌드는 성공, 함수 수에서 막힘. `/admin` 페이지가 13번째.
+**조치**: `app/page.tsx`(로그인 여부로 /chat·/sign-in 보내던 클라이언트 페이지)를 지우고 `proxy.ts`에서 `/` → `/chat` 리다이렉트. 비로그인은 `/chat`의 RequireAuth가 `/sign-in`으로 보내므로 동작은 같다.
+**주의**: 이제 페이지 수가 다시 한도(12)에 딱 맞는다. **다음에 페이지(라우트)를 하나라도 추가하면 Vercel 배포가 또 실패한다.** 새 화면은 기존 라우트 안에서(쿼리·탭) 만들거나, `manifest.ts`를 정적 파일로 바꾸거나, Vercel Pro로 올려야 한다.
