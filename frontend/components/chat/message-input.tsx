@@ -22,7 +22,16 @@ function fitHeight(textarea: HTMLTextAreaElement) {
     textarea.style.overflowY = needed > maxHeight ? "auto" : "hidden"
 }
 
-export function MessageInput({ disabled, onSend }: { disabled: boolean; onSend: (content: string) => void }) {
+export function MessageInput({
+    disabled,
+    onSend,
+    leading,
+}: {
+    disabled: boolean
+    onSend: (content: string) => void
+    /** 입력칸 왼쪽에 놓을 것(예: 부가 기능 + 메뉴). 서비스마다 다르므로 밖에서 넣는다. */
+    leading?: React.ReactNode
+}) {
     const [value, setValue] = useState("")
     const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -45,6 +54,7 @@ export function MessageInput({ disabled, onSend }: { disabled: boolean; onSend: 
             onSubmit={submit}
             className="flex items-end gap-2 border-t p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:p-4 sm:pb-[calc(1rem+env(safe-area-inset-bottom))]"
         >
+            {leading}
             <textarea
                 ref={textareaRef}
                 aria-label="메시지"

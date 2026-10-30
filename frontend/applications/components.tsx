@@ -1,7 +1,7 @@
 "use client"
 
 import { DiaryHeaderMessage, DiarySettingsSection } from "@/applications/diary-coach/components"
-import { CloudAvatar, CoachChatHeader, CoachWelcome } from "@/applications/diary-coach/chat-experience"
+import { CloudAvatar, CoachChatHeader, CoachComposerMenu, CoachWelcome } from "@/applications/diary-coach/chat-experience"
 import type { AssistantPresentation } from "@/components/chat/message-list"
 import { application } from "@/lib/application"
 
@@ -16,6 +16,11 @@ export function ApplicationSettingsSection() {
 
 export function ApplicationChatHeader() {
     return application.diaryEnabled ? <CoachChatHeader /> : null
+}
+
+/** 메시지 입력칸 왼쪽의 + 메뉴. 스타터에는 부가 기능이 없어 아무것도 그리지 않는다. */
+export function ApplicationComposerMenu() {
+    return application.diaryEnabled ? <CoachComposerMenu /> : null
 }
 
 export function applicationChatPresentation(): { emptyState?: React.ReactNode; assistant?: AssistantPresentation } {

@@ -3,15 +3,18 @@
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { ArrowUpRight, BookOpen, LoaderCircle } from "lucide-react"
+import { ArrowUpRight, BookOpen, LoaderCircle, Plus, SquarePlay } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DraftReplaceDialog } from "@/components/diary/draft-replace-dialog"
 import { useChatStore } from "@/store/chat"
 import { useDiaryStore } from "@/store/diary"
 
 const MASCOT = "/coach/cloud-coach.png"
 const SUGGESTIONS = ["오늘 배운 개념을 예시로 설명해 줘", "어려운 내용을 함께 복습하고 싶어"]
+/** 사용법 동영상. 새 탭으로 열고, 유튜브 앱이 있는 폰에서는 앱이 열린다. */
+export const GUIDE_VIDEO_URL = "https://youtu.be/MH6wL-0Qui0"
 
 export function CloudAvatar() {
     return <Image src={MASCOT} width={40} height={40} alt="" className="size-10 shrink-0 rounded-2xl object-cover" />
@@ -50,7 +53,7 @@ export function CoachWelcome() {
                             </Button>
                         ))}
                     </div>
-                    <p className="mt-4 text-xs leading-5 text-muted-foreground">대화하기 → 일기 초안 만들기 → 내 말로 다듬어 저장하기</p>
+                    <p className="mt-4 text-xs leading-5 text-muted-foreground">대화하기 → 입력칸 왼쪽 + 메뉴로 일기 초안 만들기 → 내 말로 다듬어 저장하기</p>
                 </div>
                 <div className="order-1 mx-auto lg:order-2">
                     <Image
@@ -68,7 +71,8 @@ export function CoachWelcome() {
     )
 }
 
-export function CoachChatHeader() {
+/** "이 대화로 일기 만들기" 동작. 메뉴(+)와 상단 안내가 같은 상태를 본다. */
+function useDiaryDraftAction() {
     const router = useRouter()
     const activeId = useChatStore((state) => state.activeId)
     const conversations = useChatStore((state) => state.conversations)
@@ -77,7 +81,6 @@ export function CoachChatHeader() {
     const chatError = useChatStore((state) => state.error)
     const isDrafting = useDiaryStore((state) => state.isDrafting)
     const isSaving = useDiaryStore((state) => state.isSaving)
-    const error = useDiaryStore((state) => state.error)
     const generateDraft = useDiaryStore((state) => state.generateDraftFromConversation)
     const [confirmSource, setConfirmSource] = useState<{ id: string; title: string } | null>(null)
     const mounted = useRef(false)
@@ -105,39 +108,100 @@ export function CoachChatHeader() {
         else void createDraft(source)
     }
 
+    return {
+        canDraft,
+        isDrafting,
+        requestDraft,
+        confirmSource,
+        dismissConfirm: () => setConfirmSource(null),
+        confirmReplace: () => {
+            if (confirmSource) void createDraft(confirmSource, true)
+        },
+    }
+}
+
+/** 채팅 상단. 코치 소개와 사용법 동영상 링크, 일기 초안 진행 상태를 보여 준다. */
+export function CoachChatHeader() {
+    const isDrafting = useDiaryStore((state) => state.isDrafting)
+    const error = useDiaryStore((state) => state.error)
+
+    return (
+        <div className="shrink-0 border-b bg-background px-4 py-3 sm:px-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                    <CloudAvatar />
+                    <div className="min-w-0">
+                        <p className="text-sm font-semibold">구름 코치</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">질문은 편하게, 배움은 차곡차곡</p>
+                    </div>
+                </div>
+                <a
+                    href={GUIDE_VIDEO_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${buttonVariants({ variant: "outline" })} min-h-10 w-full rounded-xl sm:w-auto`}
+                >
+                    <SquarePlay className="size-4 text-red-600" />
+                    사용법 동영상 열기
+                </a>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-muted-foreground" role={isDrafting ? "status" : undefined}>
+                {isDrafting
+                    ? "대화 속 배움과 어려웠던 점을 정리하고 있어요."
+                    : "일기 초안은 입력칸 왼쪽 + 메뉴에서 만들 수 있어요. 답변이 끝난 뒤 내용을 확인하고 직접 저장해 주세요."}
+            </p>
+            {error && (
+                <p role="alert" className="mt-2 text-sm text-destructive">
+                    {error}
+                </p>
+            )}
+        </div>
+    )
+}
+
+/** 입력칸 왼쪽의 + 버튼. 누르면 '이 대화로 일기 만들기' 같은 부가 기능 메뉴가 열린다. */
+export function CoachComposerMenu() {
+    const draft = useDiaryDraftAction()
+
     return (
         <>
-            <div className="shrink-0 border-b bg-background px-4 py-3 sm:px-6">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                        <CloudAvatar />
-                        <div className="min-w-0">
-                            <p className="text-sm font-semibold">구름 코치</p>
-                            <p className="mt-0.5 text-xs text-muted-foreground">질문은 편하게, 배움은 차곡차곡</p>
-                        </div>
-                    </div>
-                    <Button onClick={requestDraft} disabled={!canDraft} aria-busy={isDrafting} className="min-h-10 w-full rounded-xl sm:w-auto">
-                        {isDrafting ? <LoaderCircle className="size-4 animate-spin" /> : <BookOpen className="size-4" />}
-                        {isDrafting ? "일기 초안 만드는 중…" : "이 대화로 일기 만들기"}
-                    </Button>
-                </div>
-                <p className="mt-2 text-xs leading-5 text-muted-foreground" role={isDrafting ? "status" : undefined}>
-                    {isDrafting ? "대화 속 배움과 어려웠던 점을 정리하고 있어요." : "답변이 끝나면 초안을 만들 수 있어요. 내용을 확인한 뒤 직접 저장해 주세요."}
-                </p>
-                {error && (
-                    <p role="alert" className="mt-2 text-sm text-destructive">
-                        {error}
-                    </p>
-                )}
-            </div>
+            <DropdownMenu>
+                <DropdownMenuTrigger
+                    render={
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="icon-lg"
+                            className="size-10 shrink-0 rounded-full"
+                            aria-label={draft.isDrafting ? "일기 초안 만드는 중…" : "추가 기능"}
+                            title={draft.isDrafting ? "일기 초안 만드는 중…" : "추가 기능"}
+                            aria-busy={draft.isDrafting}
+                            disabled={draft.isDrafting}
+                        />
+                    }
+                >
+                    {draft.isDrafting ? <LoaderCircle className="size-5 animate-spin" /> : <Plus className="size-5" />}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" align="start" sideOffset={8} className="w-60">
+                    <DropdownMenuItem disabled={!draft.canDraft} onClick={draft.requestDraft} className="min-h-10 px-2">
+                        <BookOpen />
+                        <span className="flex flex-col">
+                            <span>이 대화로 일기 만들기</span>
+                            {!draft.canDraft && <span className="text-xs text-muted-foreground">답변이 끝나면 만들 수 있어요</span>}
+                        </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="min-h-10 px-2" render={<a href={GUIDE_VIDEO_URL} target="_blank" rel="noopener noreferrer" />}>
+                        <SquarePlay className="text-red-600" />
+                        사용법 동영상 열기
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
             <DraftReplaceDialog
-                open={!!confirmSource}
+                open={!!draft.confirmSource}
                 onOpenChange={(open) => {
-                    if (!open) setConfirmSource(null)
+                    if (!open) draft.dismissConfirm()
                 }}
-                onConfirm={() => {
-                    if (confirmSource) void createDraft(confirmSource, true)
-                }}
+                onConfirm={draft.confirmReplace}
             />
         </>
     )

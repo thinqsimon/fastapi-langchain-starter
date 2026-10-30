@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { ApplicationChatHeader, applicationChatPresentation } from "@/applications/components"
+import { ApplicationChatHeader, ApplicationComposerMenu, applicationChatPresentation } from "@/applications/components"
 
 import { ConversationSidebar } from "@/components/chat/conversation-sidebar"
 import { MessageInput } from "@/components/chat/message-input"
@@ -34,7 +34,7 @@ export default function ChatPage() {
                     </p>
                 )}
 
-                <MessageInput disabled={isStreaming} onSend={(content) => void sendMessage(content)} />
+                <MessageInput disabled={isStreaming} onSend={(content) => void sendMessage(content)} leading={<ApplicationComposerMenu />} />
             </section>
         </div>
     )

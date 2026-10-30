@@ -881,3 +881,13 @@ Render는 `preDeployCommand`로 자기 DB에 마이그레이션을 적용한다(
 **검증**: `./scripts/verify.sh` 백엔드 252 passed(97.9%), 프론트 통과. E2E admin 4 + auth·account·chat·coach 통과(아래 전체 실행 결과 참고)
 **운영 적용**: push하면 Vercel·Render 자동 배포. 새 테이블 없음(마이그레이션 없음). `ADMIN_TEST_TOKEN_EXPIRE_MINUTES`는 기본 60이라 환경 변수 추가 없이 동작
 **남은 것**: 테스트 중 만든 대화·일기는 사용자 계정에 남는다 → 필요하면 "테스트 흔적 정리" 기능(ADR-0013 주의 참고). 사용량·비용 표시는 여전히 .env 모델 기준(ADMIN-01 후속)
+
+## 2026-10-30 · 세션 28 후속 · 채팅 상단 버튼을 '사용법 동영상 열기'로, 일기 만들기는 입력칸 + 메뉴로
+
+**요청**: 코치 채팅 상단의 '이 대화로 일기 만들기' 버튼 자리를 **사용법 동영상 열기**(유튜브 클립 아이콘, https://youtu.be/MH6wL-0Qui0 새 탭/기본 앱)로 바꾸고,
+'이 대화로 일기 만들기'는 Claude 앱처럼 입력칸 앞 **+ 버튼 메뉴**의 항목으로.
+**한 일**: `chat-experience.tsx`에서 초안 로직을 `useDiaryDraftAction()`으로 빼고 `CoachChatHeader`(동영상 링크 `<a target=_blank>` + 초안 진행 상태 문구)와
+`CoachComposerMenu`(+ 버튼, shadcn `dropdown-menu` 새로 추가: '이 대화로 일기 만들기'(답변 전엔 비활성 + 안내), '사용법 동영상 열기')로 분리. 초안 생성 중에는 + 버튼이
+"일기 초안 만드는 중…"(스피너·비활성)이 되어 기존 E2E 기대를 유지. `MessageInput`에 `leading` 슬롯, `applications/components.tsx`에 `ApplicationComposerMenu`(스타터는 없음).
+lucide 1.x에는 브랜드 아이콘(Youtube)이 없어 `SquarePlay`(빨간색) 사용. 문서 3곳(usage·llm-handoff·샘플 README) 갱신.
+**검증**: `./scripts/verify.sh frontend` 통과. E2E coach 10(동영상 링크 href/target 검증 추가)·chat·responsive 22 passed.
