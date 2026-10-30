@@ -859,3 +859,10 @@ E2E: 보관 주제를 연 채 신규 보기로 바꾸면 본문이 비는지, �
 **진짜 원인(후속)**: 함수 13개의 정체는 Next 페이지가 아니라 **`frontend/api/` 폴더**였다. Vercel은 프로젝트 루트의 `api/` 폴더를 서버리스 함수로 자동 배포한다
 (axios 모듈 10개 = 함수 10개 + Next 기본 2개 = 12개로 한도에 딱 걸려 있었고, `api/admin.ts`가 13번째). 로컬 `vercel build`로 `.vercel/output/functions`를 확인해 찾았다.
 **조치**: `frontend/api/` → `frontend/lib/api/`로 이동, 임포트 `@/api` → `@/lib/api`. 이제 함수는 Next 기본 몇 개뿐이라 페이지를 늘려도 한도와 무관하다. 루트 페이지 제거(proxy 리다이렉트)는 그대로 둔다.
+**정정(배포 후 확인)**: Render의 `preDeployCommand`가 원격 DB에 마이그레이션을 적용하지 **않았다**(Supabase에 `llm_provider_settings` 없음 — 무료 인스턴스는 pre-deploy 미지원으로 보임).
+원격 마이그레이션은 이전처럼 사용자가 `cd backend && uv run alembic upgrade head`(.env = Supabase)로 직접 돌려야 한다. 새 백엔드가 떠 있는데 테이블이 없으면 채팅·일기 요청이 실패하므로 **푸시 직후 바로** 돌린다.
+또한 로컬 `make dev-backend`도 `.env`의 Supabase를 바라본다(5433이 아님).
+**재정정**: DB가 **두 개**다. 로컬 `.env`의 Supabase(ap-southeast-2 pooler)는 로컬 개발용이고, Render 백엔드는 **다른 DB**를 쓴다
+(같은 이메일의 계정 가입일이 로컬 10/26·운영 10/19로 다르고, 운영 백엔드로 만든 @example.com 계정이 .env DB에는 없다).
+Render는 `preDeployCommand`로 자기 DB에 마이그레이션을 적용한다(원래 설명이 맞았다). 위에서 돌린 `uv run alembic upgrade head`는 .env DB(로컬 개발용)에 적용된 것이고, 그것도 필요한 일이었다.
+운영 DB의 서버 설정 값은 로컬에서 읽을 수 없다 → dc.1pk.kr/admin의 "지금 동작" 카드로 확인한다.
