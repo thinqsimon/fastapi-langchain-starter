@@ -1,34 +1,46 @@
-# 배포 게이트: main의 CI가 모두 성공했을 때만 실행된다.
+# 배포 게이트: 배포 브랜치의 CI가 모두 성공했을 때만 실행된다.
+# 브랜치마다 다른 서비스(Render·Supabase·Vercel)로 배포하므로, 브랜치 → GitHub Environment로
+# 매핑해 Deploy Hook·백엔드 주소를 Environment의 시크릿·변수에서 읽는다(ADR-0011).
+#
+#   main                → production  (배움일기 코치 1)
+#   service/diary-coach → diary-coach (배움일기 코치 2)
+#
 # 배포 대상이 설정되기 전에는 job 자체가 건너뛰어진다
 # ("배포하지 않았는데 초록불"을 막기 위함).
+# 주의: workflow_run 워크플로는 저장소 기본 브랜치의 파일로 실행된다. 두 브랜치의 이 파일을 같게 유지한다.
 name: Deploy
 
 on:
   workflow_run:
     workflows: [CI]
     types: [completed]
-    branches: [main]
+    branches: [main, service/diary-coach]
 
 jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' && vars.DEPLOY_TARGET != '' }}
     runs-on: ubuntu-latest
-    environment: production
+    environment: ${{ github.event.workflow_run.head_branch == 'main' && 'production' || 'diary-coach' }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      # Render가 저장소를 직접 가져가 빌드한다(마이그레이션은 preDeployCommand에서 적용).
+      - name: 배포 대상 표시
+        run: |
+          echo "브랜치: ${{ github.event.workflow_run.head_branch }} (${{ github.event.workflow_run.head_sha }})"
+          echo "백엔드: ${{ vars.BACKEND_URL }}"
+
+      # Render가 저장소를 직접 가져가 빌드한다(마이그레이션은 Render의 시작 명령에서 자기 DATABASE_URL로만 적용).
       - name: 백엔드 배포 요청 (Render)
         run: |
           if [ -z "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
-            echo "::error::RENDER_DEPLOY_HOOK_URL 시크릿이 없습니다. docs/guides/usage.md ⑦ 참고"
+            echo "::error::이 Environment에 RENDER_DEPLOY_HOOK_URL 시크릿이 없습니다. docs/guides/usage.md ⑦ 참고"
             exit 1
           fi
           curl --fail --silent --show-error "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
 
-      # 프론트엔드는 Vercel이 GitHub 연동으로 자동 배포한다(여기서는 아무것도 하지 않는다).
+      # 프론트엔드는 Vercel이 GitHub 연동으로 자동 배포한다(프로젝트의 Production Branch 기준. 여기서는 아무것도 하지 않는다).
 
       - name: 배포 확인 (health check)
         run: |
