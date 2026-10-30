@@ -17,8 +17,12 @@ DEFAULT_PRICES_USD_PER_MILLION: dict[str, tuple[str, str]] = {
     "gpt-4o-mini": ("0.15", "0.60"),
     "gpt-4o": ("2.50", "10.00"),
     "gpt-4.1-mini": ("0.40", "1.60"),
+    "gpt-4.1": ("2.00", "8.00"),
     "claude-haiku-4-5": ("1.00", "5.00"),
     "claude-sonnet-4-5": ("3.00", "15.00"),
+    "gemini-2.0-flash": ("0.10", "0.40"),
+    "gemini-2.5-flash": ("0.30", "2.50"),
+    "gemini-2.5-pro": ("1.25", "10.00"),
     # 테스트용 공급자는 비용이 없다.
     "fake": ("0", "0"),
 }
@@ -27,8 +31,12 @@ _MILLION = Decimal(1_000_000)
 
 
 def _prices_for(model: str) -> tuple[Decimal, Decimal]:
-    """설정값이 있으면 그것을 쓰고, 없으면 기본 표에서 찾는다."""
-    if settings.LLM_PRICE_INPUT_PER_1M is not None:
+    """설정값이 있으면 그것을 쓰고, 없으면 기본 표에서 찾는다.
+
+    `.env`의 단가는 `.env`의 모델(LLM_MODEL) 하나에만 적용한다. 관리자가 서버 설정으로
+    다른 공급자를 켜서 모델이 섞이면 나머지는 기본 표를 따른다.
+    """
+    if settings.LLM_PRICE_INPUT_PER_1M is not None and model == settings.LLM_MODEL:
         return (
             Decimal(str(settings.LLM_PRICE_INPUT_PER_1M)),
             Decimal(str(settings.LLM_PRICE_OUTPUT_PER_1M or 0)),

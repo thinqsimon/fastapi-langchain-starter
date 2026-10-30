@@ -51,6 +51,8 @@ class MessageRepository:
         content: str,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
+        provider: str | None = None,
+        model: str | None = None,
     ) -> Message:
         message = Message(
             conversation_id=conversation_id,
@@ -58,6 +60,8 @@ class MessageRepository:
             content=content,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            provider=provider,
+            model=model,
         )
         self.db.add(message)
         self.db.flush()

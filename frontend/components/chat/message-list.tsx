@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react"
 import type { Message } from "@/lib/api"
 import { LogoMark } from "@/components/brand-logo"
 import { MarkdownView } from "@/components/markdown-view"
+import { answeredByLabel } from "@/lib/llm-labels"
 import { cn } from "@/lib/utils"
 
 export type AssistantPresentation = { name: string; avatar: React.ReactNode }
@@ -43,7 +44,12 @@ export function MessageList({
     return (
         <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4 sm:p-6" role="region" aria-label="대화 내용">
             {messages.map((message) => (
-                <Bubble key={message.id} role={message.role} assistant={assistant}>
+                <Bubble
+                    key={message.id}
+                    role={message.role}
+                    assistant={assistant}
+                    answeredBy={message.role === "assistant" ? answeredByLabel(message.provider, message.model) : null}
+                >
                     {message.role === "assistant" ? <MarkdownView>{message.content}</MarkdownView> : message.content}
                 </Bubble>
             ))}
@@ -64,12 +70,15 @@ function Bubble({
     pending = false,
     children,
     assistant,
+    answeredBy,
 }: {
     role: Message["role"]
     /** 아직 서버에 저장되지 않은, 스트리밍 중인 응답 */
     pending?: boolean
     children: React.ReactNode
     assistant?: AssistantPresentation
+    /** 답한 공급자·모델 표기(예: "Gemini · gemini-2.5-flash"). 없으면 표시하지 않는다. */
+    answeredBy?: string | null
 }) {
     const isUser = role === "user"
     return (
@@ -89,6 +98,11 @@ function Bubble({
             >
                 {!isUser && assistant && <p className="mb-2 text-xs font-semibold text-muted-foreground">{assistant.name}</p>}
                 {children}
+                {answeredBy && (
+                    <p data-slot="message-model" className="mt-2 text-[11px] text-muted-foreground/80">
+                        {answeredBy}
+                    </p>
+                )}
             </div>
         </div>
     )

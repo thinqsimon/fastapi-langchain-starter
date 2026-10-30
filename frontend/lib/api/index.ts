@@ -23,6 +23,7 @@ export type {
     LlmProviderPatch,
     LlmProviderSetting,
     Message,
+    ModelUsage,
     Notebook,
     NotebookTopic,
     NotebookTopicInput,

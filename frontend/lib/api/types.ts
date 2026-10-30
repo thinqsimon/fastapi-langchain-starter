@@ -77,6 +77,9 @@ export type Message = {
     role: "user" | "assistant" | "system"
     content: string
     created_at: string
+    /** 답한 공급자·모델. 사용자 메시지와 예전 답변은 null. */
+    provider: string | null
+    model: string | null
 }
 
 export type ConversationDetail = Conversation & { messages: Message[] }
@@ -159,13 +162,24 @@ export type StudyItem = {
     reviewed_at: string | null
 }
 
+export type ModelUsage = {
+    provider: string | null
+    model: string
+    message_count: number
+    input_tokens: number
+    output_tokens: number
+    estimated_cost_usd: string
+}
+
 export type UsageSummary = {
+    /** 가장 많이 쓴 모델. 자세한 내역은 by_model. */
     model: string
     message_count: number
     input_tokens: number
     output_tokens: number
     total_tokens: number
     estimated_cost_usd: string
+    by_model: ModelUsage[]
 }
 
 // 학습장(backend/src/app/domain/notebook/schemas.py)

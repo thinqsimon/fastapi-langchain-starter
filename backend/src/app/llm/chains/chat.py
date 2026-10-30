@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
+from app.core.config import settings
 from app.core.exceptions import LLMError
 from app.llm.prompts.chat import build_chat_prompt
 from app.llm.providers import ProviderAttempt, get_chat_model
@@ -20,6 +21,35 @@ HistoryItem = tuple[str, str]
 class TokenUsage:
     input_tokens: int
     output_tokens: int
+
+
+@dataclass(frozen=True)
+class ModelInfo:
+    """실제로 답한 공급자와 모델. 우선순위 전환이 일어나면 뒤쪽 공급자가 된다."""
+
+    provider: str
+    model: str
+
+
+def text_of(content: object) -> str:
+    """공급자마다 다른 응답 content에서 글자만 꺼낸다.
+
+    OpenAI는 문자열을 주지만 Gemini·Claude는 블록 리스트를 준다
+    (예: ``[{"type": "text", "text": "안녕"}, {"type": "thinking", ...}]``).
+    텍스트 블록만 이어 붙이고 서명·생각·도구 호출 블록은 버린다. 이걸 거치지 않으면
+    리스트가 ``str()``로 그대로 화면에 찍힌다(실제로 Gemini에서 겪은 문제).
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict) and block.get("type") == "text":
+                parts.append(str(block.get("text", "")))
+        return "".join(parts)
+    return ""
 
 
 def _to_messages(history: Sequence[HistoryItem]) -> list[BaseMessage]:
@@ -38,11 +68,13 @@ async def stream_reply(
     system_prompt: str | None = None,
     on_usage: Callable[[TokenUsage], None] | None = None,
     providers: Sequence[ProviderAttempt] = (),
+    on_model: Callable[[ModelInfo], None] | None = None,
 ) -> AsyncIterator[str]:
     """응답을 토큰 단위로 흘려보낸다.
 
     사용량은 보통 마지막 청크에만 실려 오므로, 받는 즉시 `on_usage`로 알린다.
-    공급자가 사용량을 주지 않으면 호출되지 않는다.
+    공급자가 사용량을 주지 않으면 호출되지 않는다. `on_model`은 첫 청크가 올 때
+    실제로 답한 공급자·모델을 알린다(메시지에 함께 저장해 표기·비용 계산에 쓴다).
 
     providers: 관리자가 "서버 설정" 화면(ADMIN-01)에서 정한 우선순위. 비어 있으면 `.env` 설정
     하나만 쓴다(기존 동작과 같다). 앞쪽 공급자가 호출 중 오류(한도 초과 등)를 내면 다음 공급자로
@@ -68,6 +100,13 @@ async def stream_reply(
             async for chunk in chain.astream(
                 {"input": user_input, "history": _to_messages(history)}
             ):
+                if not sent_any and on_model:
+                    on_model(
+                        ModelInfo(
+                            provider=attempt.provider or settings.LLM_PROVIDER,
+                            model=attempt.model or settings.LLM_MODEL,
+                        )
+                    )
                 sent_any = True
                 usage = getattr(chunk, "usage_metadata", None)
                 if usage and on_usage:
@@ -78,9 +117,9 @@ async def stream_reply(
                         )
                     )
 
-                text = chunk.content
+                text = text_of(chunk.content)
                 if text:
-                    yield text if isinstance(text, str) else str(text)
+                    yield text
             return
         except Exception as exc:  # 공급자별 예외가 제각각이라 한 곳에서 묶는다.
             last_error = exc

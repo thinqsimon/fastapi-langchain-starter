@@ -675,6 +675,22 @@
       ],
       "verify": "./scripts/verify.sh 및 ./scripts/e2e.sh e2e/admin.spec.ts",
       "passes": true
+    },
+    {
+      "id": "LLM-02",
+      "phase": 9,
+      "owner": "llm-engineer",
+      "title": "공급자별 응답 형태 정규화 + 답변마다 공급자·모델 기록·표기·비용",
+      "requirement": "2026-10-31 사용자 보고(운영 Gemini 응답이 [{'type': 'text', ...}] 리스트 원문으로 표시됨). 결정: 과거 메시지는 복구하지 않음, 모델 표기·비용 계산 포함",
+      "acceptance": [
+        "OpenAI(문자열)·Gemini(텍스트+서명 블록 리스트)·Claude(thinking 블록 포함 리스트) 어떤 content가 와도 텍스트 블록만 이어 붙인 정상 문장이 스트리밍·저장된다(text_of 단위 테스트)",
+        "assistant 메시지에 provider·model이 저장되고 메시지/대화 상세 API에 실린다. 사용자 메시지와 예전 답변은 null",
+        "답변 말풍선 아래에 'Gemini · gemini-2.5-flash'처럼 표기된다(fake는 '테스트 응답'), 새로고침 뒤에도 유지",
+        "/api/usage/me가 모델별(by_model) 토큰·비용을 주고 총비용은 모델별 단가의 합이다. .env 단가는 .env 모델에만 적용. 사용량 배지 툴팁에 모델별 내역",
+        "Alembic 마이그레이션(messages.provider/model), API·단위 테스트, E2E(model-label.spec.ts), ADR-0012 후속 절을 제공하고 ./scripts/verify.sh와 E2E를 통과한다"
+      ],
+      "verify": "./scripts/verify.sh 및 ./scripts/e2e.sh e2e/model-label.spec.ts e2e/chat.spec.ts",
+      "passes": true
     }
   ]
 }

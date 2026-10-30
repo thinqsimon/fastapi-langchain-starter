@@ -891,3 +891,20 @@ Render는 `preDeployCommand`로 자기 DB에 마이그레이션을 적용한다(
 "일기 초안 만드는 중…"(스피너·비활성)이 되어 기존 E2E 기대를 유지. `MessageInput`에 `leading` 슬롯, `applications/components.tsx`에 `ApplicationComposerMenu`(스타터는 없음).
 lucide 1.x에는 브랜드 아이콘(Youtube)이 없어 `SquarePlay`(빨간색) 사용. 문서 3곳(usage·llm-handoff·샘플 README) 갱신.
 **검증**: `./scripts/verify.sh frontend` 통과. E2E coach 10(동영상 링크 href/target 검증 추가)·chat·responsive 22 passed.
+
+## 2026-10-31 · 세션 29 · LLM-02 공급자별 응답 형태 정규화 + 답변마다 공급자·모델 기록
+
+**요청**: 운영에서 Gemini 답변이 `[{'type': 'text', 'text': ...}]` 리스트 원문으로 보임. 공급자마다 다른 응답 형태를 감안해 모든 모델에서 정상 문장이 나오게.
+**결정(사용자)**: 과거에 깨진 채 저장된 메시지는 복구하지 않음. 답변마다 공급자·모델을 저장해 표기·비용 계산에 쓰는 것까지 포함.
+구독제(free/pro/max)별 모델 라우팅은 **다음 기능(ADMIN-03)**으로: 요금제마다 공급자 순서·모델 전부 따로(`llm_providers` 키 / `llm_plan_routes` 라우트 분리),
+`users.plan` 추가 + 관리자 수동 지정, `messages.plan` 기록, 라우트 없으면 free → .env 캐스케이드. 설계는 ADR-0012 마지막 절에 기록.
+**한 일**
+- `llm/chains/chat.py`: `text_of(content)` — 문자열/블록 리스트 모두 텍스트 블록만 이어 붙임(서명·thinking·tool 블록 제외). `on_model` 콜백으로 첫 청크 때 실제 답한 공급자·모델(`ModelInfo`) 알림
+- `messages.provider/model` 컬럼(마이그레이션 `9d1e9326fa28`, 로컬 5433·5432 적용). `MessageRead`에 노출. chat 서비스가 저장
+- usage: `totals_by_model` 집계 → `UsageSummary.by_model`, 총비용은 모델별 단가 합. `.env` 단가는 `.env` 모델에만 적용. pricing 표에 Gemini 2.0/2.5·gpt-4.1 추가
+- 프론트: `lib/llm-labels.ts`(공급자 표시명, fake는 "테스트 응답"), 답변 말풍선 아래 `data-slot="message-model"` 표기, 사용량 배지 툴팁에 모델별 내역
+- 테스트: `tests/test_llm_text.py`(Gemini·Claude 형태 + 스트림 통합 + 기본 공급자 기록) 6개, `tests/api/test_message_model.py` 2개. E2E `model-label.spec.ts`. feature_list LLM-02, ADR-0012 후속 절
+**막힌 점**: 중단된 실행이 마이그레이션을 먼저 만들어 두 번째 autogenerate가 빈 리비전(`e5ba…`)을 만들었다 → 두 DB를 `9d1e9326fa28`로 내리고 빈 파일 삭제, `alembic check` 통과.
+E2E는 새로고침 뒤 대화가 자동 선택되지 않아 목록에서 다시 열도록 수정.
+**검증**: `./scripts/verify.sh` 백엔드 260 passed(97.9%), 프론트 통과. E2E chat·coach·admin 18 passed + model-label(수정 후 재실행).
+**운영 적용**: push → Render가 배포 전 마이그레이션 적용(컬럼 2개 추가, nullable). 환경 변수 추가 없음.

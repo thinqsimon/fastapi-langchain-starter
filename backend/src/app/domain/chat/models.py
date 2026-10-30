@@ -49,5 +49,9 @@ class Message(Base, TimestampMixin):
     # LLM 사용량. 사용자 메시지에는 없다.
     input_tokens: Mapped[int | None] = mapped_column(nullable=True)
     output_tokens: Mapped[int | None] = mapped_column(nullable=True)
+    # 실제로 답한 공급자·모델(ADMIN-01 우선순위 전환 뒤에는 .env와 다를 수 있다).
+    # 사용자 메시지와 이 컬럼이 생기기 전의 답변은 NULL이다.
+    provider: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    model: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     conversation: Mapped["Conversation"] = relationship(back_populates="messages")

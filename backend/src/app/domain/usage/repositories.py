@@ -33,3 +33,29 @@ class UsageRepository:
         ).one()
 
         return int(row[0] or 0), int(row[1] or 0), int(row[2] or 0)
+
+    def totals_by_model(
+        self, user_id: uuid.UUID
+    ) -> list[tuple[str | None, str | None, int, int, int]]:
+        """모델별 (공급자, 모델, 메시지 수, 입력 토큰 합, 출력 토큰 합). 많이 쓴 순."""
+        rows = self.db.execute(
+            select(
+                Message.provider,
+                Message.model,
+                func.count(Message.id),
+                func.coalesce(func.sum(Message.input_tokens), 0),
+                func.coalesce(func.sum(Message.output_tokens), 0),
+            )
+            .join(Conversation, Conversation.id == Message.conversation_id)
+            .where(
+                Conversation.user_id == user_id,
+                Message.role == "assistant",
+                Message.input_tokens.is_not(None),
+            )
+            .group_by(Message.provider, Message.model)
+            .order_by(func.count(Message.id).desc())
+        ).all()
+
+        return [
+            (row[0], row[1], int(row[2] or 0), int(row[3] or 0), int(row[4] or 0)) for row in rows
+        ]

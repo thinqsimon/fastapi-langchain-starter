@@ -10,7 +10,7 @@ from app.core.exceptions import NotFoundError
 from app.domain.admin.services import AdminLlmSettingsService
 from app.domain.chat.models import Conversation, Message
 from app.domain.chat.repositories import ConversationRepository, MessageRepository
-from app.llm.chains.chat import TokenUsage, stream_reply
+from app.llm.chains.chat import ModelInfo, TokenUsage, stream_reply
 
 logger = logging.getLogger(__name__)
 
@@ -76,10 +76,15 @@ class ChatService:
 
         chunks: list[str] = []
         usage: TokenUsage | None = None
+        answered_by: ModelInfo | None = None
 
         def record_usage(reported: TokenUsage) -> None:
             nonlocal usage
             usage = reported
+
+        def record_model(info: ModelInfo) -> None:
+            nonlocal answered_by
+            answered_by = info
 
         providers = AdminLlmSettingsService(self.db).active_provider_chain()
         try:
@@ -89,6 +94,7 @@ class ChatService:
                 system_prompt=self.system_prompt,
                 on_usage=record_usage,
                 providers=providers,
+                on_model=record_model,
             ):
                 chunks.append(chunk)
                 yield chunk
@@ -101,6 +107,8 @@ class ChatService:
                     content="".join(chunks),
                     input_tokens=usage.input_tokens if usage else None,
                     output_tokens=usage.output_tokens if usage else None,
+                    provider=answered_by.provider if answered_by else None,
+                    model=answered_by.model if answered_by else None,
                 )
                 self.db.commit()
                 logger.info(

@@ -21,6 +21,9 @@ class MessageRead(BaseModel):
     role: str
     content: str
     created_at: datetime
+    # 답한 공급자·모델. 사용자 메시지와 예전 답변은 null.
+    provider: str | None = None
+    model: str | None = None
 
 
 class ConversationRead(BaseModel):

@@ -70,3 +70,22 @@ OpenAI·Claude(Anthropic)·Gemini(Google) 키와 모델을 등록하고, 우선�
   필요해지면 "실제 오류" 방식 위에 추가할 수 있다.
 - **키를 `.env`에만 두고 화면은 순서만 바꾸기**: 키를 바꿀 때마다 재배포가 필요해 요구사항(화면에서 키 관리)에 맞지 않는다.
 - **`users.is_admin` 컬럼**: 지금은 과하다. 위 '관리자 판별' 참고.
+
+## 후속 (2026-10-31, LLM-02): 응답 형태 정규화와 메시지별 공급자·모델 기록
+
+- **증상**: Gemini는 응답 `content`를 문자열이 아니라 블록 리스트(`[{"type":"text",...}, {"extras":{"signature":...}}]`)로 준다.
+  `str()`로 바꿔 흘리던 코드 때문에 리스트 원문이 화면과 DB에 그대로 들어갔다. Claude도 thinking을 켜면 리스트다.
+- **결정**: `llm/chains/chat.text_of()`가 문자열/블록 리스트를 모두 받아 **텍스트 블록만** 이어 붙인다(서명·thinking·도구 호출 블록 제외).
+  공급자가 늘어도 이 한 곳만 지키면 된다. 이미 깨진 채로 저장된 과거 메시지는 복구하지 않기로 했다(사용자 결정).
+- **메시지별 모델 기록**: `messages.provider`, `messages.model`(nullable)을 추가하고, 스트리밍의 첫 청크가 올 때 실제로 답한 공급자·모델을
+  저장한다(우선순위 전환이 일어나면 뒤쪽 공급자가 기록된다). 화면은 답변 아래에 "Gemini · gemini-2.5-flash"처럼 표기하고, 사용량은
+  **모델별 단가로 합산**한다(`/api/usage/me`의 `by_model`). 컬럼이 생기기 전 답변(NULL)은 예전처럼 `.env`의 `LLM_MODEL`로 본다.
+- `.env`의 `LLM_PRICE_*` 단가는 `.env`의 모델에만 적용한다. 다른 모델은 `llm/pricing.py` 기본 표(Gemini 2.0/2.5 추가)를 쓴다.
+
+## 다음 단계로 확정한 설계 (2026-10-31, ADMIN-03 요금제별 라우팅)
+
+사용자 결정: 요금제(free/pro/max)마다 공급자 순서·모델을 전부 따로 두고, `users.plan`을 추가해 관리자가 수동 지정한다. 구독 결제는 나중.
+- `llm_providers`(공급자별 API 키, 전역) / `llm_plan_routes`(plan·순서·공급자·모델·사용·강제, 요금제당 강제 1행) / `users.plan`(기본 free) / `messages.plan`
+- `active_provider_chain(plan)`: 그 요금제 라우트 → 없으면 free 라우트 → 없으면 `.env`. 지금의 `llm_provider_settings`는 free 라우트로 데이터 이전
+- 관리자 화면: 사용자 카드에 요금제 변경, 공급자 키 카드(키만), 요금제 탭별 라우팅 + "지금 동작"
+- 나중(구독): `subscriptions`(plan·시작/만료·상태·결제사 id)가 `users.plan`을 채우고, 요금제별 한도는 `plan_limits`로

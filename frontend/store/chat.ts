@@ -83,7 +83,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
             conversationId ??= await get().startNewConversation()
             if (get().sessionVersion !== sessionVersion) return
             // 보낸 메시지를 먼저 보여준다. 연속 클릭은 대화 생성 전부터 막는다.
-            const pending: Message = { id: `pending-${Date.now()}`, role: "user", content, created_at: new Date().toISOString() }
+            const pending: Message = {
+                id: `pending-${Date.now()}`,
+                role: "user",
+                content,
+                created_at: new Date().toISOString(),
+                provider: null,
+                model: null,
+            }
             set((state) => ({ messages: [...state.messages, pending] }))
             await chatApi.streamMessage(conversationId, content, (token) => {
                 if (get().sessionVersion === sessionVersion && get().activeId === conversationId)
