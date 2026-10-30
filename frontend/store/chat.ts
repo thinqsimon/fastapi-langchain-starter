@@ -1,6 +1,6 @@
 import { create } from "zustand"
 
-import { chatApi, type Conversation, type Message } from "@/api"
+import { chatApi, type Conversation, type Message } from "@/lib/api"
 
 type ChatState = {
     conversations: Conversation[]

@@ -27,7 +27,7 @@ backend/src/app/
   domain/<x>/ routers → services → repositories → models (+ schemas)  ← 기능 단위 폴더
   llm/        providers(공급자 교체)·prompts·chains·rag·fake — domain import 금지
   api.py      도메인 라우터 등록 / models.py 모델 등록(Alembic용)
-frontend/     app/(auth)·app/(main) 라우트, api/ (axios), store/ (zustand), components/ui (shadcn),
+frontend/     app/(auth)·app/(main) 라우트, lib/api/ (axios), store/ (zustand), components/ui (shadcn),
               public/brand (로고 원본) → `npm run icons`로 파비콘·앱 아이콘 생성
 samples/diary-coach/  샘플앱 변경분 설명 (스타터킷 사용 예)
 harness/      feature_list.json(할 일·인수조건) · progress.md(인수인계)

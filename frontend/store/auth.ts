@@ -1,6 +1,6 @@
 import { create } from "zustand"
 
-import { authApi, tokenStorage, type User } from "@/api"
+import { authApi, tokenStorage, type User } from "@/lib/api"
 import { useChatStore } from "@/store/chat"
 
 type AuthState = {

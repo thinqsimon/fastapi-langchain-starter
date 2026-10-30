@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
-import { authApi, errorMessage } from "@/api"
+import { authApi, errorMessage } from "@/lib/api"
 import { AuthFormCard } from "@/components/auth/auth-form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 
-import { errorMessage } from "@/api"
+import { errorMessage } from "@/lib/api"
 
 export type FormResult = { kind: "success" | "error"; message: string }
 

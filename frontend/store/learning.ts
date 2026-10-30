@@ -1,6 +1,6 @@
 import { create } from "zustand"
 
-import { errorMessage, learningApi, type SavedWeeklyReview, type StudyItem } from "@/api"
+import { errorMessage, learningApi, type SavedWeeklyReview, type StudyItem } from "@/lib/api"
 import { localToday } from "@/lib/date"
 
 export function weekStart(reference: string): string {

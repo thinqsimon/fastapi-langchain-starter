@@ -1,6 +1,6 @@
 import { create } from "zustand"
 
-import { adminApi, errorMessage, type LlmProviderName, type LlmProviderPatch, type LlmProviderSetting } from "@/api"
+import { adminApi, errorMessage, type LlmProviderName, type LlmProviderPatch, type LlmProviderSetting } from "@/lib/api"
 
 type AdminState = {
     providers: LlmProviderSetting[]

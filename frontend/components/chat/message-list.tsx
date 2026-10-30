@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react"
 
-import type { Message } from "@/api"
+import type { Message } from "@/lib/api"
 import { LogoMark } from "@/components/brand-logo"
 import { MarkdownView } from "@/components/markdown-view"
 import { cn } from "@/lib/utils"

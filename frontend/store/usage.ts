@@ -1,6 +1,6 @@
 import { create } from "zustand"
 
-import { usageApi, type UsageSummary } from "@/api"
+import { usageApi, type UsageSummary } from "@/lib/api"
 
 type UsageState = {
     usage: UsageSummary | null

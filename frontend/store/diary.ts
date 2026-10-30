@@ -1,6 +1,6 @@
 import { create } from "zustand"
 
-import { diaryApi, errorMessage, type DiaryDraft, type DiaryEntry, type DiaryForm, type EligibleConversation } from "@/api"
+import { diaryApi, errorMessage, type DiaryDraft, type DiaryEntry, type DiaryForm, type EligibleConversation } from "@/lib/api"
 import { localToday } from "@/lib/date"
 
 /** 새로 쓸 때의 빈 입력칸. 제목은 오늘 날짜로 시작한다(같은 날 두 번째부터는 서버가 (2)를 붙인다). */

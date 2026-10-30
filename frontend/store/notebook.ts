@@ -1,6 +1,6 @@
 import { create } from "zustand"
 
-import { errorMessage, notebookApi, type Notebook, type NotebookTopic, type NotebookTopicInput, type NotebookTopicSummary } from "@/api"
+import { errorMessage, notebookApi, type Notebook, type NotebookTopic, type NotebookTopicInput, type NotebookTopicSummary } from "@/lib/api"
 
 /** 주제 입력칸. 태그는 쉼표로 구분한 문자열, 난이도는 ""(없음) 또는 "1"~"5"다. */
 export type TopicForm = {

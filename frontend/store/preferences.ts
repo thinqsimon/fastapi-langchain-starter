@@ -1,6 +1,6 @@
 import { create } from "zustand"
 
-import { preferencesApi, type Preferences } from "@/api"
+import { preferencesApi, type Preferences } from "@/lib/api"
 
 type PreferencesState = {
     /** 아직 불러오지 않았으면 null */

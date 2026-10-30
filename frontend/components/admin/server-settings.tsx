@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 
-import type { LlmProviderName, LlmProviderPatch, LlmProviderSetting } from "@/api"
+import type { LlmProviderName, LlmProviderPatch, LlmProviderSetting } from "@/lib/api"
 import { FormStatus, useFormAction } from "@/components/settings/form-status"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"

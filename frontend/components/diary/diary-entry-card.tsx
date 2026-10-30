@@ -1,6 +1,6 @@
 "use client"
 
-import type { DiaryEntry } from "@/api"
+import type { DiaryEntry } from "@/lib/api"
 import { DiaryPreviewActions } from "@/components/diary/diary-preview-actions"
 import { MarkdownView } from "@/components/markdown-view"
 import { Button } from "@/components/ui/button"

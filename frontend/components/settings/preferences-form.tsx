@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 
-import type { Preferences } from "@/api"
+import type { Preferences } from "@/lib/api"
 import { FormStatus, useFormAction } from "@/components/settings/form-status"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

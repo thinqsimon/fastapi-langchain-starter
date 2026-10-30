@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react"
 import { BookmarkCheck, CheckCircle2, Circle } from "lucide-react"
 
-import type { Notebook } from "@/api"
+import type { Notebook } from "@/lib/api"
 import { ConfirmDeleteDialog } from "@/components/notebook/confirm-delete-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

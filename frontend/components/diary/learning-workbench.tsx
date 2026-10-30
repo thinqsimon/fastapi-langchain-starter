@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { BookOpen, CheckCircle2, History, RotateCcw } from "lucide-react"
 
-import type { StudyItem } from "@/api"
+import type { StudyItem } from "@/lib/api"
 import { MarkdownView } from "@/components/markdown-view"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"

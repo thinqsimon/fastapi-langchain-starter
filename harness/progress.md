@@ -856,3 +856,6 @@ E2E: 보관 주제를 연 채 신규 보기로 바꾸면 본문이 비는지, �
 **증상**: `9a7d743` 푸시 뒤 Vercel(diary-coach) 배포 실패 "No more than 12 Serverless Functions can be added to a Deployment on the Hobby plan". 빌드는 성공, 함수 수에서 막힘. `/admin` 페이지가 13번째.
 **조치**: `app/page.tsx`(로그인 여부로 /chat·/sign-in 보내던 클라이언트 페이지)를 지우고 `proxy.ts`에서 `/` → `/chat` 리다이렉트. 비로그인은 `/chat`의 RequireAuth가 `/sign-in`으로 보내므로 동작은 같다.
 **주의**: 이제 페이지 수가 다시 한도(12)에 딱 맞는다. **다음에 페이지(라우트)를 하나라도 추가하면 Vercel 배포가 또 실패한다.** 새 화면은 기존 라우트 안에서(쿼리·탭) 만들거나, `manifest.ts`를 정적 파일로 바꾸거나, Vercel Pro로 올려야 한다.
+**진짜 원인(후속)**: 함수 13개의 정체는 Next 페이지가 아니라 **`frontend/api/` 폴더**였다. Vercel은 프로젝트 루트의 `api/` 폴더를 서버리스 함수로 자동 배포한다
+(axios 모듈 10개 = 함수 10개 + Next 기본 2개 = 12개로 한도에 딱 걸려 있었고, `api/admin.ts`가 13번째). 로컬 `vercel build`로 `.vercel/output/functions`를 확인해 찾았다.
+**조치**: `frontend/api/` → `frontend/lib/api/`로 이동, 임포트 `@/api` → `@/lib/api`. 이제 함수는 Next 기본 몇 개뿐이라 페이지를 늘려도 한도와 무관하다. 루트 페이지 제거(proxy 리다이렉트)는 그대로 둔다.

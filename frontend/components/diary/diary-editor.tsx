@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useState, type ChangeEvent } from "react"
 
-import type { DiaryForm } from "@/api"
+import type { DiaryForm } from "@/lib/api"
 import { MarkdownView } from "@/components/markdown-view"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
