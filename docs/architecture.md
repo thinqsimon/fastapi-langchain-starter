@@ -23,8 +23,8 @@ flowchart LR
 flowchart LR
     P[git push / PR] --> CI[GitHub Actions CI<br/>scripts/verify.sh]
     CI -- 실패 --> X[배포 중단]
-    CI -- main 성공 --> G[배포 게이트<br/>workflow_run success]
-    G --> D[자동 배포 TBD] --> H["/health 확인"]
+    CI -- 배포 브랜치 성공 --> G[배포 게이트<br/>workflow_run success]
+    G -- 브랜치 → Environment --> D[Render Deploy Hook] --> H["/health 확인"]
 ```
 
 ## 요청 흐름 (채팅 스트리밍)

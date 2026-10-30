@@ -192,10 +192,10 @@ make verify
 ## ⑦ CI/CD 확인 및 배포
 
 ### CI
-`main`에 push하거나 PR을 올리면 GitHub Actions가 자동 실행됩니다.
+`main`·`service/**` 브랜치에 push하거나 PR을 올리면 GitHub Actions가 자동 실행됩니다.
 
 ```
-git push origin main
+git push origin service/diary-coach   (또는 main)
 → CI: 린트·타입·테스트·빌드 (verify)
 → CI: 브라우저 E2E
 → 둘 다 통과해야 배포 단계로 넘어갑니다
@@ -203,6 +203,20 @@ git push origin main
 
 로컬과 CI는 **같은 스크립트**(`scripts/verify.sh`, `scripts/e2e.sh`)를 실행합니다.
 테스트가 실패하면 배포는 실행되지 않습니다.
+
+### 배포 게이트는 브랜치마다 다른 서비스로 배포합니다
+
+브랜치 하나가 서비스 하나입니다. 배포에 필요한 값은 GitHub **Environment**(Settings → Environments)에
+브랜치별로 둡니다. 자세한 이유는 [ADR-0011](../decisions/ADR-0011-deploy-per-branch.md)에 있습니다.
+
+| 브랜치 | Environment | 변수 `BACKEND_URL` | 시크릿 `RENDER_DEPLOY_HOOK_URL` |
+|---|---|---|---|
+| `main` | `production` | 코치 1 Render 주소 | 코치 1 Render 서비스의 Deploy Hook |
+| `service/diary-coach` | `diary-coach` | 코치 2 Render 주소 | 코치 2 Render 서비스의 Deploy Hook |
+
+- 변수 `DEPLOY_TARGET`(값 `render`)이 비어 있으면 배포 job은 건너뜁니다
+- `deploy.yml`은 **기본 브랜치의 파일로 실행**됩니다. 두 브랜치의 파일을 같은 내용으로 유지하세요
+- 새 서비스 브랜치를 만들면: Environment 생성 → 변수·시크릿 입력 → `deploy.yml`의 `branches`와 Environment 매핑에 추가
 
 ### 배포 (Supabase + Render + Vercel)
 
@@ -272,7 +286,9 @@ New → Web Service → **Public Git Repository**에 저장소 주소를 넣고 
 `LLM_PROVIDER=openai`, `LLM_MODEL=gpt-4o-mini`를 더합니다.
 
 > 이 방법은 Render의 자동 배포를 쓰지 않습니다. 대신 GitHub Actions가 CI 통과 후
-> Deploy Hook을 직접 호출하므로, `main`에 push하면 동일하게 배포됩니다.
+> Deploy Hook을 직접 호출하므로, 배포 브랜치에 push하면 동일하게 배포됩니다.
+> Settings → **Deploy Hook**의 URL을 복사해 해당 브랜치 Environment의 시크릿 `RENDER_DEPLOY_HOOK_URL`로 넣습니다.
+> (Blueprint·GitHub 연결로 만든 서비스도 Auto-Deploy를 **끄고** 같은 방식을 쓰면 CI를 통과한 커밋만 배포됩니다.)
 
 #### 3단계 · Vercel (프론트엔드)
 
