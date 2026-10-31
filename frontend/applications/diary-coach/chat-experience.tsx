@@ -6,8 +6,22 @@ import { useRouter } from "next/navigation"
 import { ArrowUpRight, BookOpen, LoaderCircle, Plus, SquarePlay } from "lucide-react"
 
 import { Button, buttonVariants } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { DraftReplaceDialog } from "@/components/diary/draft-replace-dialog"
+import { errorMessage } from "@/lib/api"
+import { DEFAULT_ANSWER_LEVEL, answerLevelLabel } from "@/lib/answer-level"
+import { useAnswerLevelStore } from "@/store/answer-level"
+import { useAuthStore } from "@/store/auth"
 import { useChatStore } from "@/store/chat"
 import { useDiaryStore } from "@/store/diary"
 
@@ -162,10 +176,18 @@ export function CoachChatHeader() {
 /** 입력칸 왼쪽의 + 버튼. 누르면 '이 대화로 일기 만들기' 같은 부가 기능 메뉴가 열린다. */
 export function CoachComposerMenu() {
     const draft = useDiaryDraftAction()
+    const level = useAnswerLevelChoice()
+    const [open, setOpen] = useState(false)
 
     return (
         <>
-            <DropdownMenu>
+            <DropdownMenu
+                open={open}
+                onOpenChange={(next) => {
+                    setOpen(next)
+                    if (next) level.clearError()
+                }}
+            >
                 <DropdownMenuTrigger
                     render={
                         <Button
@@ -174,7 +196,7 @@ export function CoachComposerMenu() {
                             size="icon-lg"
                             className="size-10 shrink-0 rounded-full"
                             aria-label={draft.isDrafting ? "일기 초안 만드는 중…" : "추가 기능"}
-                            title={draft.isDrafting ? "일기 초안 만드는 중…" : "추가 기능"}
+                            title={draft.isDrafting ? "일기 초안 만드는 중…" : `추가 기능 · 답변 수준 ${level.label}`}
                             aria-busy={draft.isDrafting}
                             disabled={draft.isDrafting}
                         />
@@ -194,6 +216,32 @@ export function CoachComposerMenu() {
                         <SquarePlay className="text-red-600" />
                         사용법 동영상 열기
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {/* 답변 수준(CHAT-03): 대화 중에도 바로 바꾼다. 설정 화면 카드와 같은 값을 쓴다. */}
+                    <DropdownMenuGroup>
+                        <DropdownMenuLabel>
+                            답변 수준{level.chosen === null && <span className="ml-1 font-normal">· 고르기 전에는 {level.defaultLabel}</span>}
+                        </DropdownMenuLabel>
+                        <DropdownMenuRadioGroup
+                            value={level.chosen === null ? "" : String(level.chosen)}
+                            onValueChange={(value) => {
+                                void level.choose(Number(value)).then((ok) => {
+                                    if (ok) setOpen(false)
+                                })
+                            }}
+                        >
+                            {level.levels.map((item) => (
+                                <DropdownMenuRadioItem key={item.level} value={String(item.level)} disabled={level.busy} className="min-h-9 px-2">
+                                    {item.level}단계 {item.name}
+                                </DropdownMenuRadioItem>
+                            ))}
+                        </DropdownMenuRadioGroup>
+                        {level.error && (
+                            <p role="alert" className="px-2 py-1 text-xs text-destructive">
+                                {level.error}
+                            </p>
+                        )}
+                    </DropdownMenuGroup>
                 </DropdownMenuContent>
             </DropdownMenu>
             <DraftReplaceDialog
@@ -205,4 +253,45 @@ export function CoachComposerMenu() {
             />
         </>
     )
+}
+
+/** + 메뉴의 답변 수준 고르기. 저장에 성공하면 true(메뉴를 닫는다). */
+function useAnswerLevelChoice() {
+    const user = useAuthStore((state) => state.user)
+    const updateAnswerLevel = useAuthStore((state) => state.updateAnswerLevel)
+    const levels = useAnswerLevelStore((state) => state.levels)
+    const load = useAnswerLevelStore((state) => state.load)
+    const [busy, setBusy] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+    const chosen = user?.answer_level ?? null
+
+    useEffect(() => {
+        void load()
+    }, [load])
+
+    async function choose(level: number): Promise<boolean> {
+        if (!Number.isInteger(level) || level === chosen) return true
+        setBusy(true)
+        setError(null)
+        try {
+            await updateAnswerLevel(level)
+            return true
+        } catch (caught) {
+            setError(errorMessage(caught, "답변 수준을 저장하지 못했습니다."))
+            return false
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    return {
+        levels,
+        chosen,
+        busy,
+        error,
+        clearError: () => setError(null),
+        choose,
+        label: answerLevelLabel(chosen ?? DEFAULT_ANSWER_LEVEL, levels),
+        defaultLabel: answerLevelLabel(DEFAULT_ANSWER_LEVEL, levels),
+    }
 }

@@ -26,6 +26,8 @@ type AuthState = {
     changePassword: (currentPassword: string, newPassword: string) => Promise<void>
     /** 서버의 내 정보를 다시 읽는다(쿠폰 등록 뒤 요금제·만료일 갱신). */
     refreshUser: () => Promise<void>
+    /** 답변 수준 1~5를 저장한다. 실패하면 예외를 던져 화면이 메시지를 보여주게 한다. */
+    updateAnswerLevel: (level: number) => Promise<void>
     /** 관리자: 그 사용자 계정으로 테스트를 시작한다. 이후 모든 요청이 그 계정으로 나간다. */
     startActing: (userId: string) => Promise<void>
     /** 테스트를 끝내고 관리자 계정으로 돌아온다. 토큰이 이미 만료된 경우에도 쓴다. */
@@ -106,6 +108,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     refreshUser: async () => {
         const user = await authApi.fetchMe()
+        set((state) => ({ user, acting: state.acting ? { ...state.acting, target: user } : null }))
+    },
+
+    updateAnswerLevel: async (level) => {
+        const user = await authApi.updateAnswerLevel(level)
         set((state) => ({ user, acting: state.acting ? { ...state.acting, target: user } : null }))
     },
 

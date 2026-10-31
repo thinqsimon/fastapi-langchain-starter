@@ -81,6 +81,7 @@ async def draft_diary(
     new_messages: Sequence[tuple[str, str]],
     context_messages: Sequence[tuple[str, str]] = (),
     providers: Sequence[ProviderAttempt] = (),
+    answer_level: int | None = None,
 ) -> DiaryDraft:
     """새로 추가된 대화로 일기 초안을 만든다. 이전 대화는 맥락으로만 넘긴다.
 
@@ -93,9 +94,9 @@ async def draft_diary(
     last_error: Exception | None = None
     for index, attempt in enumerate(attempts):
         try:
-            chain = build_draft_prompt() | _build_chat_model(attempt).with_structured_output(
-                DiaryDraft
-            )
+            chain = build_draft_prompt(answer_level) | _build_chat_model(
+                attempt
+            ).with_structured_output(DiaryDraft)
             result = await chain.ainvoke(
                 {
                     "context": _format_conversation(context_messages) or "(없음)",
@@ -118,7 +119,9 @@ async def draft_diary(
 
 
 async def review_week(
-    entries: Sequence[str], providers: Sequence[ProviderAttempt] = ()
+    entries: Sequence[str],
+    providers: Sequence[ProviderAttempt] = (),
+    answer_level: int | None = None,
 ) -> WeeklyReview:
     attempts: Sequence[ProviderAttempt] = providers or (ProviderAttempt(),)
 
@@ -126,9 +129,9 @@ async def review_week(
     last_error: Exception | None = None
     for index, attempt in enumerate(attempts):
         try:
-            chain = build_weekly_prompt() | _build_chat_model(attempt).with_structured_output(
-                WeeklyReview
-            )
+            chain = build_weekly_prompt(answer_level) | _build_chat_model(
+                attempt
+            ).with_structured_output(WeeklyReview)
             result = await chain.ainvoke({"entries": "\n\n---\n\n".join(entries)})
             break
         except Exception as exc:

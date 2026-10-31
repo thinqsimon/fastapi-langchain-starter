@@ -8,7 +8,8 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
 from app.core.config import settings
 from app.core.exceptions import LLMError
-from app.llm.prompts.chat import build_chat_prompt
+from app.llm.prompts.answer_level import with_answer_level
+from app.llm.prompts.chat import DEFAULT_SYSTEM_PROMPT, build_chat_prompt
 from app.llm.providers import ProviderAttempt, get_chat_model
 
 logger = logging.getLogger(__name__)
@@ -69,6 +70,7 @@ async def stream_reply(
     on_usage: Callable[[TokenUsage], None] | None = None,
     providers: Sequence[ProviderAttempt] = (),
     on_model: Callable[[ModelInfo], None] | None = None,
+    answer_level: int | None = None,
 ) -> AsyncIterator[str]:
     """응답을 토큰 단위로 흘려보낸다.
 
@@ -80,7 +82,10 @@ async def stream_reply(
     하나만 쓴다(기존 동작과 같다). 앞쪽 공급자가 호출 중 오류(한도 초과 등)를 내면 다음 공급자로
     자동 전환한다. 단, 이미 한 글자라도 보낸 뒤에는 전환하지 않는다(응답이 섞이는 것을 막는다).
     """
-    prompt = build_chat_prompt(system_prompt) if system_prompt else build_chat_prompt()
+    # answer_level: 사용자가 고른 답변 수준(CHAT-03). None이면 페르소나 그대로 쓴다.
+    prompt = build_chat_prompt(
+        with_answer_level(system_prompt or DEFAULT_SYSTEM_PROMPT, answer_level)
+    )
     attempts: Sequence[ProviderAttempt] = providers or (ProviderAttempt(),)
 
     last_error: Exception | None = None

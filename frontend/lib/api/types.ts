@@ -12,7 +12,19 @@ export type User = {
     plan: PlanName
     /** 유료 요금제 만료 시각(쿠폰으로 생긴 기한). null이면 기한 없음. */
     plan_expires_at: string | null
+    /** 답변 수준 1~5. null이면 아직 고르지 않았다(서버는 2단계로 답한다). */
+    answer_level: number | null
     created_at: string
+}
+
+/** 답변 수준 한 단계. 이름은 관리자가 바꿀 수 있고, 대상·방식·예시는 서버가 정한다. */
+export type AnswerLevelInfo = {
+    level: number
+    name: string
+    default_name: string
+    audience: string
+    style: string
+    example: string
 }
 
 export type PlanName = "free" | "pro" | "max"

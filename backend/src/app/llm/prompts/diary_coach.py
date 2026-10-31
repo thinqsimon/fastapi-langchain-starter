@@ -6,6 +6,8 @@
 
 from langchain_core.prompts import ChatPromptTemplate
 
+from app.llm.prompts.answer_level import with_answer_level
+
 COACH_SYSTEM_PROMPT = (
     "당신은 IT 부트캠프 교육생의 학습 코치입니다. "
     "학습자가 궁금한 내용을 물으면 개념과 필요한 이유, 동작 방식, 짧은 예시를 설명합니다. "
@@ -58,10 +60,11 @@ def build_coach_prompt() -> ChatPromptTemplate:
     )
 
 
-def build_draft_prompt() -> ChatPromptTemplate:
+def build_draft_prompt(answer_level: int | None = None) -> ChatPromptTemplate:
+    """answer_level: 사용자가 고른 답변 수준(CHAT-03). 어휘·설명 깊이만 맞추고 형식은 그대로."""
     return ChatPromptTemplate.from_messages(
         [
-            ("system", DRAFT_SYSTEM_PROMPT),
+            ("system", with_answer_level(DRAFT_SYSTEM_PROMPT, answer_level, for_writing=True)),
             (
                 "human",
                 "이전 대화(맥락으로만 참고):\n{context}\n\n"
@@ -71,7 +74,8 @@ def build_draft_prompt() -> ChatPromptTemplate:
     )
 
 
-def build_weekly_prompt() -> ChatPromptTemplate:
+def build_weekly_prompt(answer_level: int | None = None) -> ChatPromptTemplate:
+    system = with_answer_level(WEEKLY_SYSTEM_PROMPT, answer_level, for_writing=True)
     return ChatPromptTemplate.from_messages(
-        [("system", WEEKLY_SYSTEM_PROMPT), ("human", "이번 주 배움일기:\n\n{entries}")]
+        [("system", system), ("human", "이번 주 배움일기:\n\n{entries}")]
     )

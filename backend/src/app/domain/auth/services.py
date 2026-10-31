@@ -114,6 +114,15 @@ class AuthService:
             self.db.commit()
         return user
 
+    def update_answer_level(self, user: User, level: int) -> User:
+        previous = user.answer_level
+        user.answer_level = level
+        self.db.commit()
+        logger.info(
+            "answer_level_updated user_id=%s level=%s previous=%s", user.id, level, previous
+        )
+        return user
+
     def update_profile(self, user: User, display_name: str) -> User:
         user.display_name = display_name.strip()
         self.db.commit()

@@ -108,6 +108,7 @@ class DiaryService:
         user_id: uuid.UUID,
         entry_date: date | None = None,
         plan: str = DEFAULT_PLAN,
+        answer_level: int | None = None,
     ) -> DiaryDraftResponse:
         """채팅을 읽어 일기 초안을 만든다. 저장하지는 않는다."""
         if self.conversations.get_owned(conversation_id, user_id) is None:
@@ -126,6 +127,7 @@ class DiaryService:
             new_messages=[(m.role, m.content) for m in newer],
             context_messages=[(m.role, m.content) for m in earlier],
             providers=AdminLlmSettingsService(self.db).active_provider_chain(plan),
+            answer_level=answer_level,
         )
 
         # 제목 날짜는 채팅 날짜와 상관없이 오늘이다.
@@ -253,7 +255,11 @@ class DiaryService:
         self.db.commit()
 
     async def weekly_review(
-        self, user_id: uuid.UUID, reference: date | None = None, plan: str = DEFAULT_PLAN
+        self,
+        user_id: uuid.UUID,
+        reference: date | None = None,
+        plan: str = DEFAULT_PLAN,
+        answer_level: int | None = None,
     ) -> WeeklyReviewResponse:
         start, end = week_bounds(reference or today_in_utc())
         entries = self.entries.list_between(user_id, start, end)
@@ -267,6 +273,7 @@ class DiaryService:
                 for entry in entries
             ],
             providers=AdminLlmSettingsService(self.db).active_provider_chain(plan),
+            answer_level=answer_level,
         )
         return WeeklyReviewResponse(
             week_start=start,
@@ -300,13 +307,19 @@ class LearningService:
         return self.repo.list_reviews(user_id)
 
     async def create_review(
-        self, user_id: uuid.UUID, reference: date, plan: str = DEFAULT_PLAN
+        self,
+        user_id: uuid.UUID,
+        reference: date,
+        plan: str = DEFAULT_PLAN,
+        answer_level: int | None = None,
     ) -> SavedWeeklyReview:
         start, _ = week_bounds(reference)
         existing = self.repo.review_for_week(user_id, start)
         if existing is not None:
             return existing
-        snapshot = await self.diary.weekly_review(user_id, reference, plan=plan)
+        snapshot = await self.diary.weekly_review(
+            user_id, reference, plan=plan, answer_level=answer_level
+        )
         try:
             review = self.repo.create_review(user_id, **snapshot.model_dump())
             self.db.commit()

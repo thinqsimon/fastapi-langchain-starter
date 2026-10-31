@@ -7,6 +7,7 @@
 
 from app.core.database import Base
 from app.domain.admin.models import LlmPlanRoute, LlmProvider
+from app.domain.answer_level.models import AnswerLevelName
 from app.domain.auth.models import RefreshToken, User
 from app.domain.chat.models import Conversation, Message
 from app.domain.coupon.models import Coupon
@@ -16,6 +17,7 @@ from app.domain.preferences.models import UserPreference
 from app.domain.rag.models import DocumentChunk
 
 __all__ = [
+    "AnswerLevelName",
     "Base",
     "Conversation",
     "Coupon",

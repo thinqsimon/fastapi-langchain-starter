@@ -6,6 +6,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints, computed_field
 
+from app.core.answer_levels import AnswerLevel
 from app.core.config import settings
 
 
@@ -38,6 +39,12 @@ class ProfileUpdate(BaseModel):
     ]
 
 
+class AnswerLevelUpdate(BaseModel):
+    """채팅·일기 답변 수준 1~5(1 왕초보 ... 5 심화, 이름은 관리자가 바꿀 수 있다)."""
+
+    answer_level: AnswerLevel
+
+
 class EmailChange(BaseModel):
     email: EmailStr
     # 로그인 ID가 바뀌므로 본인 확인을 한 번 더 한다.
@@ -60,6 +67,8 @@ class UserRead(BaseModel):
     plan: str
     # 유료 요금제 만료 시각. null이면 기한 없음.
     plan_expires_at: datetime | None = None
+    # 답변 수준 1~5. null이면 아직 고르지 않았다(2단계로 답한다).
+    answer_level: int | None = None
     created_at: datetime
 
     @computed_field  # type: ignore[prop-decorator]

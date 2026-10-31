@@ -7,7 +7,17 @@ Fork한 쪽에서 컬럼을 추가하고 `make migration`으로 마이그레이�
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Uuid, func, true
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    SmallInteger,
+    String,
+    Uuid,
+    func,
+    true,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base, TimestampMixin
@@ -16,6 +26,9 @@ from app.core.plans import DEFAULT_PLAN
 
 class User(Base, TimestampMixin):
     __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint("answer_level BETWEEN 1 AND 5", name="ck_users_answer_level_range"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         Uuid,
@@ -39,6 +52,9 @@ class User(Base, TimestampMixin):
     # 유료 요금제가 끝나는 시각(쿠폰 등록 결과). NULL이면 기한 없음(관리자가 직접 지정한 경우·free).
     # 지나면 로그인 확인 때 free로 내려간다(auth.services.expire_plan_if_due).
     plan_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # 답변 수준 1~5(app.core.answer_levels). NULL이면 아직 고르지 않은 것 → 2단계로 답하고,
+    # 첫 채팅 화면에서 고르라고 안내한다(CHAT-03).
+    answer_level: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
 
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
         back_populates="user",

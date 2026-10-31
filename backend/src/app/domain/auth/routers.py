@@ -4,6 +4,7 @@ from fastapi import APIRouter, status
 
 from app.domain.auth.dependencies import AuthServiceDep, CurrentUser
 from app.domain.auth.schemas import (
+    AnswerLevelUpdate,
     EmailChange,
     LoginRequest,
     PasswordChange,
@@ -74,6 +75,24 @@ def update_me(
     payload: ProfileUpdate, current_user: CurrentUser, auth_service: AuthServiceDep
 ) -> UserRead:
     return UserRead.model_validate(auth_service.update_profile(current_user, payload.display_name))
+
+
+@router.put(
+    "/me/answer-level",
+    response_model=UserRead,
+    summary="내 답변 수준 변경",
+    description=(
+        "1~5단계. 다음 채팅 답변과 일기 초안·주간 회고부터 "
+        "어휘와 설명 깊이가 이 단계에 맞춰집니다. "
+        "단계 이름과 설명은 `GET /api/answer-levels`."
+    ),
+)
+def update_answer_level(
+    payload: AnswerLevelUpdate, current_user: CurrentUser, auth_service: AuthServiceDep
+) -> UserRead:
+    return UserRead.model_validate(
+        auth_service.update_answer_level(current_user, payload.answer_level)
+    )
 
 
 @router.put(

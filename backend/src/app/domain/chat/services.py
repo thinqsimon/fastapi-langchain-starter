@@ -65,10 +65,12 @@ class ChatService:
         user_id: uuid.UUID,
         content: str,
         plan: str = DEFAULT_PLAN,
+        answer_level: int | None = None,
     ) -> AsyncIterator[str]:
         """사용자 메시지를 저장하고, LLM 응답을 토큰 단위로 흘리며, 끝나면 함께 저장한다.
 
         plan: 사용자의 요금제. 어떤 공급자·모델을 쓸지 이 값으로 고른다(ADMIN-03).
+        answer_level: 사용자가 고른 답변 수준(CHAT-03). 어휘·설명 깊이를 맞춘다.
         """
         conversation = self.get_conversation(conversation_id, user_id)
         history = [
@@ -103,6 +105,7 @@ class ChatService:
                 on_usage=record_usage,
                 providers=providers,
                 on_model=record_model,
+                answer_level=answer_level,
             ):
                 chunks.append(chunk)
                 yield chunk

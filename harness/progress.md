@@ -950,3 +950,18 @@ E2E는 새로고침 뒤 대화가 자동 선택되지 않아 목록에서 다시
 가격표에 claude-*-5-5 추가(직전에 넣었던 퇴역 opus-4-1 제거), 프론트 "기본 라우트 채우기" 버튼·추가 폼 기본 모델·안내 문구, `.env.example` 주석, 테스트(`tests/test_llm_defaults.py`, test_admin 추가), admin.spec 갱신, ADR-0014 후속
 **검증**: 백엔드 281 passed(98.2%), 프론트 통과, E2E 72 passed
 **운영 적용**: push → Render가 마이그레이션 적용 → 운영 Pro·Max에 기본 라우트(Free는 그대로). Claude 키가 없어 Claude 라우트는 쓰이지 않음
+
+## 2026-10-31 · 세션 33 · CHAT-03 답변 수준 5단계
+
+**요청**: 성인 대상 과정에서 사용자가 고른 수준(어휘·이해 수준)에 맞춰 답하게, 설정 화면 프로필 아래에. 사용자가 "AX 풀스택 입과자 대상이니 먼저 물어서 확인받아 달라"고 해
+중간 작업을 stash로 보관하고 두 번 확인받았다.
+**확인된 결정**: 5단계 1 왕초보·2 입문·3 기초·4 실전·5 심화(관리자가 이름 변경 가능), 처음 채팅할 때 직접 고르기(고르기 전엔 2단계), 채팅 + 일기 초안·주간 회고에 적용, 입력칸 + 메뉴에도.
+**한 일**
+- 백엔드: `core/answer_levels.py`(번호·기본 이름·대상·방식·예시, `effective_answer_level`), `llm/prompts/answer_level.py`(단계별 지시, `for_writing`이면 형식·분량 우선),
+  chat·diary·weekly 체인과 서비스·라우터에 단계 전달, `users.answer_level`(NULL 허용, CHECK 1~5) + `PUT /api/auth/me/answer-level`, 새 도메인 `answer_level`(바꾼 이름만 저장, `GET /api/answer-levels`, 관리자 PATCH/DELETE). 마이그레이션 `7d0fab038fc8`(users CHECK는 수동 추가)
+- 프론트: 설정 "답변 수준" 카드(계정 정보 아래, 단계 설명·'API' 예시), 첫 채팅 안내(`answer-level-chooser`), + 메뉴 "답변 수준" 라디오 묶음, 관리자 "답변 수준 이름" 카드, `store/answer-level.ts`, 조사 도우미 `josaRo`(이름이 바뀌어도 로/으로가 맞게)
+- 테스트: 프롬프트 단위 테스트(중괄호 없음, 형식 우선), API 테스트(저장·검증·이름 변경·채팅/일기에 단계 전달). E2E `answer-level.spec.ts` 4개
+**막힌 점**: ① sr-only legend가 위치 기준 없이 문서 밖으로 넘쳐 짧은 화면에서 페이지 전체가 스크롤 → fieldset `aria-label`로 교체 ② 라디오 글자 14px가 폰 16px 규칙 위반 → `text-base`
+③ verify.sh의 빌드가 E2E용 빌드를 덮어 E2E가 8000번을 호출(CORS로 막혀 계정 유출은 없음 확인) → verify 뒤에는 항상 E2E용으로 다시 빌드 ④ coach.spec 1건 타이밍 플레이크(반복 30/30 통과)
+**검증**: 백엔드 301 passed(98.2%), 프론트 통과, E2E 76 passed(플레이크 1건 별도 재확인)
+**운영 적용**: push → Render가 마이그레이션 적용(컬럼·테이블 추가). 기존 사용자는 모두 NULL이라 다음 채팅에서 단계를 고르라는 안내를 본다

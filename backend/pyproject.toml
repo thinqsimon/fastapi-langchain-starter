@@ -89,6 +89,7 @@ type = "layers"
 layers = ["routers", "services", "repositories", "models"]
 containers = [
     "app.domain.admin",
+    "app.domain.answer_level",
     "app.domain.auth",
     "app.domain.chat",
     "app.domain.coupon",

@@ -22,6 +22,12 @@ export async function updateProfile(input: { display_name: string }): Promise<Us
     return data
 }
 
+/** 답변 수준 1~5. 다음 채팅·일기 생성부터 어휘와 설명 깊이가 바뀐다. */
+export async function updateAnswerLevel(level: number): Promise<User> {
+    const { data } = await httpClient.put<User>("/api/auth/me/answer-level", { answer_level: level })
+    return data
+}
+
 /** 로그인 ID가 바뀌므로 현재 비밀번호를 함께 보낸다. */
 export async function changeEmail(input: { email: string; current_password: string }): Promise<User> {
     const { data } = await httpClient.put<User>("/api/auth/me/email", input)

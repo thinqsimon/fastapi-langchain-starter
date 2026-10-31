@@ -74,4 +74,5 @@ def test_current_schema_is_as_expected() -> None:
         "llm_providers",
         "llm_plan_routes",
         "coupons",
+        "answer_level_names",
     }

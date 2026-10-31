@@ -6,6 +6,7 @@ import uuid
 from fastapi import APIRouter, Request, status
 from sse_starlette.sse import EventSourceResponse
 
+from app.core.answer_levels import effective_answer_level
 from app.core.exceptions import AppError
 from app.domain.auth.dependencies import CurrentUser, DbSession
 from app.domain.chat.schemas import (
@@ -109,7 +110,11 @@ async def stream_message(
     async def events():
         try:
             async for chunk in service.stream_answer(
-                conversation_id, current_user.id, payload.content, plan=current_user.plan
+                conversation_id,
+                current_user.id,
+                payload.content,
+                plan=current_user.plan,
+                answer_level=effective_answer_level(current_user.answer_level),
             ):
                 yield {"event": "token", "data": chunk}
         except AppError as exc:

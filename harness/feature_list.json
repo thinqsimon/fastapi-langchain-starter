@@ -739,6 +739,22 @@
       ],
       "verify": "./scripts/verify.sh 및 ./scripts/e2e.sh e2e/admin.spec.ts",
       "passes": true
+    },
+    {
+      "id": "CHAT-03",
+      "phase": 9,
+      "owner": "frontend-dev",
+      "title": "답변 수준 5단계(왕초보·입문·기초·실전·심화) — 채팅·일기 어휘와 설명 깊이",
+      "requirement": "2026-10-31 사용자 요청(AX 풀스택 입과자, 성인). 확인 결과: 5단계·직관적 이름(관리자가 변경 가능), 처음 채팅할 때 직접 고르기, 채팅+일기 초안·주간 회고에 적용, 입력칸 + 메뉴에도 추가",
+      "acceptance": [
+        "사용자가 1~5단계 중 하나를 고르면 채팅 답변과 일기 초안·주간 회고 프롬프트에 그 단계 지시가 붙는다(일기·회고는 형식·분량 규칙이 먼저). 고르지 않았으면 2단계로 답한다",
+        "아직 고르지 않은 사용자에게 첫 채팅 화면에서 단계를 고르게 하고, '나중에'는 그 화면에서만 숨긴다",
+        "설정 화면 '계정 정보' 바로 아래 '답변 수준' 카드에서 단계 설명과 예시를 보고 바꿀 수 있고, 채팅 입력칸 + 메뉴에서도 바로 바꿀 수 있다. 새로고침 뒤에도 유지된다",
+        "관리자는 /admin에서 단계 이름을 바꾸거나 기본 이름으로 되돌릴 수 있고, 바뀐 이름이 설정 카드·+ 메뉴·채팅 안내에 보인다. 답변 지시는 단계 번호로 정해져 바뀌지 않는다",
+        "마이그레이션(users.answer_level, answer_level_names), 프롬프트·API 테스트, E2E(answer-level.spec.ts), ADR-0016을 제공하고 ./scripts/verify.sh와 E2E를 통과한다"
+      ],
+      "verify": "./scripts/verify.sh 및 ./scripts/e2e.sh e2e/answer-level.spec.ts",
+      "passes": true
     }
   ]
 }
