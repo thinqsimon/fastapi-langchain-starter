@@ -344,15 +344,21 @@ test("모바일에서도 구름 코치·입력·일기 만들기가 화면 안�
     await page.screenshot({ path: "coach-ui-previews/mobile-diary.png", animations: "disabled" })
 })
 
-test("상단 사용법 동영상 버튼은 빈 대화에서만 보이고, 첫 메시지를 보내거나 목록에서 대화를 고르면 감춰진다", async ({ page }) => {
+test("채팅 상단(코치 소개·사용법 동영상·안내)은 빈 대화에서만 보이고, 첫 메시지를 보내거나 목록에서 대화를 고르면 통째로 감춰진다", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await signUp(page, "coach-guide")
+    const intro = page.getByText("질문은 편하게, 배움은 차곡차곡", { exact: true })
     const guide = page.getByRole("link", { name: "사용법 동영상 열기" })
+    const hint = page.getByText(/일기 초안은 입력칸 왼쪽 \+ 메뉴에서/)
+    await expect(intro).toBeVisible()
     await expect(guide).toBeVisible()
+    await expect(hint).toBeVisible()
 
-    // 첫 메시지를 보내면 감춰 대화 칸을 넓힌다. + 메뉴에서는 계속 열 수 있다.
+    // 첫 메시지를 보내면 통째로 감춰 대화 칸을 넓힌다. 사용법 동영상은 + 메뉴에서 계속 열 수 있다.
     await sendChatMessage(page, "첫 질문을 보내면 버튼이 감춰져요")
+    await expect(intro).toHaveCount(0)
     await expect(guide).toHaveCount(0)
+    await expect(hint).toHaveCount(0)
     await composerMenu(page).click()
     await expect(page.getByRole("menuitem", { name: "사용법 동영상 열기" })).toHaveAttribute("href", DEMO_VIDEO.phone)
     await page.keyboard.press("Escape")
@@ -364,10 +370,12 @@ test("상단 사용법 동영상 버튼은 빈 대화에서만 보이고, 첫 �
     await toggle.click()
     await drawer.getByRole("button", { name: "새 대화", exact: true }).click()
     await expect(drawer).toBeHidden()
+    await expect(intro).toBeVisible()
     await expect(guide).toBeVisible()
     await toggle.click()
     await drawer.getByRole("button", { name: "첫 질문을 보내면 버튼이 감춰져요", exact: true }).click()
     await expect(drawer).toBeHidden()
     await expect(page.locator('[data-role="user"]')).toContainText("첫 질문을 보내면 버튼이 감춰져요")
+    await expect(intro).toHaveCount(0)
     await expect(guide).toHaveCount(0)
 })

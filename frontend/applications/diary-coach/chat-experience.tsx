@@ -144,14 +144,35 @@ function useDiaryDraftAction() {
     }
 }
 
-/** 채팅 상단. 코치 소개와 사용법 동영상 링크(빈 대화일 때), 일기 초안 진행 상태를 보여 준다. */
+/**
+ * 채팅 상단. 빈 대화(시작 화면)에서는 코치 소개·사용법 동영상 링크·일기 초안 안내를 보여 준다.
+ * 대화가 시작되면(첫 메시지를 보내거나 목록에서 대화를 고르면) 통째로 감춰 대화 칸을 넓히고,
+ * 일기 초안을 만드는 중 표시와 오류만 생길 때 얇은 줄로 보여 준다. 사용법 동영상은 입력칸 + 메뉴에서도 열 수 있다.
+ */
 export function CoachChatHeader() {
     const isDrafting = useDiaryStore((state) => state.isDrafting)
     const error = useDiaryStore((state) => state.error)
-    // 사용법 동영상 버튼은 빈 대화(시작 화면)에서만 보인다. 첫 메시지를 보내거나 목록에서 대화를 고르면 감춰 대화 칸을 넓힌다.
-    // 감춘 뒤에도 입력칸 + 메뉴에서 열 수 있다.
     const isEmptyChat = useChatStore((state) => state.messages.length === 0 && !state.isStreaming)
     const guideVideoUrl = useGuideVideoUrl()
+    const draftingText = "대화 속 배움과 어려웠던 점을 정리하고 있어요."
+
+    if (!isEmptyChat) {
+        if (!isDrafting && !error) return null
+        return (
+            <div className="flex shrink-0 flex-col gap-1 border-b bg-background px-4 py-2 sm:px-6">
+                {isDrafting && (
+                    <p role="status" className="text-xs leading-5 text-muted-foreground">
+                        {draftingText}
+                    </p>
+                )}
+                {error && (
+                    <p role="alert" className="text-sm text-destructive">
+                        {error}
+                    </p>
+                )}
+            </div>
+        )
+    }
 
     return (
         <div className="shrink-0 border-b bg-background px-4 py-3 sm:px-6">
@@ -163,22 +184,18 @@ export function CoachChatHeader() {
                         <p className="mt-0.5 text-xs text-muted-foreground">질문은 편하게, 배움은 차곡차곡</p>
                     </div>
                 </div>
-                {isEmptyChat && (
-                    <a
-                        href={guideVideoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`${buttonVariants({ variant: "outline" })} min-h-10 w-full rounded-xl sm:w-auto`}
-                    >
-                        <SquarePlay className="size-4 text-red-600" />
-                        사용법 동영상 열기
-                    </a>
-                )}
+                <a
+                    href={guideVideoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${buttonVariants({ variant: "outline" })} min-h-10 w-full rounded-xl sm:w-auto`}
+                >
+                    <SquarePlay className="size-4 text-red-600" />
+                    사용법 동영상 열기
+                </a>
             </div>
             <p className="mt-2 text-xs leading-5 text-muted-foreground" role={isDrafting ? "status" : undefined}>
-                {isDrafting
-                    ? "대화 속 배움과 어려웠던 점을 정리하고 있어요."
-                    : "일기 초안은 입력칸 왼쪽 + 메뉴에서 만들 수 있어요. 답변이 끝난 뒤 내용을 확인하고 직접 저장해 주세요."}
+                {isDrafting ? draftingText : "일기 초안은 입력칸 왼쪽 + 메뉴에서 만들 수 있어요. 답변이 끝난 뒤 내용을 확인하고 직접 저장해 주세요."}
             </p>
             {error && (
                 <p role="alert" className="mt-2 text-sm text-destructive">
