@@ -144,10 +144,13 @@ function useDiaryDraftAction() {
     }
 }
 
-/** 채팅 상단. 코치 소개와 사용법 동영상 링크, 일기 초안 진행 상태를 보여 준다. */
+/** 채팅 상단. 코치 소개와 사용법 동영상 링크(빈 대화일 때), 일기 초안 진행 상태를 보여 준다. */
 export function CoachChatHeader() {
     const isDrafting = useDiaryStore((state) => state.isDrafting)
     const error = useDiaryStore((state) => state.error)
+    // 사용법 동영상 버튼은 빈 대화(시작 화면)에서만 보인다. 첫 메시지를 보내거나 목록에서 대화를 고르면 감춰 대화 칸을 넓힌다.
+    // 감춘 뒤에도 입력칸 + 메뉴에서 열 수 있다.
+    const isEmptyChat = useChatStore((state) => state.messages.length === 0 && !state.isStreaming)
     const guideVideoUrl = useGuideVideoUrl()
 
     return (
@@ -160,15 +163,17 @@ export function CoachChatHeader() {
                         <p className="mt-0.5 text-xs text-muted-foreground">질문은 편하게, 배움은 차곡차곡</p>
                     </div>
                 </div>
-                <a
-                    href={guideVideoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`${buttonVariants({ variant: "outline" })} min-h-10 w-full rounded-xl sm:w-auto`}
-                >
-                    <SquarePlay className="size-4 text-red-600" />
-                    사용법 동영상 열기
-                </a>
+                {isEmptyChat && (
+                    <a
+                        href={guideVideoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`${buttonVariants({ variant: "outline" })} min-h-10 w-full rounded-xl sm:w-auto`}
+                    >
+                        <SquarePlay className="size-4 text-red-600" />
+                        사용법 동영상 열기
+                    </a>
+                )}
             </div>
             <p className="mt-2 text-xs leading-5 text-muted-foreground" role={isDrafting ? "status" : undefined}>
                 {isDrafting

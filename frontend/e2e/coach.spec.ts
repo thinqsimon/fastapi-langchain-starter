@@ -343,3 +343,31 @@ test("모바일에서도 구름 코치·입력·일기 만들기가 화면 안�
     await expect(page.getByLabel("오늘 배운 것")).not.toHaveValue("")
     await page.screenshot({ path: "coach-ui-previews/mobile-diary.png", animations: "disabled" })
 })
+
+test("상단 사용법 동영상 버튼은 빈 대화에서만 보이고, 첫 메시지를 보내거나 목록에서 대화를 고르면 감춰진다", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await signUp(page, "coach-guide")
+    const guide = page.getByRole("link", { name: "사용법 동영상 열기" })
+    await expect(guide).toBeVisible()
+
+    // 첫 메시지를 보내면 감춰 대화 칸을 넓힌다. + 메뉴에서는 계속 열 수 있다.
+    await sendChatMessage(page, "첫 질문을 보내면 버튼이 감춰져요")
+    await expect(guide).toHaveCount(0)
+    await composerMenu(page).click()
+    await expect(page.getByRole("menuitem", { name: "사용법 동영상 열기" })).toHaveAttribute("href", DEMO_VIDEO.phone)
+    await page.keyboard.press("Escape")
+    await expect(page.getByRole("menu")).toHaveCount(0)
+
+    // 새 대화(빈 대화)에서는 다시 보이고, 목록에서 기존 대화를 고르면 감춰진다.
+    const toggle = page.getByRole("button", { name: "대화 목록 열고 닫기" })
+    const drawer = page.getByRole("dialog", { name: "대화 목록" })
+    await toggle.click()
+    await drawer.getByRole("button", { name: "새 대화", exact: true }).click()
+    await expect(drawer).toBeHidden()
+    await expect(guide).toBeVisible()
+    await toggle.click()
+    await drawer.getByRole("button", { name: "첫 질문을 보내면 버튼이 감춰져요", exact: true }).click()
+    await expect(drawer).toBeHidden()
+    await expect(page.locator('[data-role="user"]')).toContainText("첫 질문을 보내면 버튼이 감춰져요")
+    await expect(guide).toHaveCount(0)
+})
