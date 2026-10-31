@@ -7,6 +7,7 @@ test("starter의 이름과 설명을 사용한다", async ({ page }) => {
     await expect(page).toHaveTitle("AX Chat Starter")
     await expect(page.getByText("AI CHAT STARTER", { exact: true })).toBeVisible()
     await expect(page.getByText("LEARNING DIARY COACH")).toHaveCount(0)
+    await expect(page.getByRole("link", { name: "사용법 시연" })).toHaveCount(0)
 })
 
 test("공통 인증·대화·계정 설정을 유지하고 서비스 설정은 요청하지 않는다", async ({ page }) => {

@@ -7,12 +7,15 @@ const definitions = {
         subtitle: "AI CHAT STARTER",
         description: "FastAPI · PostgreSQL · Next.js · LangChain 챗봇형 AI 서비스 스타터킷",
         diaryEnabled: false,
+        demoVideoUrl: null,
     },
     "diary-coach": {
         name: "배움일기 코치",
         subtitle: "LEARNING DIARY COACH",
         description: "AI와 나눈 학습 대화를 배움일기로 정리하는 학습 코치",
         diaryEnabled: true,
+        /** 로그인·가입 화면의 '사용법 시연' 버튼이 여는 시연 영상(최종 발표용, 3분 38초). */
+        demoVideoUrl: "https://youtu.be/wCsDCMeg8WQ",
     },
 } as const
 

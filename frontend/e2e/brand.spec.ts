@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test, type Page } from "@playwright/test"
 
 import { signUp } from "./helpers"
 
@@ -32,6 +32,23 @@ test("로그인 화면 위쪽에 로고와 서비스 이름이 보인다", async
     const logo = page.locator('main img[src="/brand/logo.svg"]')
     await expect(logo).toBeVisible()
     await expect(page.getByText("LEARNING DIARY COACH")).toBeVisible()
+})
+
+async function expectDemoVideoLink(page: Page) {
+    const demo = page.getByRole("link", { name: "사용법 시연" })
+    await expect(demo).toBeVisible()
+    await expect(demo).toHaveAttribute("href", "https://youtu.be/wCsDCMeg8WQ")
+    await expect(demo).toHaveAttribute("target", "_blank")
+}
+
+test("첫 화면(로그인)과 가입 화면의 '사용법 시연' 버튼은 시연 영상을 새 탭으로 연다", async ({ page }) => {
+    // 사이트 주소(/)로 들어오면 /chat을 거쳐 로그인 화면이 첫 화면으로 뜬다.
+    await page.goto("/")
+    await expect(page).toHaveURL(/\/sign-in$/)
+    await expectDemoVideoLink(page)
+
+    await page.goto("/sign-up")
+    await expectDemoVideoLink(page)
 })
 
 test("헤더 왼쪽 로고를 누르면 채팅으로 가고, 좁은 화면에서는 로고만 보인다", async ({ page }) => {

@@ -997,3 +997,12 @@ Base UI 메뉴는 이미 체크된 항목을 눌러도 `onValueChange`를 부르
 **원인**: ① Gemini SDK 기본 6회 재시도로 실패를 알기까지 약 15초 ② 프론트 axios 기본 제한 30초라 41초 걸린 초안 요청이 끊김
 **한 일**: `llm/providers.py` 공급자별 `max_retries`(Gemini 2, OpenAI·Claude 1), 프론트 `LLM_REQUEST_TIMEOUT_MS`(120초)를 일기 초안·주간 회고 요청에만 적용,
 테스트(`test_llm_defaults.py`에 실제 모델 객체의 재시도 값 확인), ADR-0012 후속 절. 사용자는 관리자 화면에서 Free 라우트의 OpenAI를 1순위로 올림
+
+## 2026-10-31 · 세션 36 · 첫 화면(로그인·가입)에 '사용법 시연' 영상 버튼
+
+**요청**: 유튜브에 올린 최종 시연 영상(https://youtu.be/wCsDCMeg8WQ)을 홈페이지 첫 화면에 '사용법 시연' 버튼으로 연결.
+**한 일**: 첫 화면은 `/` → `/chat` → (로그인 전) `/sign-in`이라, 로그인·가입이 함께 쓰는 `app/(auth)/layout.tsx`의 로고 아래에 버튼을 넣었다.
+새 탭으로 열고, 모양은 채팅 상단 '사용법 동영상 열기'와 같은 테두리 버튼·빨간 재생 아이콘. 영상 주소는 `lib/application.ts` 서비스 정의의 `demoVideoUrl`(starter는 `null`이라 버튼이 없다).
+앱 안의 '사용법 동영상 열기'(채팅 상단·+ 메뉴, `GUIDE_VIDEO_URL`)는 예전 영상(MH6wL-0Qui0) 그대로 두었다.
+**테스트**: E2E `brand.spec.ts`에 "`/`로 들어와 로그인 화면, 그리고 가입 화면에서 버튼 주소·새 탭 확인" 추가, `starter-profile.spec.ts`에 버튼이 없음을 확인
+**검증**: 프론트 verify 통과, E2E brand·auth·responsive 17 passed, starter 3 passed, 1280px·iPhone 13 스크린샷(가로 넘침 없음), 버튼을 누르면 새 탭에서 유튜브 영상이 열림
