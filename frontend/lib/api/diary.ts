@@ -1,4 +1,4 @@
-import { httpClient } from "./client"
+import { httpClient, LLM_REQUEST_TIMEOUT_MS } from "./client"
 import type { DiaryDraft, DiaryEntry, DiaryEntryCreate, DiaryForm, EligibleConversation, WeeklyReview } from "./types"
 
 export async function listEntries(): Promise<DiaryEntry[]> {
@@ -14,10 +14,11 @@ export async function listEligibleConversations(): Promise<EligibleConversation[
 
 /** 고른 채팅으로 일기 초안을 만든다(저장은 하지 않는다). 날짜는 사용자 기준 오늘이다. */
 export async function draftFromConversation(conversationId: string, entryDate: string): Promise<DiaryDraft> {
-    const { data } = await httpClient.post<DiaryDraft>("/api/diary/draft", {
-        conversation_id: conversationId,
-        entry_date: entryDate,
-    })
+    const { data } = await httpClient.post<DiaryDraft>(
+        "/api/diary/draft",
+        { conversation_id: conversationId, entry_date: entryDate },
+        { timeout: LLM_REQUEST_TIMEOUT_MS }
+    )
     return data
 }
 
@@ -36,6 +37,6 @@ export async function deleteEntry(id: string): Promise<void> {
 }
 
 export async function fetchWeeklyReview(reference?: string): Promise<WeeklyReview> {
-    const { data } = await httpClient.get<WeeklyReview>("/api/diary/weekly", { params: { reference } })
+    const { data } = await httpClient.get<WeeklyReview>("/api/diary/weekly", { params: { reference }, timeout: LLM_REQUEST_TIMEOUT_MS })
     return data
 }

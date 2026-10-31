@@ -1,4 +1,4 @@
-import { httpClient } from "./client"
+import { httpClient, LLM_REQUEST_TIMEOUT_MS } from "./client"
 import type { SavedWeeklyReview, StudyItem } from "./types"
 
 export async function listReviews(): Promise<SavedWeeklyReview[]> {
@@ -6,7 +6,7 @@ export async function listReviews(): Promise<SavedWeeklyReview[]> {
 }
 
 export async function createReview(reference: string): Promise<SavedWeeklyReview> {
-    return (await httpClient.post<SavedWeeklyReview>("/api/diary/reviews", { reference })).data
+    return (await httpClient.post<SavedWeeklyReview>("/api/diary/reviews", { reference }, { timeout: LLM_REQUEST_TIMEOUT_MS })).data
 }
 
 export async function deleteReview(id: string): Promise<void> {

@@ -63,6 +63,12 @@ export const tokenStorage = {
     },
 }
 
+/**
+ * AI가 결과를 한 번에 만들어 돌려주는 요청(일기 초안·주간 회고)의 제한 시간.
+ * 첫 공급자가 실패해 다음 공급자로 넘어가면 30초를 넘길 수 있어 따로 길게 둔다.
+ */
+export const LLM_REQUEST_TIMEOUT_MS = 120_000
+
 export const httpClient = axios.create({
     baseURL: BASE_URL,
     timeout: 30000,

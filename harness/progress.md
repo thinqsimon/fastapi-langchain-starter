@@ -989,3 +989,11 @@ Base UI 메뉴는 이미 체크된 항목을 눌러도 `onValueChange`를 부르
 ② E2E `getByLabel("새 비밀번호")`가 묶음 이름 "새 비밀번호 고르기"와 부분 일치 → 묶음 이름을 "초기화 방식"으로 바꾸고 테스트는 exact
 **검증**: `./scripts/verify.sh` 통과(백엔드 307 passed, 98.27%), E2E admin·coupon·account·auth 17 passed, 데스크톱 스크린샷으로 버튼·대화상자 확인
 **운영 적용**: 마이그레이션 없음. 기본 암호를 바꾸려면 Render 환경 변수 `ADMIN_RESET_PASSWORD_DEFAULT`(8~72자)
+
+## 2026-10-31 · 세션 35 · 운영 AI 전환 지연과 일기 초안 시간 초과 수정 (최종 발표 영상 촬영 중 발견)
+
+**상황**: 최종 발표 시연 영상을 운영 dc.1pk.kr에서 찍다가 2부가 "이 대화로 일기 만들기"에서 멈췄다. 화면에 "서버에 연결할 수 없습니다".
+**측정**: 채팅 답 42초·44초(모두 OpenAI가 답함), 일기 초안 41초. 데모 계정 답변 34개 중 14개가 Gemini 3.5 Flash 실패 뒤 OpenAI로 넘어간 답.
+**원인**: ① Gemini SDK 기본 6회 재시도로 실패를 알기까지 약 15초 ② 프론트 axios 기본 제한 30초라 41초 걸린 초안 요청이 끊김
+**한 일**: `llm/providers.py` 공급자별 `max_retries`(Gemini 2, OpenAI·Claude 1), 프론트 `LLM_REQUEST_TIMEOUT_MS`(120초)를 일기 초안·주간 회고 요청에만 적용,
+테스트(`test_llm_defaults.py`에 실제 모델 객체의 재시도 값 확인), ADR-0012 후속 절. 사용자는 관리자 화면에서 Free 라우트의 OpenAI를 1순위로 올림

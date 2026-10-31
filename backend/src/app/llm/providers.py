@@ -34,6 +34,12 @@ _STREAM_USAGE_PROVIDERS = {"openai"}
 # temperature·top_p·top_k를 보내면 모든 모델에서 400이고, 5.5 계열은 그 전부터 기본값만 받는다
 # (langchain-anthropic은 보내기 전에 ValueError를 낸다). 빼면 모델 기본 샘플링을 쓴다.
 _NO_SAMPLING_PROVIDERS = {"anthropic"}
+# 공급자 SDK 안의 자동 재시도는 한 번만 한다. 실패하면 관리자가 정한 우선순위의 다음 공급자로
+# 넘어가는 편이 빠르다. Gemini SDK 기본값은 6번까지 대기 시간을 늘려 가며 다시 시도해서,
+# 운영에서 실패를 알기까지 15초쯤 걸렸고 일기 초안이 화면 제한 시간을 넘겼다.
+# Gemini의 max_retries는 "시도 횟수"(1이면 재시도 없음), OpenAI·Claude는 "재시도 횟수"라
+# 같은 한 번 재시도라도 값이 다르다.
+_MAX_RETRIES = {"google_genai": 2, "openai": 1, "anthropic": 1}
 
 
 def _provider_kwargs(provider: str) -> dict[str, Any]:
@@ -43,6 +49,8 @@ def _provider_kwargs(provider: str) -> dict[str, Any]:
         kwargs["temperature"] = settings.LLM_TEMPERATURE
     if provider in _STREAM_USAGE_PROVIDERS:
         kwargs["stream_usage"] = True
+    if provider in _MAX_RETRIES:
+        kwargs["max_retries"] = _MAX_RETRIES[provider]
     return kwargs
 
 
