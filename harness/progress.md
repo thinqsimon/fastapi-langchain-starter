@@ -1033,3 +1033,25 @@ Base UI 메뉴는 이미 체크된 항목을 눌러도 `onValueChange`를 부르
 일기 초안을 만드는 중 표시(`p[role=status]`)와 오류(`p[role=alert]`)는 생길 때만 얇은 줄로 보인다. 사용법 동영상은 + 메뉴에 남는다.
 **테스트**: E2E `coach.spec.ts`의 390px 시나리오를 소개·버튼·안내 문구가 함께 보이고 감춰지는 흐름으로 넓혔다
 **검증**: 프론트 verify 통과, E2E 전체(diary-coach) 81 passed
+
+## 2026-10-31 · 세션 37 · 사용 안내 화면(/guide): 일반 사용자용 전체 설명서 + /study-notes 스킬 단원
+
+**요청**: 우측 상단 프로필(계정) 메뉴에서 열리는 일반 사용자용 사용법. 지금까지 만든 모든 기능을 아우르고, 레벨별 사용법과 스킬 설치·입력 방법을
+스크린샷(부분 캡처)과 함께 아주 상세하게. 스킬 저장소 README의 사용 팁도 포함.
+**확인된 결정**(사용자 답): 스크린샷은 운영 dc.1pk.kr 데모 계정(demo@goorm.io)으로 촬영, Claude Code·Codex 장면은 터미널 모양 패널로 재현,
+'레벨별'은 답변 수준 5단계 + 숙련도별 시나리오 둘 다, 완료 후 커밋·푸시까지.
+**한 일**
+- 화면: `app/(main)/guide/page.tsx`(서버 컴포넌트, 넓은 화면은 왼쪽 고정 목차·좁은 화면은 접는 목차). 단원 12개(한눈에 보기, 시작하기, 숙련도별 사용법,
+  채팅, 답변 수준 5단계, 배움일기, 주간 회고와 복습, 학습장, /study-notes 스킬, 설정·계정·요금제, 폰에서 쓰기, FAQ). `/guide#<id>`로 단원 직행
+- 부품: `components/guide/primitives.tsx`(GuideSection·Figure·Callout·Steps·Table·TerminalPanel 등), `toc.tsx`, 단원은 `sections-*.tsx` 4개
+- 진입: 계정 메뉴에 '사용 안내' 버튼(설정 위), 학습장 도움말에서 `/guide#skill` 링크
+- 스크린샷: Playwright로 운영 데모 계정 화면 43장(PC 1280 @2x·폰 390 @3x) → sharp로 WebP(가로 최대 1600/900px) `public/guide/` 2.5MB.
+  촬영은 메뉴·대화상자 열기까지만(메시지 전송·저장 없음). 계정 메뉴만 새 버튼이 있는 로컬 빌드에서 찍고 위·아래를 이어 붙임
+- 스킬 단원: 설치 3가지(플러그인·직접 복사·Codex), Windows 안내(차이 표·PowerShell 명령·오류 표), 입력 방법 표, 처음 실행(수준 묻기)·결과 보고·
+  다음 실행 패널, 노트 폴더·파일 구조, 앱에 올리기, 저장소 README의 사용 팁 9개, 문제 해결
+- 테스트: `e2e/guide.spec.ts` 3개(계정 메뉴 → /guide, 목차 이동, 터미널 패널 문구, 이미지 alt, `#skill` 직행, 폰 목차·가로 넘침 없음)
+- 문서: `samples/diary-coach/README.md`에 사용 안내 항목
+**막힌 점**: ① 사용자의 개발 서버(:3000)가 켜져 있으면 Next 16이 같은 폴더의 두 번째 `next dev`(:3100)를 거부한다 → E2E는 `next build` 후
+`next start -p 3100`으로 띄워 돌렸다(Playwright는 기존 서버 재사용) ② 운영 계정 메뉴에는 아직 새 버튼이 없어 그 한 장만 로컬에서 촬영
+**검증**: `./scripts/verify.sh frontend` 통과, E2E guide·account·notebook 17 passed, 데스크톱·폰 전체 페이지 스크린샷으로 배치 확인
+**운영 적용**: 마이그레이션·설정 없음. 푸시하면 Vercel 자동 배포

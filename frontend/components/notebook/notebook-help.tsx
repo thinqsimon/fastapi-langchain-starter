@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { CircleHelp } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -34,6 +35,10 @@ export function NotebookHelp() {
                             </p>
                             <p>
                                 스킬 설치와 사용법:{" "}
+                                <Link href="/guide#skill" className="underline underline-offset-4">
+                                    사용 안내의 스킬 단원
+                                </Link>{" "}
+                                또는{" "}
                                 <a href={SKILL_URL} target="_blank" rel="noreferrer" className="break-all underline underline-offset-4">
                                     {SKILL_URL}
                                 </a>

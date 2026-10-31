@@ -33,7 +33,10 @@
    업로드 없이 빈 학습장과 주제를 직접 만들 수도 있다. 같은 파일명은 다시 올릴 수 없고, 삭제 후 올린다.
    시간이 없을 때는 일단 올려 두고, **선택**으로 주제를 골라 **보관**하면 **보관함** 보기에서 그것만 모아 공부한다. 아직 보관하지 않은 주제는 **신규** 보기에 남는다
 
-우측 상단 계정 버튼을 누르면 오른쪽에서 메뉴가 열린다(계정 정보·사용량·설정·로그아웃).
+우측 상단 계정 버튼을 누르면 오른쪽에서 메뉴가 열린다(계정 정보·사용량·**사용 안내**·설정·로그아웃).
+**사용 안내**(`/guide`)는 일반 사용자용 전체 설명서다. 시작하기, 숙련도별 사용법, 채팅·답변 수준·일기·회고·학습장, `/study-notes` 스킬
+설치와 입력 방법(터미널 모양 패널), 설정·요금제, 폰 사용법, FAQ를 운영 화면 스크린샷(`frontend/public/guide/`)과 함께 담는다.
+`/guide#notebook`처럼 단원 id를 붙이면 그 단원부터 보이고, 학습장 도움말이 `/guide#skill`로 이어진다.
 설정에서 이름·이메일·비밀번호와 **캐치프레이즈**(헤더 가운데, 넘치면 전광판처럼 흐름)·푸터를 바꾼다.
 
 ## 스타터킷에서 그대로 쓴 것
@@ -69,6 +72,7 @@
 |---|---|
 | 계정 정보 수정 API(이름·이메일·비밀번호) | `backend/src/app/domain/auth/` — `PATCH /api/auth/me`, `PUT /api/auth/me/email`, `PUT /api/auth/me/password` |
 | 계정 사이드 메뉴·설정 화면 | `frontend/components/account-menu.tsx`, `frontend/app/(main)/settings/` |
+| 사용 안내 화면(목차·단원·스크린샷·터미널 패널 부품) | `frontend/app/(main)/guide/`, `frontend/components/guide/`, `frontend/public/guide/` |
 | 캐치프레이즈 전광판 | `frontend/components/catchphrase-marquee.tsx` |
 | 마크다운 보기 | `frontend/components/markdown-view.tsx` |
 | 반응형·모바일 | `frontend/store/layout.ts`(대화 목록 접기·서랍), `components/chat/message-input.tsx`(3줄 자동 높이), 아이폰 안전 영역 |

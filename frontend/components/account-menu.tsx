@@ -1,6 +1,6 @@
 "use client"
 
-import { CircleUserRound, LogOut, Settings, ShieldCheck } from "lucide-react"
+import { BookOpenText, CircleUserRound, LogOut, Settings, ShieldCheck } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
@@ -22,6 +22,11 @@ export function AccountMenu() {
     function goToSettings() {
         setOpen(false)
         router.push("/settings")
+    }
+
+    function goToGuide() {
+        setOpen(false)
+        router.push("/guide")
     }
 
     function goToServerSettings() {
@@ -78,6 +83,11 @@ export function AccountMenu() {
                             관리자
                         </Button>
                     )}
+                    {/* 앱 전체 사용법과 /study-notes 스킬 안내(화면 설명과 스크린샷). */}
+                    <Button variant="outline" onClick={goToGuide}>
+                        <BookOpenText />
+                        사용 안내
+                    </Button>
                     <Button variant="outline" onClick={goToSettings}>
                         <Settings />
                         설정
