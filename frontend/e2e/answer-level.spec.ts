@@ -86,6 +86,29 @@ test("'나중에'를 누르면 이 화면에서만 숨고, 설정 카드에는 �
     await expect(chooser(page)).toBeVisible()
 })
 
+test("고르기 전에도 + 메뉴에는 2단계 입문이 처음부터 체크돼 있고, 누르면 그대로 확정돼 다시 묻지 않는다", async ({ page }) => {
+    await signUp(page, "e2e-level-default")
+    await expect(chooser(page)).toBeVisible()
+
+    // 아직 고르지 않았어도 지금 답하는 기본 단계에 체크 표시가 보이고, 체크는 하나뿐이다.
+    await plusMenu(page).click()
+    await expect(page.getByRole("menu")).toContainText("고르기 전에는 2단계 입문")
+    await expect(levelItem(page, "2단계 입문")).toHaveAttribute("aria-checked", "true")
+    await expect(levelItem(page, "2단계 입문").locator('[data-slot="dropdown-menu-radio-item-indicator"] svg')).toBeVisible()
+    await expect(page.getByRole("menuitemradio", { checked: true })).toHaveCount(1)
+
+    // 이미 체크된 기본 단계를 눌러도 직접 고른 것으로 저장되고 메뉴와 안내가 닫힌다.
+    await levelItem(page, "2단계 입문").click()
+    await expect(page.getByRole("menu")).toHaveCount(0)
+    await expect(chooser(page)).toHaveCount(0)
+
+    await openSettings(page)
+    const card = page.getByRole("form", { name: "답변 수준" })
+    await expect(page.locator('[data-slot="answer-level-unset"]')).toHaveCount(0)
+    await expect(card.getByRole("radio", { name: /^2단계 입문/ })).toBeChecked()
+    await expect(card.locator("label", { hasText: "2단계 입문" })).toContainText("사용 중")
+})
+
 test.describe("관리자", () => {
     test.afterEach(async ({ page }) => {
         await resetLevelNames(page)

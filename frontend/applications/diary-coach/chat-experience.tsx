@@ -222,8 +222,10 @@ export function CoachComposerMenu() {
                         <DropdownMenuLabel>
                             답변 수준{level.chosen === null && <span className="ml-1 font-normal">· 고르기 전에는 {level.defaultLabel}</span>}
                         </DropdownMenuLabel>
+                        {/* 고르기 전에도 지금 답하는 기본 단계(2단계)에 처음부터 체크가 보이게 한다.
+                            이미 체크된 항목을 눌러도 onValueChange가 불리므로(Base UI), 기본 단계를 눌러 그대로 확정할 수 있다. */}
                         <DropdownMenuRadioGroup
-                            value={level.chosen === null ? "" : String(level.chosen)}
+                            value={String(level.chosen ?? DEFAULT_ANSWER_LEVEL)}
                             onValueChange={(value) => {
                                 void level.choose(Number(value)).then((ok) => {
                                     if (ok) setOpen(false)
