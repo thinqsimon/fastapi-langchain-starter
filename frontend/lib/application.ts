@@ -7,15 +7,18 @@ const definitions = {
         subtitle: "AI CHAT STARTER",
         description: "FastAPI · PostgreSQL · Next.js · LangChain 챗봇형 AI 서비스 스타터킷",
         diaryEnabled: false,
-        demoVideoUrl: null,
+        demoVideos: null,
     },
     "diary-coach": {
         name: "배움일기 코치",
         subtitle: "LEARNING DIARY COACH",
         description: "AI와 나눈 학습 대화를 배움일기로 정리하는 학습 코치",
         diaryEnabled: true,
-        /** 로그인·가입 화면의 '사용법 시연' 버튼이 여는 시연 영상(최종 발표용, 3분 38초). */
-        demoVideoUrl: "https://youtu.be/wCsDCMeg8WQ",
+        /**
+         * 사용법 시연 영상(최종 발표용). 넓은 화면(768px 이상)은 PC 화면판(3분 38초), 좁은 화면은 폰 화면판(3분 51초)을 연다.
+         * 로그인·가입 화면의 '사용법 시연' 버튼과 채팅 화면의 '사용법 동영상 열기'가 함께 쓴다.
+         */
+        demoVideos: { desktop: "https://youtu.be/wCsDCMeg8WQ", phone: "https://youtu.be/FekXxD6Tv8E" },
     },
 } as const
 

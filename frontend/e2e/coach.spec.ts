@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises"
 import { expect, test, type Page } from "@playwright/test"
 
-import { logOut, openSettings, sendChatMessage, signUp } from "./helpers"
+import { DEMO_VIDEO, logOut, openSettings, sendChatMessage, signUp } from "./helpers"
 
 /** 입력칸 왼쪽 + 버튼. 일기 만들기는 이 메뉴 안에 있다. 초안을 만드는 동안은 이름이 "일기 초안 만드는 중…"으로 바뀐다. */
 const composerMenu = (page: Page) => page.getByRole("button", { name: "추가 기능", exact: true })
@@ -12,6 +12,17 @@ async function expectDraft(page: Page, enabled: boolean) {
     await composerMenu(page).click()
     if (enabled) await expect(draftItem(page)).toBeEnabled()
     else await expect(draftItem(page)).toBeDisabled()
+    await page.keyboard.press("Escape")
+    await expect(page.getByRole("menu")).toHaveCount(0)
+}
+
+/** 채팅 상단 버튼과 + 메뉴의 사용법 동영상이 같은 영상을 새 탭(폰에서는 유튜브 앱)으로 여는지 확인한다. */
+async function expectGuideVideo(page: Page, href: string) {
+    const guide = page.getByRole("link", { name: "사용법 동영상 열기" })
+    await expect(guide).toHaveAttribute("href", href)
+    await expect(guide).toHaveAttribute("target", "_blank")
+    await composerMenu(page).click()
+    await expect(page.getByRole("menuitem", { name: "사용법 동영상 열기" })).toHaveAttribute("href", href)
     await page.keyboard.press("Escape")
     await expect(page.getByRole("menu")).toHaveCount(0)
 }
@@ -32,10 +43,8 @@ test("구름 코치 시작 화면·추천 질문·응답 아바타와 데스크�
     await expect(mascot).toBeVisible()
     await expect.poll(() => mascot.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
     await expectDraft(page, false)
-    // 상단 버튼은 사용법 동영상 링크다. 새 탭(폰에서는 유튜브 앱)으로 연다.
-    const guide = page.getByRole("link", { name: "사용법 동영상 열기" })
-    await expect(guide).toHaveAttribute("href", "https://youtu.be/MH6wL-0Qui0")
-    await expect(guide).toHaveAttribute("target", "_blank")
+    // 넓은 화면의 사용법 동영상은 PC 화면판 시연 영상이다.
+    await expectGuideVideo(page, DEMO_VIDEO.desktop)
     await mkdir("coach-ui-previews", { recursive: true })
     await page.screenshot({ path: "coach-ui-previews/desktop-welcome.png", animations: "disabled" })
     await page.getByRole("button", { name: "오늘 배운 개념을 예시로 설명해 줘" }).click()
@@ -323,6 +332,8 @@ test("모바일에서도 구름 코치·입력·일기 만들기가 화면 안�
     await expect(page.getByRole("heading", { name: /구름 코치와 풀어볼까요/ })).toBeVisible()
     await expect(page.getByLabel("메시지")).toBeInViewport()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    // 폰 화면의 사용법 동영상은 폰 화면판 시연 영상이다.
+    await expectGuideVideo(page, DEMO_VIDEO.phone)
     await mkdir("coach-ui-previews", { recursive: true })
     await page.screenshot({ path: "coach-ui-previews/mobile-welcome.png", animations: "disabled" })
     await sendChatMessage(page, "오늘 학습한 내용을 정리하고 싶어요")

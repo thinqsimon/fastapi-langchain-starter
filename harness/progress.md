@@ -1006,3 +1006,13 @@ Base UI 메뉴는 이미 체크된 항목을 눌러도 `onValueChange`를 부르
 앱 안의 '사용법 동영상 열기'(채팅 상단·+ 메뉴, `GUIDE_VIDEO_URL`)는 예전 영상(MH6wL-0Qui0) 그대로 두었다.
 **테스트**: E2E `brand.spec.ts`에 "`/`로 들어와 로그인 화면, 그리고 가입 화면에서 버튼 주소·새 탭 확인" 추가, `starter-profile.spec.ts`에 버튼이 없음을 확인
 **검증**: 프론트 verify 통과, E2E brand·auth·responsive 17 passed, starter 3 passed, 1280px·iPhone 13 스크린샷(가로 넘침 없음), 버튼을 누르면 새 탭에서 유튜브 영상이 열림
+
+## 2026-10-31 · 세션 36-1 · 사용법 영상 링크를 화면 폭에 따라 PC판·폰판으로
+
+**요청**: 폰 화면판 시연 영상(https://youtu.be/FekXxD6Tv8E)을 올렸으니, 폰 화면인지에 따라 기존 영상 링크가 PC판·폰판 중 하나를 열게.
+**한 일**: 영상 주소를 `lib/application.ts`의 `demoVideos`(desktop: wCsDCMeg8WQ, phone: FekXxD6Tv8E) 한곳에 모았다.
+나누는 기준은 채팅 목록이 서랍으로 바뀌는 768px(`DESKTOP_QUERY`, Tailwind `md`)이다. 768px 이상은 PC판, 미만은 폰판.
+로그인·가입 화면(서버 컴포넌트)은 버튼 두 개 중 하나만 CSS(`md:hidden` / `hidden md:inline-flex`)로 보인다.
+채팅 상단 '사용법 동영상 열기'와 + 메뉴 항목은 `useMediaQuery(DESKTOP_QUERY)`로 주소를 고른다. 예전 영상(MH6wL-0Qui0)과 `GUIDE_VIDEO_URL`은 없앴다.
+**테스트**: E2E `brand.spec.ts`(넓은 화면 PC판, 390px 폰판), `coach.spec.ts`(데스크톱·모바일에서 상단 버튼과 + 메뉴 주소). 기대 주소는 `e2e/helpers.ts`의 `DEMO_VIDEO`
+**검증**: 프론트 verify 통과, E2E brand·coach·responsive·answer-level 27 passed, starter 3 passed

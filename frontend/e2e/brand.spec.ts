@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
 
-import { signUp } from "./helpers"
+import { DEMO_VIDEO, signUp } from "./helpers"
 
 /** BRAND-01 로고·파비콘 */
 
@@ -34,21 +34,28 @@ test("로그인 화면 위쪽에 로고와 서비스 이름이 보인다", async
     await expect(page.getByText("LEARNING DIARY COACH")).toBeVisible()
 })
 
-async function expectDemoVideoLink(page: Page) {
+/** 화면 폭에 맞는 버튼 하나만 보이고(다른 하나는 감춰져 역할 목록에 없다), 그 영상을 새 탭으로 연다. */
+async function expectDemoVideoLink(page: Page, href: string) {
     const demo = page.getByRole("link", { name: "사용법 시연" })
     await expect(demo).toBeVisible()
-    await expect(demo).toHaveAttribute("href", "https://youtu.be/wCsDCMeg8WQ")
+    await expect(demo).toHaveAttribute("href", href)
     await expect(demo).toHaveAttribute("target", "_blank")
 }
 
-test("첫 화면(로그인)과 가입 화면의 '사용법 시연' 버튼은 시연 영상을 새 탭으로 연다", async ({ page }) => {
-    // 사이트 주소(/)로 들어오면 /chat을 거쳐 로그인 화면이 첫 화면으로 뜬다.
+test("첫 화면(로그인)과 가입 화면의 '사용법 시연' 버튼은 화면 폭에 맞는 시연 영상을 새 탭으로 연다", async ({ page }) => {
+    // 사이트 주소(/)로 들어오면 /chat을 거쳐 로그인 화면이 첫 화면으로 뜬다. 넓은 화면은 PC 화면판 영상이다.
     await page.goto("/")
     await expect(page).toHaveURL(/\/sign-in$/)
-    await expectDemoVideoLink(page)
+    await expectDemoVideoLink(page, DEMO_VIDEO.desktop)
 
     await page.goto("/sign-up")
-    await expectDemoVideoLink(page)
+    await expectDemoVideoLink(page, DEMO_VIDEO.desktop)
+
+    // 폰 화면(768px 미만)에서는 폰 화면판 영상으로 바뀐다.
+    await page.setViewportSize({ width: 390, height: 844 })
+    await expectDemoVideoLink(page, DEMO_VIDEO.phone)
+    await page.goto("/sign-in")
+    await expectDemoVideoLink(page, DEMO_VIDEO.phone)
 })
 
 test("헤더 왼쪽 로고를 누르면 채팅으로 가고, 좁은 화면에서는 로고만 보인다", async ({ page }) => {

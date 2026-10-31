@@ -66,3 +66,6 @@ export function localToday(now = new Date()): string {
 
 export const DEFAULT_CATCHPHRASE = "풀스택 화이팅 !!!  절실하게 공부합시다!!! 운영진 분들 강사님 감사합니다."
 export const DEFAULT_FOOTER = "감사 합니다."
+
+/** 사용법 시연 영상(lib/application.ts의 demoVideos). 넓은 화면(768px 이상)은 PC 화면판, 좁은 화면은 폰 화면판. */
+export const DEMO_VIDEO = { desktop: "https://youtu.be/wCsDCMeg8WQ", phone: "https://youtu.be/FekXxD6Tv8E" }

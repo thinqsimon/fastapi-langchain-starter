@@ -20,15 +20,25 @@ import {
 import { DraftReplaceDialog } from "@/components/diary/draft-replace-dialog"
 import { errorMessage } from "@/lib/api"
 import { DEFAULT_ANSWER_LEVEL, answerLevelLabel } from "@/lib/answer-level"
+import { application } from "@/lib/application"
+import { useMediaQuery } from "@/lib/use-media-query"
 import { useAnswerLevelStore } from "@/store/answer-level"
 import { useAuthStore } from "@/store/auth"
 import { useChatStore } from "@/store/chat"
 import { useDiaryStore } from "@/store/diary"
+import { DESKTOP_QUERY } from "@/store/layout"
 
 const MASCOT = "/coach/cloud-coach.png"
 const SUGGESTIONS = ["오늘 배운 개념을 예시로 설명해 줘", "어려운 내용을 함께 복습하고 싶어"]
-/** 사용법 동영상. 새 탭으로 열고, 유튜브 앱이 있는 폰에서는 앱이 열린다. */
-export const GUIDE_VIDEO_URL = "https://youtu.be/MH6wL-0Qui0"
+
+/**
+ * 사용법 동영상 주소. 넓은 화면(768px 이상)은 PC 화면판, 좁은 화면은 폰 화면판 시연 영상이다(채팅 목록이 서랍으로 바뀌는 기준과 같다).
+ * 새 탭으로 열고, 유튜브 앱이 있는 폰에서는 앱이 열린다.
+ */
+function useGuideVideoUrl() {
+    const isDesktop = useMediaQuery(DESKTOP_QUERY)
+    return isDesktop ? application.demoVideos?.desktop : application.demoVideos?.phone
+}
 
 export function CloudAvatar() {
     return <Image src={MASCOT} width={40} height={40} alt="" className="size-10 shrink-0 rounded-2xl object-cover" />
@@ -138,6 +148,7 @@ function useDiaryDraftAction() {
 export function CoachChatHeader() {
     const isDrafting = useDiaryStore((state) => state.isDrafting)
     const error = useDiaryStore((state) => state.error)
+    const guideVideoUrl = useGuideVideoUrl()
 
     return (
         <div className="shrink-0 border-b bg-background px-4 py-3 sm:px-6">
@@ -150,7 +161,7 @@ export function CoachChatHeader() {
                     </div>
                 </div>
                 <a
-                    href={GUIDE_VIDEO_URL}
+                    href={guideVideoUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`${buttonVariants({ variant: "outline" })} min-h-10 w-full rounded-xl sm:w-auto`}
@@ -177,6 +188,7 @@ export function CoachChatHeader() {
 export function CoachComposerMenu() {
     const draft = useDiaryDraftAction()
     const level = useAnswerLevelChoice()
+    const guideVideoUrl = useGuideVideoUrl()
     const [open, setOpen] = useState(false)
 
     return (
@@ -212,7 +224,7 @@ export function CoachComposerMenu() {
                             {!draft.canDraft && <span className="text-xs text-muted-foreground">답변이 끝나면 만들 수 있어요</span>}
                         </span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="min-h-10 px-2" render={<a href={GUIDE_VIDEO_URL} target="_blank" rel="noopener noreferrer" />}>
+                    <DropdownMenuItem className="min-h-10 px-2" render={<a href={guideVideoUrl} target="_blank" rel="noopener noreferrer" />}>
                         <SquarePlay className="text-red-600" />
                         사용법 동영상 열기
                     </DropdownMenuItem>
