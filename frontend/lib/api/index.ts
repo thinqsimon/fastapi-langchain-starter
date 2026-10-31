@@ -40,6 +40,7 @@ export type {
     NotebookTopicInput,
     NotebookTopicPatch,
     NotebookTopicSummary,
+    PasswordResetResult,
     PlanName,
     Preferences,
     TokenPair,

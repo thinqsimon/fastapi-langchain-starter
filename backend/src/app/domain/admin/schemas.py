@@ -4,8 +4,9 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, computed_field
 
+from app.core.config import settings
 from app.core.plans import PlanName
 
 LlmProviderName = Literal["openai", "anthropic", "google_genai"]
@@ -29,9 +30,38 @@ class AdminUserRead(BaseModel):
     plan_expires_at: datetime | None = None
     created_at: datetime
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def is_admin(self) -> bool:
+        """관리자 계정(설정 파일의 ADMIN_EMAILS)은 비밀번호 초기화·삭제 대상이 아니다(ADMIN-05)."""
+        return self.email.lower() in settings.admin_emails
+
 
 class PlanUpdate(BaseModel):
     plan: PlanName
+
+
+class PasswordResetRequest(BaseModel):
+    """관리자가 정해 주는 새 비밀번호(ADMIN-05). 비우면 서버의 기본 암호로 바꾼다."""
+
+    password: str | None = Field(
+        default=None,
+        min_length=8,
+        max_length=72,
+        description="새 비밀번호(가입 규칙과 같은 8~72자). 비우면 기본 암호",
+    )
+
+
+class PasswordResetDefaultRead(BaseModel):
+    """'기본 암호로 초기화'에 쓰는 값. 관리자가 사용자에게 알려 주려고 화면에 보여 준다."""
+
+    password: str
+
+
+class PasswordResetResponse(BaseModel):
+    user: AdminUserRead
+    # 어떤 비밀번호로 바꿨는지. 비밀번호 자체는 응답에 싣지 않는다.
+    password_source: Literal["default", "custom"]
 
 
 class ActingTokenResponse(BaseModel):

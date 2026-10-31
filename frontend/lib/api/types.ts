@@ -68,6 +68,8 @@ export type AdminUser = {
     plan: PlanName
     plan_expires_at: string | null
     created_at: string
+    /** 관리자 계정이면 비밀번호 초기화·삭제 대상이 아니다(ADMIN-05). */
+    is_admin: boolean
 }
 
 // 요금제 쿠폰(backend/src/app/domain/coupon/schemas.py)
@@ -115,6 +117,12 @@ export type ActingToken = {
     token_type: string
     expires_in: number
     user: AdminUser
+}
+
+/** 관리자 비밀번호 초기화 결과(ADMIN-05). 비밀번호 자체는 응답에 오지 않는다. */
+export type PasswordResetResult = {
+    user: AdminUser
+    password_source: "default" | "custom"
 }
 
 export type TokenPair = {

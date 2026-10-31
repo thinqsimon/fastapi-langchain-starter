@@ -3,7 +3,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import or_, select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import Session
 
 from app.domain.auth.models import RefreshToken, User
@@ -35,6 +35,15 @@ class UserRepository:
             .limit(limit)
         )
         return list(self.db.execute(stmt).scalars())
+
+    def delete(self, user_id: uuid.UUID) -> None:
+        """사용자를 지운다(관리자 삭제, ADMIN-05).
+
+        users를 참조하는 테이블은 DB의 ON DELETE CASCADE가 함께 지우고,
+        쿠폰은 SET NULL로 기록만 남는다. ORM의 session.delete()는 자식 행의 외래 키를
+        비우려다 NOT NULL에 막힐 수 있어 DELETE 문을 바로 보낸다.
+        """
+        self.db.execute(delete(User).where(User.id == user_id))
 
 
 class RefreshTokenRepository:

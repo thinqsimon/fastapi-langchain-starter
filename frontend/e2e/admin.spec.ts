@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test"
 
 import { logOut, openAccountMenu, sendChatMessage, signIn, signUp } from "./helpers"
 
-/** ADMIN-01·03 관리자 LLM 설정(공급자 키·요금제별 라우팅), ADMIN-02 사용자 계정으로 테스트, 요금제 지정 */
+/** ADMIN-01·03 관리자 LLM 설정(공급자 키·요금제별 라우팅), ADMIN-02 사용자 계정으로 테스트, 요금제 지정, ADMIN-05 비밀번호 초기화·사용자 삭제 */
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8010"
 // scripts/e2e.sh가 백엔드에 ADMIN_EMAILS로 넘기는 주소와 같아야 한다.
@@ -34,6 +34,20 @@ async function resetLlmSettings(page: Page) {
     for (const provider of PROVIDERS) {
         await page.request.patch(`${API}/api/admin/llm-providers/${provider}`, { headers, data: { api_key: "" } })
     }
+}
+
+/** 관리자 화면의 사용자 검색. 결과 목록을 돌려준다. */
+async function searchUser(page: Page, email: string) {
+    const lookup = page.getByRole("form", { name: "사용자 검색" })
+    await lookup.getByLabel("이메일 또는 이름").fill(email)
+    await lookup.getByRole("button", { name: "검색" }).click()
+    const results = page.getByRole("list", { name: "검색 결과" })
+    await expect(results).toContainText(email)
+    return results
+}
+
+async function loginStatus(page: Page, email: string, password: string) {
+    return (await page.request.post(`${API}/api/auth/login`, { data: { email, password } })).status()
 }
 
 async function saveKey(page: Page, label: string, value: string) {
@@ -214,6 +228,73 @@ test.describe("관리자", () => {
         await expect(memberMenu.locator('[data-slot="account-plan"]')).toContainText("Pro")
     })
 
+    test("비밀번호를 기본 암호나 직접 입력한 암호로 초기화하면 그 암호로 로그인되고, 관리자 계정은 대상이 아니다", async ({ page }) => {
+        const member = await signUp(page, "e2e-reset")
+        await logOut(page)
+
+        await signInAsAdmin(page)
+        await page.goto("/admin")
+
+        // 관리자 계정 행은 초기화·삭제 버튼이 꺼져 있다.
+        const adminRow = await searchUser(page, ADMIN.email)
+        await expect(adminRow.getByRole("button", { name: `${ADMIN.email} 비밀번호 초기화` })).toBeDisabled()
+        await expect(adminRow.getByRole("button", { name: `${ADMIN.email} 삭제` })).toBeDisabled()
+
+        // 기본 암호(서버 설정, 없으면 12345678)로 초기화한다.
+        const results = await searchUser(page, member.email)
+        await results.getByRole("button", { name: `${member.email} 비밀번호 초기화` }).click()
+        const dialog = page.getByRole("dialog", { name: "비밀번호 초기화" })
+        await expect(dialog.locator('[data-slot="reset-default-password"]')).toContainText("12345678")
+        await dialog.getByRole("button", { name: "초기화", exact: true }).click()
+        await expect(dialog).toHaveCount(0)
+        const notice = page.locator('[data-slot="admin-user-notice"]')
+        await expect(notice).toContainText(`${member.email}의 비밀번호를 초기화했습니다`)
+        await expect(notice.locator('[data-slot="reset-new-password"]')).toHaveText("12345678")
+        expect(await loginStatus(page, member.email, member.password)).toBe(401)
+        expect(await loginStatus(page, member.email, "12345678")).toBe(200)
+
+        // 직접 입력: 8자보다 짧으면 버튼이 꺼져 있고, 규칙에 맞으면 그 암호로 바뀐다.
+        await results.getByRole("button", { name: `${member.email} 비밀번호 초기화` }).click()
+        await dialog.getByRole("radio", { name: /직접 입력/ }).check()
+        await dialog.getByLabel("새 비밀번호", { exact: true }).fill("1234567")
+        await expect(dialog.getByRole("button", { name: "초기화", exact: true })).toBeDisabled()
+        await dialog.getByLabel("새 비밀번호", { exact: true }).fill("반가워요-2026")
+        await dialog.getByRole("button", { name: "초기화", exact: true }).click()
+        await expect(notice.locator('[data-slot="reset-new-password"]')).toHaveText("반가워요-2026")
+        expect(await loginStatus(page, member.email, "12345678")).toBe(401)
+
+        // 사용자는 새 암호로 로그인한다.
+        await logOut(page)
+        await signIn(page, member.email, "반가워요-2026")
+        await expect(page).toHaveURL(/\/chat$/)
+    })
+
+    test("사용자를 삭제하면 확인 뒤 목록에서 사라지고, 그 계정으로는 로그인할 수 없다", async ({ page }) => {
+        const member = await signUp(page, "e2e-delete")
+        await sendChatMessage(page, "지워질 대화입니다")
+        await logOut(page)
+
+        await signInAsAdmin(page)
+        await page.goto("/admin")
+        const results = await searchUser(page, member.email)
+
+        // 취소하면 아무 일도 없다.
+        await results.getByRole("button", { name: `${member.email} 삭제` }).click()
+        const dialog = page.getByRole("dialog", { name: "사용자 삭제" })
+        await expect(dialog).toContainText(member.email)
+        await expect(dialog).toContainText("되돌릴 수 없습니다")
+        await expect(dialog.locator('[data-slot="delete-user-effects"]')).toContainText("기록이 모두 지워집니다")
+        await dialog.getByRole("button", { name: "취소" }).click()
+        await expect(dialog).toHaveCount(0)
+        expect(await loginStatus(page, member.email, member.password)).toBe(200)
+
+        await results.getByRole("button", { name: `${member.email} 삭제` }).click()
+        await dialog.getByRole("button", { name: "삭제", exact: true }).click()
+        await expect(page.locator('[data-slot="admin-user-notice"]')).toHaveText(`${member.email} 계정을 삭제했습니다.`)
+        await expect(page.getByText(member.email, { exact: true })).toHaveCount(0)
+        expect(await loginStatus(page, member.email, member.password)).toBe(401)
+    })
+
     test("관리자 화면은 좁은 화면에서도 가로로 넘치지 않는다", async ({ page }) => {
         await page.setViewportSize({ width: 390, height: 844 })
         await signInAsAdmin(page)
@@ -221,6 +302,8 @@ test.describe("관리자", () => {
         await expect(keyForm(page, "OpenAI")).toBeVisible()
         await expect(page.getByRole("form", { name: "사용자 검색" })).toBeVisible()
         await expect(page.getByRole("form", { name: "Free 라우트 추가" })).toBeVisible()
+        // 버튼이 네 개 붙은 사용자 행도 줄바꿈되어 화면 안에 들어온다.
+        await searchUser(page, ADMIN.email)
 
         expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false)
     })

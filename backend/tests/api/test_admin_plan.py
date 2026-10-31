@@ -49,7 +49,7 @@ def test_admin_sets_plan_and_user_sees_it(
     )
     assert (
         api_client.patch(
-            f"{USERS}/00000000-0000-0000-0000-000000000000",
+            f"{USERS}/00000000-0000-0000-0000-000000000000/plan",
             json={"plan": "max"},
             headers=admin_headers,
         ).status_code

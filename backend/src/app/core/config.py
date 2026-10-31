@@ -63,6 +63,10 @@ class Settings(BaseSettings):
     SETTINGS_ENCRYPTION_KEY: str = ""
     # 관리자가 다른 계정으로 테스트하는 토큰(ADMIN-02)의 수명(분). 지나면 관리자 계정으로 돌아간다.
     ADMIN_TEST_TOKEN_EXPIRE_MINUTES: int = 60
+    # 관리자 화면 "비밀번호 초기화"(ADMIN-05)에서 '기본 암호로'를 고르면 쓰는 값. 비우면 12345678.
+    # 사용자에게 알려 줄 임시 암호라 가입 규칙(8~72자)을 따른다. 규칙 검사는 초기화할 때 한다.
+    # 잘못 넣었다고 서버가 아예 뜨지 않으면 운영 전체가 멈추기 때문이다.
+    ADMIN_RESET_PASSWORD_DEFAULT: str | None = None
 
     # 선택 기능: 문서를 저장해 두고 질문과 비슷한 대목을 찾아 답변에 쓰는 기능.
     # 끄면 관련 API가 아예 등록되지 않는다.
@@ -112,6 +116,7 @@ class Settings(BaseSettings):
         "LLM_BASE_URL",
         "LLM_PRICE_INPUT_PER_1M",
         "LLM_PRICE_OUTPUT_PER_1M",
+        "ADMIN_RESET_PASSWORD_DEFAULT",
         mode="before",
     )
     @classmethod
@@ -144,6 +149,11 @@ class Settings(BaseSettings):
     def admin_emails(self) -> set[str]:
         """ "서버 설정" 화면에 접근할 수 있는 이메일(소문자, 공백 제거)."""
         return {email.strip().lower() for email in self.ADMIN_EMAILS.split(",") if email.strip()}
+
+    @property
+    def admin_reset_password(self) -> str:
+        """'기본 암호로 초기화'(ADMIN-05)에 쓸 값. 설정이 없으면 12345678."""
+        return self.ADMIN_RESET_PASSWORD_DEFAULT or "12345678"
 
     @model_validator(mode="after")
     def _reject_insecure_production_settings(self) -> "Settings":

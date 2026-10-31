@@ -4,18 +4,25 @@
 1. 공급자별 API 키 보관(`AdminLlmSettingsService.update_provider_key`)
 2. 요금제별 라우팅(어느 공급자의 어느 모델을 어떤 순서로) 관리와, chat/diary가 부르는
    `active_provider_chain(plan)`
-3. 사용자 검색·요금제 지정·"이 계정으로 테스트" 토큰(`AdminUserService`)
+3. 사용자 검색·요금제 지정·"이 계정으로 테스트" 토큰·비밀번호 초기화·삭제(`AdminUserService`)
 """
 
 import logging
 import uuid
+from typing import Literal
 
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.exceptions import AppError, ConflictError, NotFoundError, ServiceUnavailableError
+from app.core.exceptions import (
+    AppError,
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+    ServiceUnavailableError,
+)
 from app.core.plans import DEFAULT_PLAN, PLANS
-from app.core.security import create_access_token, decrypt_secret, encrypt_secret
+from app.core.security import create_access_token, decrypt_secret, encrypt_secret, hash_password
 from app.domain.admin.defaults import DEFAULT_ROUTES
 from app.domain.admin.models import LlmPlanRoute, LlmProvider
 from app.domain.admin.repositories import LlmPlanRouteRepository, LlmProviderRepository
@@ -23,6 +30,7 @@ from app.domain.admin.schemas import (
     ALLOWED_PROVIDERS,
     ActingTokenResponse,
     AdminUserRead,
+    PasswordResetResponse,
     ProviderKeyRead,
     ProviderKeyUpdate,
     RouteCreate,
@@ -30,7 +38,7 @@ from app.domain.admin.schemas import (
     RouteUpdate,
 )
 from app.domain.auth.models import User
-from app.domain.auth.repositories import UserRepository
+from app.domain.auth.repositories import RefreshTokenRepository, UserRepository
 from app.llm.providers import ProviderAttempt
 
 logger = logging.getLogger(__name__)
@@ -225,7 +233,8 @@ def _to_route_read(route: LlmPlanRoute, keys: dict[str, bool]) -> RouteRead:
 
 
 class AdminUserService:
-    """사용자 검색, 요금제 지정(ADMIN-03), '이 계정으로 테스트'(ADMIN-02).
+    """사용자 검색, 요금제 지정(ADMIN-03), '이 계정으로 테스트'(ADMIN-02),
+    비밀번호 초기화·삭제(ADMIN-05).
 
     테스트 토큰은 신고된 오류를 관리자가 그 계정 그대로 재현하기 위한 것. 감사 기록은 서버 로그.
     """
@@ -271,3 +280,55 @@ class AdminUserService:
         return ActingTokenResponse(
             access_token=token, expires_in=minutes * 60, user=AdminUserRead.model_validate(target)
         )
+
+    def password_reset_default(self) -> str:
+        """'기본 암호로 초기화'에 쓸 값. 서버 설정이 가입 규칙(8~72자)에 맞지 않으면 쓰지 않는다."""
+        password = settings.admin_reset_password
+        if not 8 <= len(password) <= 72:
+            raise ServiceUnavailableError(
+                "서버의 기본 암호 설정(ADMIN_RESET_PASSWORD_DEFAULT)이 8~72자가 아닙니다. "
+                "새 비밀번호를 직접 입력해 초기화하세요."
+            )
+        return password
+
+    def reset_password(
+        self, admin: User, target_id: uuid.UUID, password: str | None
+    ) -> PasswordResetResponse:
+        """비밀번호를 잊은 사용자에게 관리자가 새 비밀번호를 정해 준다.
+
+        그 계정의 다른 로그인은 모두 끊는다. password가 None이면 서버의 기본 암호를 쓴다.
+        다음 로그인 때 변경을 강제하지는 않는다(사용자 결정).
+        """
+        target = self._manageable_target(admin, target_id, "비밀번호를 초기화")
+        source: Literal["default", "custom"] = "default" if password is None else "custom"
+        new_password = self.password_reset_default() if password is None else password
+        target.password_hash = hash_password(new_password)
+        revoked = RefreshTokenRepository(self.db).revoke_all_for_user(target.id)
+        self.db.commit()
+        # 비밀번호와 이메일 원문은 로그에 남기지 않는다.
+        logger.info(
+            "admin_password_reset admin=%s target=%s source=%s revoked_sessions=%s",
+            admin.id,
+            target.id,
+            source,
+            revoked,
+        )
+        return PasswordResetResponse(
+            user=AdminUserRead.model_validate(target), password_source=source
+        )
+
+    def delete_user(self, admin: User, target_id: uuid.UUID) -> None:
+        """계정과 그 계정의 대화·일기·학습장 기록을 모두 지운다. 되돌릴 수 없다."""
+        target = self._manageable_target(admin, target_id, "삭제")
+        self.users.delete(target.id)
+        self.db.commit()
+        logger.info("admin_user_deleted admin=%s target=%s", admin.id, target_id)
+
+    def _manageable_target(self, admin: User, target_id: uuid.UUID, action: str) -> User:
+        """초기화·삭제할 수 있는 사용자. 관리자 계정(자기 자신 포함)은 여기서 다루지 않는다."""
+        target = self.users.get_by_id(target_id)
+        if target is None:
+            raise NotFoundError("사용자를 찾을 수 없습니다.")
+        if target.id == admin.id or target.email.lower() in settings.admin_emails:
+            raise ForbiddenError(f"관리자 계정은 여기서 {action}할 수 없습니다.")
+        return target

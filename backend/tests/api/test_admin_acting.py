@@ -43,6 +43,7 @@ def test_search_is_admin_only_and_matches_email_or_name(
         "plan",
         "plan_expires_at",
         "created_at",
+        "is_admin",
     }
 
     by_name = api_client.get(USERS, params={"q": "일반"}, headers=admin_headers).json()

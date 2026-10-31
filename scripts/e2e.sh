@@ -18,6 +18,8 @@ export DATABASE_URL="${E2E_DATABASE_URL:-postgresql+psycopg://app:app@localhost:
 # 관리자 서버 설정(ADMIN-01) E2E. e2e/admin.spec.ts의 계정과 같아야 한다. 암호화 키는 테스트 전용 값이다.
 export ADMIN_EMAILS="${ADMIN_EMAILS:-e2e-admin@example.com}"
 export SETTINGS_ENCRYPTION_KEY="${SETTINGS_ENCRYPTION_KEY:-QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=}"
+# 비밀번호 초기화(ADMIN-05) E2E는 코드 기본값(12345678)을 기대한다. 개발자 .env의 값이 끼어들지 않게 비운다.
+export ADMIN_RESET_PASSWORD_DEFAULT=""
 export CORS_ORIGINS='["http://localhost:3100","http://127.0.0.1:3100"]' 
 
 backend_pid=""

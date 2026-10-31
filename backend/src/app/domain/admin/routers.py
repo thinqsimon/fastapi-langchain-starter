@@ -10,6 +10,9 @@ from app.domain.admin.schemas import (
     ActingTokenResponse,
     AdminUserRead,
     LlmProviderName,
+    PasswordResetDefaultRead,
+    PasswordResetRequest,
+    PasswordResetResponse,
     PlanUpdate,
     ProviderKeyRead,
     ProviderKeyUpdate,
@@ -165,3 +168,53 @@ def set_user_plan(
 )
 def create_acting_token(user_id: uuid.UUID, admin: AdminUser, db: DbSession) -> ActingTokenResponse:
     return AdminUserService(db).create_acting_token(admin, user_id)
+
+
+@router.get(
+    "/password-reset/default",
+    response_model=PasswordResetDefaultRead,
+    summary="기본 초기화 암호",
+    description=(
+        "'기본 암호로 초기화'에 쓰는 값입니다. 서버 설정 `ADMIN_RESET_PASSWORD_DEFAULT`, "
+        "없으면 `12345678`. 관리자가 사용자에게 알려 주려고 화면에 보여 줍니다."
+    ),
+    responses={**FORBIDDEN, 503: {"description": "서버 설정이 8~72자가 아님"}},
+)
+def read_password_reset_default(_admin: AdminUser, db: DbSession) -> PasswordResetDefaultRead:
+    return PasswordResetDefaultRead(password=AdminUserService(db).password_reset_default())
+
+
+@router.post(
+    "/users/{user_id}/password-reset",
+    response_model=PasswordResetResponse,
+    summary="비밀번호 초기화",
+    description=(
+        "비밀번호를 잊은 사용자에게 관리자가 새 비밀번호를 정해 줍니다. `password`를 비우면 "
+        "기본 암호로 바꿉니다. 그 계정의 다른 로그인(리프레시 토큰)은 모두 끊깁니다. "
+        "관리자 계정은 대상이 아닙니다(403)."
+    ),
+    responses={
+        **FORBIDDEN,
+        404: {"description": "사용자를 찾을 수 없음"},
+        503: {"description": "기본 암호 설정이 8~72자가 아님"},
+    },
+)
+def reset_user_password(
+    user_id: uuid.UUID, payload: PasswordResetRequest, admin: AdminUser, db: DbSession
+) -> PasswordResetResponse:
+    return AdminUserService(db).reset_password(admin, user_id, payload.password)
+
+
+@router.delete(
+    "/users/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="사용자 삭제",
+    description=(
+        "계정과 그 계정의 대화·일기·학습장 기록을 모두 지웁니다. 되돌릴 수 없습니다. "
+        "쿠폰은 발급·사용 기록이 남고 사용자 칸만 비워집니다. 관리자 계정은 대상이 아닙니다(403)."
+    ),
+    responses={**FORBIDDEN, 404: {"description": "사용자를 찾을 수 없음"}},
+)
+def delete_user(user_id: uuid.UUID, admin: AdminUser, db: DbSession) -> Response:
+    AdminUserService(db).delete_user(admin, user_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

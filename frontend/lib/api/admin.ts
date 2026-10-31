@@ -1,5 +1,5 @@
 import { httpClient } from "./client"
-import type { ActingToken, AdminUser, LlmProviderKey, LlmProviderName, LlmRoute, LlmRoutePatch, PlanName } from "./types"
+import type { ActingToken, AdminUser, LlmProviderKey, LlmProviderName, LlmRoute, LlmRoutePatch, PasswordResetResult, PlanName } from "./types"
 
 /** 관리자 전용. 세 공급자(OpenAI/Claude/Gemini)의 키 상태를 항상 돌려준다. 관리자가 아니면 403. */
 export async function fetchProviders(): Promise<LlmProviderKey[]> {
@@ -55,4 +55,21 @@ export async function setUserPlan(userId: string, plan: PlanName): Promise<Admin
 export async function createActingToken(userId: string): Promise<ActingToken> {
     const { data } = await httpClient.post<ActingToken>(`/api/admin/users/${userId}/acting-token`)
     return data
+}
+
+/** '기본 암호로 초기화'에 쓰는 값(ADMIN-05). 서버 설정이 없으면 12345678. */
+export async function fetchPasswordResetDefault(): Promise<string> {
+    const { data } = await httpClient.get<{ password: string }>("/api/admin/password-reset/default")
+    return data.password
+}
+
+/** 비밀번호를 초기화한다(ADMIN-05). password를 비우면 기본 암호로 바꾼다. 그 계정의 다른 로그인은 끊긴다. */
+export async function resetUserPassword(userId: string, password?: string): Promise<PasswordResetResult> {
+    const { data } = await httpClient.post<PasswordResetResult>(`/api/admin/users/${userId}/password-reset`, password === undefined ? {} : { password })
+    return data
+}
+
+/** 사용자와 그 계정의 기록을 모두 지운다(ADMIN-05). 되돌릴 수 없다. */
+export async function deleteUser(userId: string): Promise<void> {
+    await httpClient.delete(`/api/admin/users/${userId}`)
 }

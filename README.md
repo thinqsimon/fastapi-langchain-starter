@@ -60,9 +60,11 @@ make init            # .env 생성 · 의존성 설치 · DB 기동 · 마이그
 키 없이 먼저 둘러보려면 `LLM_PROVIDER=fake`로 두세요(정해진 응답이 돌아옵니다).
 
 운영자가 화면에서 OpenAI·Claude·Gemini 키와 우선순위를 관리하려면 `ADMIN_EMAILS`(관리자 이메일)와
-`SETTINGS_ENCRYPTION_KEY`(키 암호화용, `Fernet.generate_key()`)를 넣고 그 계정으로 로그인해 계정 메뉴의 **서버 설정**을 엽니다.
+`SETTINGS_ENCRYPTION_KEY`(키 암호화용, `Fernet.generate_key()`)를 넣고 그 계정으로 로그인해 계정 메뉴의 **관리자**를 엽니다.
 요금제(free/pro/max)마다 다른 공급자·모델 순서를 둘 수 있고, 사용자 요금제는 관리자가 지정합니다(결제 연동 전).
-자세한 규칙은 `docs/decisions/ADR-0012-admin-llm-providers.md`, `ADR-0014-plan-based-llm-routing.md`.
+같은 화면에서 비밀번호를 잊은 사용자의 비밀번호를 초기화하거나(기본 암호 `ADMIN_RESET_PASSWORD_DEFAULT`, 비우면 12345678, 또는 직접 입력)
+계정을 삭제할 수 있습니다. 관리자 계정은 대상이 아닙니다.
+자세한 규칙은 `docs/decisions/ADR-0012-admin-llm-providers.md`, `ADR-0014-plan-based-llm-routing.md`, `ADR-0017-admin-password-reset-and-delete.md`.
 
 ```bash
 make dev-backend     # http://localhost:8000  (API 문서: /docs)
