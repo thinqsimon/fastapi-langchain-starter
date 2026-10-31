@@ -14,7 +14,7 @@ import { diaryFooter, diarySections, type DiaryDocumentInput } from "@/lib/diary
  *   (플랫폼은 h2·h3를 거의 같은 크기로 크게 그려 항목 제목과 소제목이 구분되지 않았다).
  * - 항목 사이, 그리고 상세 안의 소주제 사이에는 빈 문단을 넣는다. 여백 스타일은 사라져도 빈 줄은 남는다.
  */
-function SubHeading({ children, node }: { children?: ReactNode } & ExtraProps) {
+export function SubHeading({ children, node }: { children?: ReactNode } & ExtraProps) {
     // 본문 맨 앞의 소제목은 바로 위가 항목 제목이라 빈 줄을 넣지 않는다(빈 줄이 겹치지 않게).
     const first = node?.position?.start.offset === 0
     return (
@@ -37,7 +37,7 @@ const BODY: Components = {
 }
 
 /** 빈 줄. 편집기 대부분이 내용 없는 문단을 지우지 않도록 <br>을 넣는다. */
-function BlankLine() {
+export function BlankLine() {
     return (
         <p>
             <br />

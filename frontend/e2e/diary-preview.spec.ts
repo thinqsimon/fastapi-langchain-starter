@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
 
-import { DEFAULT_FOOTER, localToday, signUp } from "./helpers"
+import { DEFAULT_FOOTER, localToday, readClipboard, signUp } from "./helpers"
 
 /** DIARY-04 일기 프리뷰 보기·전체 복사 */
 
@@ -19,16 +19,6 @@ async function fillDiary(page: Page, nextPlan = "") {
     await page.getByLabel("내일 할 것").fill(nextPlan)
 }
 
-function clipboard(page: Page) {
-    return page.evaluate(async () => {
-        const [item] = await navigator.clipboard.read()
-        return {
-            text: await (await item.getType("text/plain")).text(),
-            html: item.types.includes("text/html") ? await (await item.getType("text/html")).text() : "",
-        }
-    })
-}
-
 test("작성 화면: 프리뷰 보기는 일기 전체를 문서 형태로 보여주고 닫기·전체 복사가 있다", async ({ page }) => {
     await signUp(page, "e2e-preview")
     await fillDiary(page)
@@ -45,7 +35,7 @@ test("작성 화면: 프리뷰 보기는 일기 전체를 문서 형태로 보�
 
     await preview.getByRole("button", { name: "프리뷰 전체 복사" }).click()
     await expect(preview.getByRole("button", { name: "프리뷰 전체 복사" })).toContainText("복사됨")
-    expect((await clipboard(page)).text).toContain(`# ${title}`)
+    expect((await readClipboard(page)).text).toContain(`# ${title}`)
 
     await preview.getByRole("button", { name: "닫기" }).click()
     await expect(preview).toBeHidden()
@@ -59,7 +49,7 @@ test("작성 화면: 전체 복사는 창을 열지 않고 마크다운 글자�
 
     await expect(page.getByRole("dialog")).toHaveCount(0)
     await expect(page.getByRole("button", { name: "작성 중인 일기 전체 복사" })).toContainText("복사됨")
-    const copied = await clipboard(page)
+    const copied = await readClipboard(page)
     expect(copied.text).toBe(
         [
             `# ${title}`,
@@ -103,7 +93,7 @@ test("지난 일기 카드에도 프리뷰 보기·전체 복사가 있고 '내�
     await card.getByRole("button", { name: `${title} 전체 복사` }).click()
     // 복사가 끝난 뒤에 읽는다(쓰는 중에 읽으면 브라우저가 거부한다).
     await expect(card.getByRole("button", { name: `${title} 전체 복사` })).toContainText("복사됨")
-    const copied = await clipboard(page)
+    const copied = await readClipboard(page)
     expect(copied.text).toContain("## 어려웠던 것\n\n네트워크 설정\n\n## 내일 할 것\n\n볼륨 정리하기\n\n---")
     expect(copied.text.trimEnd().endsWith(DEFAULT_FOOTER)).toBe(true)
 
@@ -136,7 +126,7 @@ test("붙여 넣기 서식: 상세의 소주제 사이에도 빈 줄이 들어�
 
     await page.getByRole("button", { name: "작성 중인 일기 전체 복사" }).click()
     await expect(page.getByRole("button", { name: "작성 중인 일기 전체 복사" })).toContainText("복사됨")
-    const { html } = await clipboard(page)
+    const { html } = await readClipboard(page)
 
     // 각 소제목 바로 앞 요소가 무엇인지 본다.
     const before = await page.evaluate((source) => {

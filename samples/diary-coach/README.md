@@ -31,7 +31,8 @@
 8. **학습장**에서 Claude Code `/study-notes` 스킬이 만든 md 파일을 올리면 `## 주제`마다 나뉘어 저장된다(스킬 노트가 아닌 md·txt는 거부).
    왼쪽에서 학습장(파일)별 주제를 고르고(전체/공부할 것/끝낸 것 필터) 오른쪽에서 읽고 고치며 **학습 완료**를 표시한다.
    업로드 없이 빈 학습장과 주제를 직접 만들 수도 있다. 같은 파일명은 다시 올릴 수 없고, 삭제 후 올린다.
-   시간이 없을 때는 일단 올려 두고, **선택**으로 주제를 골라 **보관**하면 **보관함** 보기에서 그것만 모아 공부한다. 아직 보관하지 않은 주제는 **신규** 보기에 남는다
+   시간이 없을 때는 일단 올려 두고, **선택**으로 주제를 골라 **보관**하면 **보관함** 보기에서 그것만 모아 공부한다. 아직 보관하지 않은 주제는 **신규** 보기에 남는다.
+   본문 위 **클립보드에 복사**는 주제 제목과 본문을 마크다운 글자와 서식으로 함께 복사해 교육 플랫폼·노션에 그대로 붙여 넣게 한다
 
 우측 상단 계정 버튼을 누르면 오른쪽에서 메뉴가 열린다(계정 정보·사용량·**사용 안내**·설정·로그아웃).
 **사용 안내**(`/guide`)는 일반 사용자용 전체 설명서다. 시작하기, 숙련도별 사용법, 채팅·답변 수준·일기·회고·학습장, `/study-notes` 스킬
@@ -51,7 +52,7 @@
 | 회고 보관·복습 | `frontend/components/diary/learning-workbench.tsx`, `frontend/store/learning.ts`, `frontend/api/learning.ts` | 주별 회고 생성·저장·조회·삭제, 원문 기반 메모·완료·재복습. 계정과 지연 응답 격리 |
 | 회고·복습 데이터 | `backend/src/app/domain/diary/`, Alembic `e317b6a91d42` | 계정·주별 회고 snapshot, 일기별 진행 상태. 소유권 검사, 원문 삭제 FK cascade |
 | 학습장 업로드·주제 관리 | `backend/src/app/domain/notebook/`, Alembic `37929cca196b` | `/study-notes` md를 JSON으로 올려 펜스 밖 `## 주제`로 나눠 저장(목차·코드 블록 제외, 메타 줄 → 유형·태그·난이도). 같은 프로젝트의 파일명 중복 409, 소유권 404, 학습장 삭제 시 주제 cascade |
-| 학습장 화면 | `frontend/app/(main)/notebook/`, `frontend/components/notebook/`, `frontend/store/notebook.ts`, `frontend/api/notebook.ts` | 왼쪽 학습장별 주제 목록(신규/전체/보관함 보기, 상태 필터, 선택 보관, 끌어서 너비 조절)·오른쪽 마크다운 본문, 수정(작성/미리보기)·학습 완료·보관·삭제 확인, 모바일은 한 창씩 |
+| 학습장 화면 | `frontend/app/(main)/notebook/`, `frontend/components/notebook/`, `frontend/store/notebook.ts`, `frontend/api/notebook.ts` | 왼쪽 학습장별 주제 목록(신규/전체/보관함 보기, 상태 필터, 선택 보관, 끌어서 너비 조절)·오른쪽 마크다운 본문, 수정(작성/미리보기)·학습 완료·보관·클립보드에 복사(`topic-paste-document.tsx`)·삭제 확인, 모바일은 한 창씩 |
 | 코치 페르소나·일기 프롬프트 | `backend/src/app/llm/prompts/diary_coach.py` | 새 대화/이전 대화(맥락) 구분, 상세 작성 규칙, '내일 할 것'을 지어내지 않는 규칙 |
 | 구조화 출력 체인 | `backend/src/app/llm/chains/diary.py` | `with_structured_output`으로 일기 항목·회고 3항목을 받음. '내일 할 것'은 근거 문장이 대화에 있을 때만 남김 |
 | `DiaryEntry` 모델 | `backend/src/app/domain/diary/models.py` | 채팅 단위(`source_last_message_at`), 같은 날 여러 편(`day_sequence`), 제목·상세·푸터 |
@@ -76,7 +77,7 @@
 | 캐치프레이즈 전광판 | `frontend/components/catchphrase-marquee.tsx` |
 | 마크다운 보기 | `frontend/components/markdown-view.tsx` |
 | 반응형·모바일 | `frontend/store/layout.ts`(대화 목록 접기·서랍), `components/chat/message-input.tsx`(3줄 자동 높이), 아이폰 안전 영역 |
-| 클립보드 복사(마크다운 + 서식) | `frontend/lib/clipboard.ts` |
+| 클립보드 복사(마크다운 + 서식) | `frontend/lib/clipboard.ts`, 버튼 `frontend/components/rich-copy-button.tsx` |
 | 아이콘 생성 스크립트 | `frontend/scripts/generate-icons.mjs` (`npm run icons`) |
 
 ## Fork 후 같은 방식으로 새 서비스를 만들려면

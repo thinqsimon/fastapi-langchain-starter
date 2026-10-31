@@ -23,6 +23,17 @@ export async function signUp(page: Page, prefix?: string): Promise<Account> {
     return account
 }
 
+/** 클립보드의 마크다운 글자(text/plain)와 서식(text/html). 테스트에서 clipboard-read 권한을 먼저 준다. */
+export function readClipboard(page: Page) {
+    return page.evaluate(async () => {
+        const [item] = await navigator.clipboard.read()
+        return {
+            text: await (await item.getType("text/plain")).text(),
+            html: item.types.includes("text/html") ? await (await item.getType("text/html")).text() : "",
+        }
+    })
+}
+
 export async function signIn(page: Page, email: string, password: string) {
     await page.goto("/sign-in")
     await page.getByLabel("이메일").fill(email)

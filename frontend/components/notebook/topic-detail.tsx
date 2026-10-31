@@ -6,6 +6,8 @@ import { ArrowLeft, Bookmark, BookmarkCheck, CheckCircle2, RotateCcw } from "luc
 import { DiaryDocument } from "@/components/diary/diary-document"
 import { ConfirmDeleteDialog } from "@/components/notebook/confirm-delete-dialog"
 import { TopicEditor } from "@/components/notebook/topic-editor"
+import { TopicPasteDocument, topicToMarkdown } from "@/components/notebook/topic-paste-document"
+import { RichCopyButton } from "@/components/rich-copy-button"
 import { Button } from "@/components/ui/button"
 import { useNotebookStore } from "@/store/notebook"
 
@@ -95,6 +97,16 @@ export function TopicDetail() {
                             {topic.kept ? <BookmarkCheck /> : <Bookmark />}
                             {topic.kept ? "보관 해제" : "보관"}
                         </Button>
+                        {/* 교육 플랫폼·노션에 붙여 넣는 용도. 주제를 바꾸면 '복사됨' 표시를 지우려고 key를 준다. */}
+                        <RichCopyButton
+                            key={topic.id}
+                            markdown={topicToMarkdown(topic)}
+                            pasteDocument={<TopicPasteDocument topic={topic} />}
+                            label="클립보드에 복사"
+                            disabled={!topic.content.trim()}
+                        >
+                            클립보드에 복사
+                        </RichCopyButton>
                         <Button size="sm" variant="outline" aria-label={`${topic.title} 삭제`} disabled={busy} onClick={() => setConfirming(true)}>
                             삭제
                         </Button>

@@ -42,8 +42,9 @@ event: error   data: {"code": "LLM_ERROR", "message": "..."}
   - 입력칸 글자는 16px 이상(모바일 Safari가 누를 때 확대하지 않게)
   - 화면 아래에 닿는 요소는 `env(safe-area-inset-bottom)` 여백(`viewport-fit=cover`는 `app/layout.tsx`)
   - 서랍·모달은 화면 폭이 바뀌면 닫는다(배경 막만 남아 화면이 막히지 않게)
-- 클립보드 복사는 `lib/clipboard.ts`(마크다운 글자 + HTML). 붙여 넣는 편집기는 CSS를 버리고 태그만 받으므로,
-  붙여 넣기용 HTML은 크기·여백 대신 태그 단계와 빈 줄로 모양을 잡는다(`components/diary/diary-paste-document.tsx`)
+- 클립보드 복사는 `lib/clipboard.ts`(마크다운 글자 + HTML), 버튼은 `components/rich-copy-button.tsx`(일기 '전체 복사'·학습장 '클립보드에 복사' 공용).
+  붙여 넣는 편집기는 CSS를 버리고 태그만 받으므로, 붙여 넣기용 HTML은 크기·여백 대신 태그 단계와 빈 줄로 모양을 잡는다
+  (`components/diary/diary-paste-document.tsx`, `components/notebook/topic-paste-document.tsx`)
 - 로고 원본은 `public/brand/logo.svg` 하나. 파비콘·홈 화면 아이콘은 `npm run icons`로 만든다(손으로 고치지 않는다)
 
 ## LLM 사용량·비용

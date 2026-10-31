@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test"
 
-import { logOut, newAccount, signUp } from "./helpers"
+import { logOut, newAccount, readClipboard, signUp } from "./helpers"
 
-/** NOTE-01 학습장: /study-notes md 업로드와 주제별 관리 · NOTE-04 보관함(선택 보관·보관함 보기) */
+/** NOTE-01 학습장: /study-notes md 업로드와 주제별 관리 · NOTE-04 보관함(선택 보관·보관함 보기) · 주제 클립보드에 복사 */
 
 const backend = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8010"
 const FILENAME = "2026-10-27_01.md"
@@ -63,6 +63,15 @@ const SAMPLE = [
 
 /** 다른 프로젝트(frontmatter project)의 같은 날짜 노트. 파일명은 같지만 따로 올라가야 한다(NOTE-02). */
 const OTHER_PROJECT_SAMPLE = SAMPLE.replace("project: SpaceXyzDiary", "project: ai-one-park").split(TITLE).join(OTHER_TITLE)
+
+/** '클립보드에 복사' 시나리오용. 1번 주제에 이전 노트 상대 링크, 웹 링크, 더 깊은 제목(####)을 더한다. */
+const COPY_SAMPLE = SAMPLE.replace(
+    "> 한 줄 요약: 스킬은 절차를 적어 둔 md 파일이다.",
+    "> 이전 노트: [스킬 기초](2026-10-26_01.md#1-스킬-기초)\n> 한 줄 요약: 스킬은 절차를 적어 둔 md 파일이다."
+).replace(
+    "- SKILL.md는 frontmatter와 본문으로 나뉜다.",
+    "- SKILL.md는 frontmatter와 본문으로 나뉜다. [공식 문서](https://docs.claude.com/)\n\n#### frontmatter 필드\nname과 description이 필요하다."
+)
 
 const list = (page: Page) => page.locator('[data-slot="notebook-list"]')
 const detail = (page: Page) => page.locator('[data-slot="topic-detail"]')
@@ -166,6 +175,59 @@ test("md 파일을 올리면 주제별로 나뉘고 본문·메타가 새로고�
     await topics(page).getByRole("button", { name: "1. Claude Code 스킬 만들기", exact: true }).click()
     await expect(document(page).locator("pre")).toContainText("## 코드 블록 안의 제목은 주제가 아니다")
     await expect(meta(page)).toContainText("워크플로")
+})
+
+test("주제 본문의 '클립보드에 복사'는 제목과 본문을 마크다운 글자와 붙여 넣기 서식으로 함께 복사한다", async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"])
+    await signUp(page, "notebook-copy")
+    await seed(page, FILENAME, COPY_SAMPLE)
+    await openNotebook(page)
+    await topics(page).getByRole("button", { name: "1. Claude Code 스킬 만들기", exact: true }).click()
+
+    const copy = detail(page).getByRole("button", { name: "클립보드에 복사", exact: true })
+    const deleteButton = detail(page).getByRole("button", { name: "Claude Code 스킬 만들기 삭제", exact: true })
+    const deleteBefore = await deleteButton.boundingBox()
+    await copy.click()
+    await expect(copy).toContainText("복사됨")
+    // 글자가 '복사됨'으로 짧아져도 버튼 폭은 그대로라, 옆 '삭제'가 누르던 자리로 당겨지지 않는다.
+    expect((await deleteButton.boundingBox())?.x).toBe(deleteBefore?.x)
+    const { text, html } = await readClipboard(page)
+
+    // 글자: 제목(#) 다음에 노트 본문 그대로. 메타 줄(유형·태그·난이도)은 화면처럼 빠진다.
+    expect(text.startsWith("# Claude Code 스킬 만들기\n\n> 이전 노트: [스킬 기초](2026-10-26_01.md#1-스킬-기초)\n")).toBe(true)
+    expect(text).toContain("### 어떤 상황에서 나왔나")
+    expect(text).toContain("## 코드 블록 안의 제목은 주제가 아니다")
+    expect(text).not.toContain("`유형`")
+
+    // 서식: 제목 h1, 소제목 h3(앞에 빈 줄), 더 깊은 제목은 '▶ 굵은 글씨'. 상대 링크는 글자만, 웹 링크는 그대로.
+    const pasted = await page.evaluate((source) => {
+        const doc = new DOMParser().parseFromString(source, "text/html")
+        const isBlankLine = (element: Element | null) => element?.tagName === "P" && element.innerHTML === "<br>"
+        return {
+            h1: Array.from(doc.querySelectorAll("h1"), (heading) => heading.textContent),
+            h2: doc.querySelectorAll("h2").length,
+            h3: Array.from(doc.querySelectorAll("h3"), (heading) => ({ text: heading.textContent, blankBefore: isBlankLine(heading.previousElementSibling) })),
+            subHeadings: Array.from(doc.querySelectorAll("p > strong"), (strong) => strong.textContent),
+            links: Array.from(doc.querySelectorAll("a"), (link) => link.getAttribute("href")),
+            quote: doc.querySelector("blockquote")?.textContent ?? "",
+            code: doc.querySelector("pre")?.textContent ?? "",
+        }
+    }, html)
+    expect(pasted.h1).toEqual(["Claude Code 스킬 만들기"])
+    expect(pasted.h2).toBe(0)
+    expect(pasted.h3).toEqual([
+        { text: "어떤 상황에서 나왔나", blankBefore: true },
+        { text: "핵심 개념", blankBefore: true },
+    ])
+    expect(pasted.subHeadings).toEqual(["▶ frontmatter 필드"])
+    expect(pasted.links).toEqual(["https://docs.claude.com/"])
+    expect(pasted.quote).toContain("이전 노트: 스킬 기초")
+    expect(pasted.code).toContain("## 코드 블록 안의 제목은 주제가 아니다")
+
+    // 잠시 뒤 원래 글자로 돌아온다. 수정 중에는 버튼이 없다.
+    await expect(copy).toHaveText("클립보드에 복사")
+    await detail(page).getByRole("button", { name: "수정", exact: true }).click()
+    await expect(copy).toHaveCount(0)
 })
 
 test("같은 파일을 다시 올리면 거부하고, 학습장을 삭제한 뒤에는 다시 올릴 수 있으며, 다른 프로젝트의 같은 파일명은 따로 올라간다", async ({ page }) => {
@@ -513,6 +575,8 @@ test.describe("터치 폰(390px)", () => {
         await expect(detail(page)).toBeVisible()
         await expect(list(page)).toBeHidden()
         await expect(document(page).locator("pre")).toContainText("## 코드 블록 안의 제목은 주제가 아니다")
+        // 버튼이 한 줄에 다 들어가지 않으면 다음 줄로 넘어간다(가로 넘침 없이 화면 안에).
+        await expect(detail(page).getByRole("button", { name: "클립보드에 복사", exact: true })).toBeInViewport()
         expect(await hasHorizontalScroll(page)).toBe(false)
 
         await detail(page).getByRole("button", { name: "수정", exact: true }).click()
