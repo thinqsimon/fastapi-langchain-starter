@@ -73,6 +73,8 @@ test.describe("관리자", () => {
 
     test("공급자 키를 넣고 요금제별 라우트를 만들면 '지금 동작'이 바뀌고, 채팅은 계속 된다", async ({ page }) => {
         await signInAsAdmin(page)
+        // 마이그레이션이 기본 라우트(모델 사다리)를 넣어 두므로 빈 상태에서 시작한다.
+        await resetLlmSettings(page)
 
         const menu = await openAccountMenu(page)
         const adminButton = menu.getByRole("button", { name: "관리자" })
@@ -127,6 +129,22 @@ test.describe("관리자", () => {
         await page.getByRole("tab", { name: /^Pro/ }).click()
         await routeForm(page, "Pro", 1).getByRole("button", { name: "Pro 1번 라우트 삭제" }).click()
         await expect(page.locator('[data-slot="routes-empty"]')).toContainText("Pro 요금제에 라우트가 없습니다")
+
+        // 빈 요금제는 기본 라우트(Free보다 한 단계씩 비싼 모델)로 한 번에 채운다. Claude는 키가 없어 쓰이지 않는다.
+        await page.locator('[data-slot="routes-empty"]').getByRole("button", { name: "기본 라우트 채우기" }).click()
+        await expect(routeForm(page, "Pro", 1).getByLabel("모델")).toHaveValue("gemini-2.5-pro")
+        await expect(routeForm(page, "Pro", 2).getByLabel("모델")).toHaveValue("gpt-4.1-mini")
+        await expect(routeForm(page, "Pro", 3).getByLabel("모델")).toHaveValue("claude-sonnet-5-5")
+        await expect(routeForm(page, "Pro", 3)).toContainText("키 없음")
+        await expect(planLine(page, "pro")).toContainText("우선순위 1. Gemini (gemini-2.5-pro) → 2. OpenAI (gpt-4.1-mini)")
+
+        // 라우트 추가 폼은 요금제·공급자에 맞는 기본 모델을 미리 채운다(Max의 Claude는 Opus).
+        await page.getByRole("tab", { name: /^Max/ }).click()
+        const addMax = page.getByRole("form", { name: "Max 라우트 추가" })
+        await addMax.getByLabel("공급자").selectOption("anthropic")
+        await expect(addMax.getByLabel("모델")).toHaveValue("claude-opus-5-5")
+        await addMax.getByLabel("공급자").selectOption("openai")
+        await expect(addMax.getByLabel("모델")).toHaveValue("gpt-4.1")
 
         // 설정을 바꿔도 채팅은 계속 된다(E2E는 fake 공급자라 실제 호출은 없다).
         await page.getByRole("link", { name: "채팅", exact: true }).click()

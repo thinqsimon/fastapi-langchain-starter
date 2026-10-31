@@ -9,21 +9,21 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PLANS, planLabel, providerLabel } from "@/lib/llm-labels"
+import { DEFAULT_ROUTE_MODELS, PLANS, planLabel, providerLabel } from "@/lib/llm-labels"
 import { routesOf, useAdminStore } from "@/store/admin"
 import { useAuthStore } from "@/store/auth"
 
 /** 공급자 순서와 예시 모델. 서버는 provider 값만 안다. */
 const PROVIDERS: { provider: LlmProviderName; vendor: string; examples: string }[] = [
-    { provider: "openai", vendor: "OpenAI", examples: "gpt-4o-mini, gpt-4o, gpt-4.1" },
-    { provider: "anthropic", vendor: "Anthropic", examples: "claude-sonnet-4-5, claude-haiku-4-5" },
+    { provider: "openai", vendor: "OpenAI", examples: "gpt-4o-mini, gpt-4.1-mini, gpt-4.1" },
+    { provider: "anthropic", vendor: "Anthropic", examples: "claude-haiku-5-5, claude-sonnet-5-5, claude-opus-5-5" },
     { provider: "google_genai", vendor: "Google", examples: "gemini-2.5-flash, gemini-2.5-pro" },
 ]
 
 const PLAN_HINTS: Record<PlanName, string> = {
-    free: "기본 요금제. 라우트가 없으면 서버의 .env 설정(LLM_PROVIDER, LLM_MODEL)을 씁니다.",
-    pro: "라우트가 없으면 free 요금제의 라우트를 그대로 씁니다.",
-    max: "라우트가 없으면 free 요금제의 라우트를 그대로 씁니다.",
+    free: "기본 요금제. 기본값은 가장 싼 모델(Gemini 2.5 Flash → GPT-4o mini → Claude Haiku 5.5). 라우트가 없으면 서버의 .env 설정을 씁니다.",
+    pro: "기본값은 Free보다 한 단계 비싼 모델(Gemini 2.5 Pro → GPT-4.1 mini → Claude Sonnet 5.5). 라우트가 없으면 free 라우트를 그대로 씁니다.",
+    max: "기본값은 Pro보다 한 단계 더 비싼 모델(GPT-4.1 → Gemini 2.5 Pro → Claude Opus 5.5). 라우트가 없으면 free 라우트를 그대로 씁니다.",
 }
 
 /** 관리자용 LLM 설정: 공급자 API 키와 요금제별 라우팅(ADMIN-01·03). */
@@ -186,8 +186,10 @@ function ProviderKeyForm({ info, row }: { info: (typeof PROVIDERS)[number]; row?
 }
 
 function PlanRoutesCard({ routes, providers }: { routes: LlmRoute[]; providers: LlmProviderKey[] }) {
+    const seedDefaults = useAdminStore((state) => state.seedDefaults)
     const [plan, setPlan] = useState<PlanName>("free")
     const planRoutes = routesOf(routes, plan)
+    const { result: seedResult, isPending: isSeeding, run: runSeed } = useFormAction()
 
     return (
         <Card>
@@ -216,9 +218,27 @@ function PlanRoutesCard({ routes, providers }: { routes: LlmRoute[]; providers: 
                 <p className="text-xs text-muted-foreground">{PLAN_HINTS[plan]}</p>
 
                 {planRoutes.length === 0 ? (
-                    <p data-slot="routes-empty" className="rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground">
-                        {planLabel(plan)} 요금제에 라우트가 없습니다.
-                    </p>
+                    <div
+                        data-slot="routes-empty"
+                        className="flex flex-col items-center gap-2 rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground"
+                    >
+                        <p>{planLabel(plan)} 요금제에 라우트가 없습니다.</p>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={isSeeding}
+                            onClick={() =>
+                                void runSeed(async () => {
+                                    const created = await seedDefaults(plan)
+                                    return `기본 라우트 ${created.length}개를 넣었습니다.`
+                                }, "기본 라우트를 넣지 못했습니다.")
+                            }
+                        >
+                            기본 라우트 채우기
+                        </Button>
+                        <FormStatus result={seedResult} />
+                    </div>
                 ) : (
                     <ol aria-label={`${planLabel(plan)} 라우트`} className="flex flex-col gap-3">
                         {planRoutes.map((route, index) => (
@@ -357,10 +377,18 @@ function RouteRow({ route, index, count }: { route: LlmRoute; index: number; cou
 function AddRouteForm({ plan, providers }: { plan: PlanName; providers: LlmProviderKey[] }) {
     const addRoute = useAdminStore((state) => state.addRoute)
     const [provider, setProvider] = useState<LlmProviderName>("openai")
-    const [model, setModel] = useState("")
+    // 공급자·요금제에 맞는 기본 모델(한 단계씩 비싼 사다리)을 미리 채우고, 관리자가 고치면 그 값을 쓴다.
+    const [model, setModel] = useState(() => DEFAULT_ROUTE_MODELS[plan]?.[provider] ?? "")
+    const [shownDefault, setShownDefault] = useState(model)
     const { result, isPending, run } = useFormAction()
     const example = PROVIDERS.find((info) => info.provider === provider)?.examples ?? ""
     const hasKey = providers.find((row) => row.provider === provider)?.has_api_key
+    const defaultModel = DEFAULT_ROUTE_MODELS[plan]?.[provider] ?? ""
+    if (defaultModel !== shownDefault) {
+        // 탭(요금제)이나 공급자가 바뀌면 기본 모델도 바뀐다. 직접 고친 값은 유지한다.
+        setShownDefault(defaultModel)
+        if (!model || model === shownDefault) setModel(defaultModel)
+    }
 
     return (
         <form
@@ -410,7 +438,7 @@ function AddRouteForm({ plan, providers }: { plan: PlanName; providers: LlmProvi
                 </div>
             </div>
             <p className="text-xs text-muted-foreground">
-                예: {example}. {hasKey === false && `${providerLabel(provider)} 키가 없어 추가해도 쓰이지 않습니다.`}
+                {planLabel(plan)} 기본값 {defaultModel}. 예: {example}. {hasKey === false && `${providerLabel(provider)} 키가 없어 추가해도 쓰이지 않습니다.`}
             </p>
             <FormStatus result={result} />
         </form>

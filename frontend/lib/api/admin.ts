@@ -33,6 +33,12 @@ export async function deleteRoute(routeId: string): Promise<void> {
     await httpClient.delete(`/api/admin/llm-routes/${routeId}`)
 }
 
+/** 라우트가 없는 요금제에 기본 모델 사다리를 넣는다. 이미 있으면 409. */
+export async function seedDefaultRoutes(plan: PlanName): Promise<LlmRoute[]> {
+    const { data } = await httpClient.post<LlmRoute[]>("/api/admin/llm-routes/defaults", { plan })
+    return data
+}
+
 /** 이메일이나 이름 일부로 사용자를 찾는다(최근 가입순, 최대 20명). */
 export async function searchUsers(query: string): Promise<AdminUser[]> {
     const { data } = await httpClient.get<AdminUser[]>("/api/admin/users", { params: { q: query } })

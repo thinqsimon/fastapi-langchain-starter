@@ -30,6 +30,20 @@ class ProviderAttempt:
 
 # OpenAI는 스트리밍에서 기본적으로 사용량을 주지 않아 명시해야 한다.
 _STREAM_USAGE_PROVIDERS = {"openai"}
+# Claude에는 temperature를 보내지 않는다. anthropic SDK 2.x가 쓰는 API 버전(2026-10-21)은
+# temperature·top_p·top_k를 보내면 모든 모델에서 400이고, 5.5 계열은 그 전부터 기본값만 받는다
+# (langchain-anthropic은 보내기 전에 ValueError를 낸다). 빼면 모델 기본 샘플링을 쓴다.
+_NO_SAMPLING_PROVIDERS = {"anthropic"}
+
+
+def _provider_kwargs(provider: str) -> dict[str, Any]:
+    """공급자마다 다른 생성 옵션. 테스트가 실제 호출 없이 확인할 수 있게 따로 둔다."""
+    kwargs: dict[str, Any] = {}
+    if provider not in _NO_SAMPLING_PROVIDERS:
+        kwargs["temperature"] = settings.LLM_TEMPERATURE
+    if provider in _STREAM_USAGE_PROVIDERS:
+        kwargs["stream_usage"] = True
+    return kwargs
 
 
 def get_chat_model(
@@ -51,16 +65,12 @@ def get_chat_model(
     resolved_model = model or settings.LLM_MODEL
     resolved_key = api_key if api_key is not None else settings.llm_api_key
     resolved_base_url = base_url if base_url is not None else settings.LLM_BASE_URL
-    extra: dict[str, Any] = (
-        {"stream_usage": True} if resolved_provider in _STREAM_USAGE_PROVIDERS else {}
-    )
 
     chat_model: BaseChatModel = init_chat_model(
         resolved_model,
         model_provider=resolved_provider,
         api_key=resolved_key or None,
         base_url=resolved_base_url or None,
-        temperature=settings.LLM_TEMPERATURE,
-        **extra,
+        **_provider_kwargs(resolved_provider),
     )
     return chat_model

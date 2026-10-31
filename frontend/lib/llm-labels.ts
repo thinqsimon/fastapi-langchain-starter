@@ -36,3 +36,13 @@ export function planPeriodLabel(plan: string, expiresAt: string | null | undefin
 export const COUPON_DURATIONS = ["7d", "15d", "1m", "3m", "6m", "12m"] as const
 export const COUPON_DURATION_LABELS: Record<string, string> = { "7d": "7일", "15d": "15일", "1m": "1개월", "3m": "3개월", "6m": "6개월", "12m": "12개월" }
 export const COUPON_VALID_DAYS = [7, 14, 30, 90] as const
+
+/**
+ * 요금제별 기본 모델(백엔드 app/domain/admin/defaults.py와 같은 값). 라우트 추가 폼이 미리 채운다.
+ * Free는 가장 싼 모델, Pro·Max는 공급자마다 한 단계씩 비싼 모델.
+ */
+export const DEFAULT_ROUTE_MODELS: Record<string, Record<string, string>> = {
+    free: { google_genai: "gemini-2.5-flash", openai: "gpt-4o-mini", anthropic: "claude-haiku-5-5" },
+    pro: { google_genai: "gemini-2.5-pro", openai: "gpt-4.1-mini", anthropic: "claude-sonnet-5-5" },
+    max: { openai: "gpt-4.1", google_genai: "gemini-2.5-pro", anthropic: "claude-opus-5-5" },
+}

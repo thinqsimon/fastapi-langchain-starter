@@ -72,6 +72,22 @@ def create_route(payload: RouteCreate, _admin: AdminUser, db: DbSession) -> Rout
     return AdminLlmSettingsService(db).create_route(payload)
 
 
+@router.post(
+    "/llm-routes/defaults",
+    response_model=list[RouteRead],
+    status_code=status.HTTP_201_CREATED,
+    summary="요금제에 기본 라우트(모델 사다리) 넣기",
+    description=(
+        "라우트가 하나도 없는 요금제에 기본값을 넣습니다. Free는 가장 싼 모델, "
+        "Pro·Max는 공급자마다 한 단계씩 비싼 모델입니다(app/domain/admin/defaults.py). "
+        "이미 라우트가 있으면 409."
+    ),
+    responses={**FORBIDDEN, 409: {"description": "이미 라우트가 있음"}},
+)
+def seed_default_routes(payload: PlanUpdate, _admin: AdminUser, db: DbSession) -> list[RouteRead]:
+    return AdminLlmSettingsService(db).seed_default_routes(payload.plan)
+
+
 @router.patch(
     "/llm-routes/{route_id}",
     response_model=RouteRead,

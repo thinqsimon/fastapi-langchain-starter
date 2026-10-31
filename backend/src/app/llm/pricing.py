@@ -20,6 +20,10 @@ DEFAULT_PRICES_USD_PER_MILLION: dict[str, tuple[str, str]] = {
     "gpt-4.1": ("2.00", "8.00"),
     "claude-haiku-4-5": ("1.00", "5.00"),
     "claude-sonnet-4-5": ("3.00", "15.00"),
+    # 클로드 5.5 계열(요금제 기본 라우트). Haiku 5.5는 프롬프트 10만 토큰 이하 기준.
+    "claude-haiku-5-5": ("0.10", "0.50"),
+    "claude-sonnet-5-5": ("2.00", "10.00"),
+    "claude-opus-5-5": ("4.00", "20.00"),
     "gemini-2.0-flash": ("0.10", "0.40"),
     "gemini-2.5-flash": ("0.30", "2.50"),
     "gemini-2.5-pro": ("1.25", "10.00"),

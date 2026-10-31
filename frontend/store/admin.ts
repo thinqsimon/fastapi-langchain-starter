@@ -16,6 +16,8 @@ type AdminState = {
     removeRoute: (routeId: string) => Promise<void>
     /** 같은 요금제 안에서 한 칸 위/아래로. 두 라우트의 순서 값을 맞바꾼다. */
     moveRoute: (routeId: string, direction: -1 | 1) => Promise<void>
+    /** 라우트가 없는 요금제에 기본 모델 사다리를 넣는다. */
+    seedDefaults: (plan: PlanName) => Promise<LlmRoute[]>
     reset: () => void
 }
 
@@ -85,6 +87,12 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         const theirs = index + 1
         const [a, b] = await Promise.all([adminApi.updateRoute(current.id, { priority: mine }), adminApi.updateRoute(neighbor.id, { priority: theirs })])
         set((state) => ({ routes: state.routes.map((route) => (route.id === a.id ? a : route.id === b.id ? b : route)) }))
+    },
+
+    seedDefaults: async (plan) => {
+        const created = await adminApi.seedDefaultRoutes(plan)
+        set((state) => ({ routes: [...state.routes, ...created] }))
+        return created
     },
 
     reset: () => set({ providers: [], routes: [], isLoading: false, error: null }),

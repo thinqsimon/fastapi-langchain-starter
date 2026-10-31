@@ -258,3 +258,28 @@ def test_active_chain_skips_keys_it_cannot_decrypt(
     monkeypatch.setattr(settings, "SETTINGS_ENCRYPTION_KEY", Fernet.generate_key().decode())
 
     assert AdminLlmSettingsService(db_session).active_provider_chain("free") == []
+
+
+def test_seed_default_routes_fills_an_empty_plan_with_the_model_ladder(
+    api_client: TestClient, admin_enabled: None
+) -> None:
+    """ADMIN-04: 비어 있는 요금제에 기본 사다리를 넣는다. 이미 있으면 409, 관리자만."""
+    headers = auth_headers(api_client, ADMIN)
+    url = f"{ROUTES}/defaults"
+
+    res = api_client.post(url, json={"plan": "pro"}, headers=headers)
+    assert res.status_code == 201, res.text
+    assert [(r["priority"], r["provider"], r["model"]) for r in res.json()] == [
+        (1, "google_genai", "gemini-2.5-pro"),
+        (2, "openai", "gpt-4.1-mini"),
+        (3, "anthropic", "claude-sonnet-5-5"),
+    ]
+    assert all(r["plan"] == "pro" and r["enabled"] and not r["forced"] for r in res.json())
+
+    assert api_client.post(url, json={"plan": "pro"}, headers=headers).status_code == 409
+    assert api_client.post(url, json={"plan": "vip"}, headers=headers).status_code == 422
+    member = auth_headers(api_client, MEMBER)
+    assert api_client.post(url, json={"plan": "max"}, headers=member).status_code == 403
+
+    # 목록 조회는 기본값을 몰래 채우지 않는다(지운 요금제가 되살아나지 않게).
+    assert {r["plan"] for r in api_client.get(ROUTES, headers=headers).json()} == {"pro"}

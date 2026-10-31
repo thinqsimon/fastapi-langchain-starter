@@ -940,3 +940,13 @@ E2E는 새로고침 뒤 대화가 자동 선택되지 않아 목록에서 다시
 - ADR-0015, feature_list COUPON-01
 **검증**: `./scripts/verify.sh` 백엔드·프론트 통과(아래 커밋 참고). E2E coupon·admin·account·auth 통과
 **운영 적용**: push → Render가 마이그레이션 적용(coupons 테이블, users.plan_expires_at). 환경 변수 추가 없음
+
+## 2026-10-31 · 세션 32 · ADMIN-04 요금제별 기본 모델 사다리 + Claude temperature 제거
+
+**요청**: 교육에 맞는 모델 중 Free에 비해 Pro·Max는 한 단계씩 비싼 모델이 기본으로. 표를 제시했고 사용자가 "적용 부탁해요".
+**바뀐 점(제시한 표 대비)**: claude-api 레퍼런스 확인 결과 claude-opus-4-1은 2026-08-05 퇴역(호출 실패), claude-sonnet-4-5는 2026-11-30 퇴역 예정 → Claude 열을 haiku/sonnet/opus **5.5**로.
+같은 확인에서 설치된 anthropic SDK 2.3.0(API 2026-10-21)은 temperature를 보내면 모든 모델에서 400, langchain-anthropic은 5.5 모델에 temperature를 주면 요청 전에 ValueError → **Claude에는 temperature를 보내지 않도록** 수정(이전엔 Claude 키를 넣어도 항상 실패해 다음 공급자로 넘어갔을 것).
+**한 일**: `domain/admin/defaults.py`(사다리), 데이터 마이그레이션 `708a27953136`(빈 요금제에만, 운영 상태 재현 확인), `seed_default_routes` + `POST /api/admin/llm-routes/defaults`, `llm/providers._provider_kwargs`,
+가격표에 claude-*-5-5 추가(직전에 넣었던 퇴역 opus-4-1 제거), 프론트 "기본 라우트 채우기" 버튼·추가 폼 기본 모델·안내 문구, `.env.example` 주석, 테스트(`tests/test_llm_defaults.py`, test_admin 추가), admin.spec 갱신, ADR-0014 후속
+**검증**: 백엔드 281 passed(98.2%), 프론트 통과, E2E 72 passed
+**운영 적용**: push → Render가 마이그레이션 적용 → 운영 Pro·Max에 기본 라우트(Free는 그대로). Claude 키가 없어 Claude 라우트는 쓰이지 않음

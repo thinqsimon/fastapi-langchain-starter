@@ -723,6 +723,22 @@
       ],
       "verify": "./scripts/verify.sh 및 ./scripts/e2e.sh e2e/coupon.spec.ts",
       "passes": true
+    },
+    {
+      "id": "ADMIN-04",
+      "phase": 9,
+      "owner": "llm-engineer",
+      "title": "요금제별 기본 모델 사다리(Free < Pro < Max) + Claude temperature 제거",
+      "requirement": "2026-10-31 사용자 요청: 교육에 맞는 모델 중 Free에 비해 Pro·Max는 한 단계씩 비싼 모델을 기본으로. 사용자가 표를 보고 적용 요청(Claude는 퇴역·예정 모델이라 5.5 계열로 교체)",
+      "acceptance": [
+        "기본 라우트: Free gemini-2.5-flash→gpt-4o-mini→claude-haiku-5-5, Pro gemini-2.5-pro→gpt-4.1-mini→claude-sonnet-5-5, Max gpt-4.1→gemini-2.5-pro→claude-opus-5-5",
+        "데이터 마이그레이션이 라우트가 없는 요금제에만 기본값을 넣고 이미 설정된 요금제(운영 free)는 그대로 둔다. 목록 조회는 자동으로 채우지 않는다",
+        "관리자 화면의 빈 요금제에 '기본 라우트 채우기'(POST /api/admin/llm-routes/defaults, 이미 있으면 409), 라우트 추가 폼은 요금제·공급자별 기본 모델을 미리 채운다",
+        "Claude 요청에는 temperature를 보내지 않고(OpenAI·Gemini는 유지), 기본 모델 단가가 단가표에 있으며 공급자별·1순위별로 Free < Pro ≤ Max임을 테스트로 고정한다",
+        "ADR-0014 후속 절, 테스트, E2E(admin.spec.ts)를 제공하고 ./scripts/verify.sh와 E2E를 통과한다"
+      ],
+      "verify": "./scripts/verify.sh 및 ./scripts/e2e.sh e2e/admin.spec.ts",
+      "passes": true
     }
   ]
 }

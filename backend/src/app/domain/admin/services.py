@@ -13,9 +13,10 @@ import uuid
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.exceptions import AppError, NotFoundError, ServiceUnavailableError
+from app.core.exceptions import AppError, ConflictError, NotFoundError, ServiceUnavailableError
 from app.core.plans import DEFAULT_PLAN, PLANS
 from app.core.security import create_access_token, decrypt_secret, encrypt_secret
+from app.domain.admin.defaults import DEFAULT_ROUTES
 from app.domain.admin.models import LlmPlanRoute, LlmProvider
 from app.domain.admin.repositories import LlmPlanRouteRepository, LlmProviderRepository
 from app.domain.admin.schemas import (
@@ -76,6 +77,40 @@ class AdminLlmSettingsService:
     def list_routes(self) -> list[RouteRead]:
         keys = self._key_presence()
         return [_to_route_read(route, keys) for route in self.routes.list_all()]
+
+    def seed_default_routes(self, plan: str | None = None) -> list[RouteRead]:
+        """라우트가 없는 요금제에 기본 사다리(defaults.py)를 넣는다.
+
+        plan을 주면 그 요금제만 넣고, 이미 라우트가 있으면 409. 주지 않으면 비어 있는 요금제 모두.
+        """
+        self._ensure_providers()
+        targets = [plan] if plan else list(PLANS)
+        created: list[LlmPlanRoute] = []
+        for target in targets:
+            if target not in DEFAULT_ROUTES:
+                raise NotFoundError("없는 요금제입니다.")
+            if self.routes.list_for_plan(target):
+                if plan:
+                    raise ConflictError(
+                        f"{target} 요금제에 이미 라우트가 있습니다. "
+                        "기본값을 넣으려면 먼저 모두 지우세요."
+                    )
+                continue
+            for priority, (provider, model) in enumerate(DEFAULT_ROUTES[target], start=1):
+                created.append(
+                    self.routes.create(
+                        plan=target, provider=provider, model=model, priority=priority
+                    )
+                )
+        if created:
+            self.db.commit()
+            logger.info(
+                "llm_routes_seeded plans=%s count=%s",
+                sorted({r.plan for r in created}),
+                len(created),
+            )
+        keys = self._key_presence()
+        return [_to_route_read(r, keys) for r in created]
 
     def create_route(self, payload: RouteCreate) -> RouteRead:
         self._ensure_providers()
