@@ -146,3 +146,34 @@ test("새 대화를 준비하는 동안 보낸 메시지는 새 대화로 간다
     await list.getByRole("button", { name: "첫 대화", exact: true }).click()
     await expect(page.locator('[data-role="user"]')).toHaveText(["첫 대화"])
 })
+
+test("답변의 첫 글자를 기다리는 동안 점 세 개가 움직이고, 동작 줄이기 설정이면 깜빡이기만 한다", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 600 })
+    await signUpAndOpenChat(page)
+    // 대화를 화면보다 길게 만들어, 기다리는 동안 페이지 전체가 스크롤되지 않는지도 함께 본다.
+    for (const text of ["첫 질문", "두 번째 질문", "세 번째 질문", "네 번째 질문"]) await sendChatMessage(page, text)
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+        release = resolve
+    })
+    await page.route("**/api/conversations/*/stream", async (route) => {
+        const response = await route.fetch()
+        await gate
+        await route.fulfill({ response })
+    })
+    await page.getByLabel("메시지").fill("기다리는 동안")
+    await page.getByRole("button", { name: "보내기" }).click()
+
+    const indicator = page.locator('[data-role="assistant"][data-pending] [data-slot="typing-indicator"]')
+    await expect(indicator).toContainText("답변을 준비하고 있어요")
+    const dots = indicator.locator('[aria-hidden="true"]')
+    await expect(dots).toHaveCount(3)
+    await expect(dots.first()).toHaveCSS("animation-name", "typing-dot")
+    expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true)
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    await expect(dots.first()).toHaveCSS("animation-name", "pulse")
+
+    release()
+    await expect(savedAssistant(page)).toHaveCount(5)
+    await expect(indicator).toHaveCount(0)
+})

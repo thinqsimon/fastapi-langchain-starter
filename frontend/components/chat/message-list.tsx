@@ -56,12 +56,33 @@ export function MessageList({
 
             {isStreaming && (
                 <Bubble role="assistant" pending assistant={assistant}>
-                    {streamingAnswer ? <MarkdownView>{streamingAnswer}</MarkdownView> : <span className="animate-pulse">…</span>}
+                    {streamingAnswer ? <MarkdownView>{streamingAnswer}</MarkdownView> : <TypingDots />}
                 </Bubble>
             )}
 
             <div ref={bottomRef} />
         </div>
+    )
+}
+
+/**
+ * 첫 글자가 오기 전의 대기 표시. 점 세 개가 차례로 튀어 올라 멈추지 않았음을 보여 준다.
+ * 동작 줄이기 설정이면 튀지 않고 차례로 깜빡이기만 한다.
+ */
+function TypingDots() {
+    return (
+        // relative: 숨김 글자(sr-only)가 메시지 스크롤 영역 밖으로 빠져나가 페이지 전체가 스크롤되지 않게 한다.
+        <span data-slot="typing-indicator" className="relative flex h-5 items-center gap-1.5">
+            {[0, 150, 300].map((delay) => (
+                <span
+                    key={delay}
+                    aria-hidden="true"
+                    className="size-2 animate-typing-dot rounded-full bg-muted-foreground motion-reduce:animate-pulse"
+                    style={{ animationDelay: `${delay}ms` }}
+                />
+            ))}
+            <span className="sr-only">답변을 준비하고 있어요</span>
+        </span>
     )
 }
 
