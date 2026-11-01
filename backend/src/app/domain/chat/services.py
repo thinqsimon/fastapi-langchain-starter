@@ -11,6 +11,7 @@ from app.core.plans import DEFAULT_PLAN
 from app.domain.admin.services import AdminLlmSettingsService
 from app.domain.chat.models import Conversation, Message
 from app.domain.chat.repositories import ConversationRepository, MessageRepository
+from app.domain.chat.schemas import DEFAULT_CONVERSATION_TITLE
 from app.llm.chains.chat import ModelInfo, TokenUsage, stream_reply
 
 logger = logging.getLogger(__name__)
@@ -80,7 +81,8 @@ class ChatService:
 
         self.messages.add(conversation_id=conversation_id, role="user", content=content)
         # 첫 메시지를 제목으로 삼아 목록에서 알아보기 쉽게 한다.
-        if not history:
+        # 사용자가 먼저 이름을 붙였으면 그대로 둔다.
+        if not history and conversation.title == DEFAULT_CONVERSATION_TITLE:
             conversation.title = content[:TITLE_FROM_MESSAGE_LENGTH]
         self.db.commit()
 

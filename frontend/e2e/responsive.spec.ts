@@ -58,11 +58,26 @@ test.describe("터치 폰(390px)", () => {
         await expect(drawer).toBeVisible()
         await expect.poll(async () => drawer.boundingBox().then((box) => Math.round(box?.x ?? -1))).toBe(0)
 
-        // 터치 기기에는 hover가 없으므로 삭제 버튼이 처음부터 보인다.
-        const remove = drawer.getByRole("button", { name: "모바일에서 보낸 질문 삭제" })
-        await expect(remove).toHaveCSS("opacity", "1")
+        // 터치 기기에는 hover가 없으므로 '…' 메뉴 버튼이 처음부터 보인다.
+        await expect(drawer.getByRole("button", { name: "모바일에서 보낸 질문 메뉴" })).toHaveCSS("opacity", "1")
 
-        await drawer.getByRole("button", { name: "모바일에서 보낸 질문", exact: true }).click()
+        // 서랍 안에서 이름을 바꾼다. 입력칸 글자는 16px 이상이고, Esc는 이름 바꾸기만 취소한다(서랍은 열린 채).
+        await drawer.getByRole("button", { name: "모바일에서 보낸 질문 메뉴" }).click()
+        await page.getByRole("menuitem", { name: "이름 바꾸기" }).click()
+        const title = drawer.getByRole("textbox", { name: "대화 제목" })
+        await expect(title).toBeFocused()
+        expect(await smallestInputFont(page)).toBeGreaterThanOrEqual(16)
+        await title.press("Escape")
+        await expect(title).toHaveCount(0)
+        await expect(drawer).toBeVisible()
+        await drawer.getByRole("button", { name: "모바일에서 보낸 질문 메뉴" }).click()
+        await page.getByRole("menuitem", { name: "이름 바꾸기" }).click()
+        await title.fill("폰에서 바꾼 제목")
+        await title.press("Enter")
+        await expect(drawer.getByRole("button", { name: "폰에서 바꾼 제목", exact: true })).toBeVisible()
+        expect(await hasHorizontalScroll(page)).toBe(false)
+
+        await drawer.getByRole("button", { name: "폰에서 바꾼 제목", exact: true }).click()
         await expect(drawer).toBeHidden()
         await expect(page.locator('[data-role="user"]')).toContainText("모바일에서 보낸 질문")
     })
@@ -105,11 +120,11 @@ test.describe("아이폰 폭(375px)", () => {
 test.describe("터치 태블릿(820px)", () => {
     test.use({ viewport: { width: 820, height: 1180 }, hasTouch: true, isMobile: true })
 
-    test("화면이 넓어도 터치 기기면 삭제 버튼이 보이고 입력칸 글자는 16px 이상이다", async ({ page }) => {
+    test("화면이 넓어도 터치 기기면 '…' 메뉴 버튼이 보이고 입력칸 글자는 16px 이상이다", async ({ page }) => {
         await signUp(page, "e2e-responsive")
         await sendChatMessage(page, "태블릿 질문")
 
-        await expect(page.getByRole("button", { name: "태블릿 질문 삭제" })).toHaveCSS("opacity", "1")
+        await expect(page.getByRole("button", { name: "태블릿 질문 메뉴" })).toHaveCSS("opacity", "1")
         expect(await smallestInputFont(page)).toBeGreaterThanOrEqual(16)
     })
 })

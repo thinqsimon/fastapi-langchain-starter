@@ -1,8 +1,12 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
+import { Ellipsis, Pencil, Trash2 } from "lucide-react"
 
+import type { Conversation } from "@/lib/api"
 import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { useMediaQuery } from "@/lib/use-media-query"
 import { cn } from "@/lib/utils"
@@ -10,13 +14,14 @@ import { useChatStore } from "@/store/chat"
 import { DESKTOP_QUERY, useLayoutStore } from "@/store/layout"
 
 /**
- * 대화 목록. 넓은 화면에서는 왼쪽에 붙어 있고(헤더 아이콘으로 접고 펼침),
+ * 대화 목록. 넓은 화면에서는 왼쪽에 붙어 있고(헤더 아이콘으로 접고 펼침, 오른쪽 손잡이로 너비 조절),
  * 모바일에서는 감춰 두었다가 아이콘을 누르면 왼쪽에서 서랍처럼 열린다.
  */
 export function ConversationSidebar() {
     const desktopOpen = useLayoutStore((state) => state.desktopSidebarOpen)
     const mobileOpen = useLayoutStore((state) => state.mobileSidebarOpen)
     const setMobileOpen = useLayoutStore((state) => state.setMobileSidebarOpen)
+    const listWidth = useLayoutStore((state) => state.listWidth)
     const isDesktop = useMediaQuery(DESKTOP_QUERY)
 
     // 서랍을 연 채로 화면이 넓어지면(태블릿 회전·창 크기 변경) 서랍을 닫는다.
@@ -28,7 +33,7 @@ export function ConversationSidebar() {
     return (
         <>
             {desktopOpen && (
-                <aside id="conversation-sidebar" className="hidden w-64 shrink-0 flex-col border-r md:flex">
+                <aside id="conversation-sidebar" style={{ width: listWidth }} className="hidden shrink-0 flex-col md:flex">
                     <ConversationList />
                 </aside>
             )}
@@ -50,9 +55,7 @@ export function ConversationSidebar() {
 function ConversationList({ onPicked }: { onPicked?: () => void }) {
     const conversations = useChatStore((state) => state.conversations)
     const activeId = useChatStore((state) => state.activeId)
-    const openConversation = useChatStore((state) => state.openConversation)
     const startNewConversation = useChatStore((state) => state.startNewConversation)
-    const removeConversation = useChatStore((state) => state.removeConversation)
 
     return (
         <>
@@ -73,33 +76,119 @@ function ConversationList({ onPicked }: { onPicked?: () => void }) {
 
                 <ul className="flex flex-col gap-1">
                     {conversations.map((conversation) => (
-                        <li key={conversation.id} className="group flex items-center gap-1">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    onPicked?.()
-                                    void openConversation(conversation.id)
-                                }}
-                                className={cn(
-                                    "min-w-0 flex-1 truncate rounded-md px-3 py-2 text-left text-sm hover:bg-muted",
-                                    conversation.id === activeId && "bg-muted font-medium"
-                                )}
-                            >
-                                {conversation.title}
-                            </button>
-                            {/* 마우스가 있는 기기에서만 올렸을 때 보인다. 터치 기기(폰·태블릿)는 hover가 없으므로 늘 보인다. */}
-                            <button
-                                type="button"
-                                aria-label={`${conversation.title} 삭제`}
-                                onClick={() => void removeConversation(conversation.id)}
-                                className="px-2 py-2 text-xs text-muted-foreground group-hover:opacity-100 hover:text-destructive focus-visible:opacity-100 [@media(hover:hover)]:opacity-0"
-                            >
-                                삭제
-                            </button>
-                        </li>
+                        <ConversationItem key={conversation.id} conversation={conversation} active={conversation.id === activeId} onPicked={onPicked} />
                     ))}
                 </ul>
             </nav>
         </>
+    )
+}
+
+/** 대화 한 줄. 제목을 누르면 열고, 옆 '…' 메뉴에서 이름을 바꾸거나 지운다. */
+function ConversationItem({ conversation, active, onPicked }: { conversation: Conversation; active: boolean; onPicked?: () => void }) {
+    const openConversation = useChatStore((state) => state.openConversation)
+    const renameConversation = useChatStore((state) => state.renameConversation)
+    const removeConversation = useChatStore((state) => state.removeConversation)
+    const [renaming, setRenaming] = useState(false)
+    const input = useRef<HTMLInputElement>(null)
+    const titleButton = useRef<HTMLButtonElement>(null)
+    // Enter 뒤 입력칸이 사라질 때 blur가 한 번 더 와도 두 번 저장하지 않게 한다.
+    const editing = useRef(false)
+    const refocusTitle = useRef(false)
+
+    // 키보드로 끝냈으면(Enter·Esc) 제목 버튼으로 포커스를 돌려준다. 다른 곳을 눌러 끝냈으면 그곳에 둔다.
+    useEffect(() => {
+        if (renaming || !refocusTitle.current) return
+        refocusTitle.current = false
+        titleButton.current?.focus()
+    }, [renaming])
+
+    const startRenaming = () => {
+        editing.current = true
+        setRenaming(true)
+    }
+
+    /** 비우거나 그대로면 저장하지 않는다(store가 거른다). */
+    const finish = (save: boolean, byKeyboard: boolean) => {
+        if (!editing.current) return
+        editing.current = false
+        refocusTitle.current = byKeyboard
+        const title = input.current?.value ?? ""
+        setRenaming(false)
+        if (save) void renameConversation(conversation.id, title)
+    }
+
+    return (
+        <li className="group flex items-center gap-1">
+            {renaming ? (
+                <form
+                    className="min-w-0 flex-1"
+                    onSubmit={(event) => {
+                        event.preventDefault()
+                        finish(true, true)
+                    }}
+                >
+                    <Input
+                        ref={input}
+                        aria-label="대화 제목"
+                        defaultValue={conversation.title}
+                        maxLength={100}
+                        onFocus={(event) => event.currentTarget.select()}
+                        onBlur={() => finish(true, false)}
+                        onKeyDown={(event) => {
+                            if (event.key !== "Escape") return
+                            // 서랍(폰의 대화 목록)까지 닫히지 않게 여기서 멈춘다.
+                            event.preventDefault()
+                            event.stopPropagation()
+                            finish(false, true)
+                        }}
+                    />
+                </form>
+            ) : (
+                <button
+                    ref={titleButton}
+                    type="button"
+                    title={conversation.title}
+                    onClick={() => {
+                        onPicked?.()
+                        void openConversation(conversation.id)
+                    }}
+                    className={cn("min-w-0 flex-1 truncate rounded-md px-3 py-2 text-left text-sm hover:bg-muted", active && "bg-muted font-medium")}
+                >
+                    {conversation.title}
+                </button>
+            )}
+            <DropdownMenu>
+                <DropdownMenuTrigger
+                    render={
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`${conversation.title} 메뉴`}
+                            className={cn(
+                                "shrink-0 text-muted-foreground",
+                                // 마우스가 있는 기기에서는 줄에 올리거나(포커스·메뉴 열림 포함) 지금 보는 대화일 때 보인다.
+                                // 터치 기기(폰·태블릿)는 hover가 없으므로 늘 보인다.
+                                !active && "group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100 [@media(hover:hover)]:opacity-0"
+                            )}
+                        />
+                    }
+                >
+                    <Ellipsis />
+                </DropdownMenuTrigger>
+                {/* 이름 바꾸기를 고르면 메뉴가 닫힐 때 '…' 대신 제목 입력칸으로 포커스를 보낸다. */}
+                <DropdownMenuContent align="end" className="w-36" finalFocus={() => input.current ?? true}>
+                    <DropdownMenuItem onClick={startRenaming}>
+                        <Pencil />
+                        이름 바꾸기
+                    </DropdownMenuItem>
+                    <DropdownMenuItem variant="destructive" onClick={() => void removeConversation(conversation.id)}>
+                        <Trash2 />
+                        삭제
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </li>
     )
 }

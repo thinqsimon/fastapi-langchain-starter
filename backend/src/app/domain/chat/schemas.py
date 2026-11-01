@@ -5,9 +5,12 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# 이름을 붙이기 전의 제목. 이 제목인 대화만 첫 메시지를 제목으로 삼는다.
+DEFAULT_CONVERSATION_TITLE = "새 대화"
+
 
 class ConversationCreate(BaseModel):
-    title: str = Field(default="새 대화", min_length=1, max_length=100)
+    title: str = Field(default=DEFAULT_CONVERSATION_TITLE, min_length=1, max_length=100)
 
 
 class ConversationUpdate(BaseModel):

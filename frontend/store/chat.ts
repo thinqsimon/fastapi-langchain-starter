@@ -1,6 +1,6 @@
 import { create } from "zustand"
 
-import { chatApi, type Conversation, type Message } from "@/lib/api"
+import { chatApi, errorMessage, type Conversation, type Message } from "@/lib/api"
 
 type ChatState = {
     conversations: Conversation[]
@@ -16,6 +16,8 @@ type ChatState = {
     loadConversations: () => Promise<void>
     openConversation: (id: string) => Promise<void>
     startNewConversation: () => Promise<string>
+    /** 목록에 바로 보여 주고 저장한다. 비우거나 그대로면 저장하지 않는다. */
+    renameConversation: (id: string, title: string) => Promise<void>
     removeConversation: (id: string) => Promise<void>
     sendMessage: (content: string) => Promise<void>
 }
@@ -96,6 +98,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
         })
         preparing = { sessionVersion, promise }
         return promise
+    },
+
+    renameConversation: async (id, title) => {
+        const trimmed = title.trim()
+        const before = get().conversations.find((item) => item.id === id)
+        if (!before || !trimmed || trimmed === before.title) return
+        const sessionVersion = get().sessionVersion
+        const show = (value: string) =>
+            set((state) => ({ conversations: state.conversations.map((item) => (item.id === id ? { ...item, title: value } : item)) }))
+        show(trimmed)
+        try {
+            const saved = await chatApi.renameConversation(id, trimmed)
+            // 기다리는 동안 목록을 다시 읽어 예전 제목이 왔을 수 있으니 저장된 제목으로 한 번 더 맞춘다.
+            if (get().sessionVersion === sessionVersion) show(saved.title)
+        } catch (caught) {
+            if (get().sessionVersion !== sessionVersion) return
+            show(before.title)
+            set({ error: errorMessage(caught, "대화 제목을 바꾸지 못했습니다.") })
+        }
     },
 
     removeConversation: async (id) => {

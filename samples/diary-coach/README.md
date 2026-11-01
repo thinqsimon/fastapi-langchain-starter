@@ -76,7 +76,8 @@
 | 사용 안내 화면(목차·단원·스크린샷·터미널 패널 부품) | `frontend/app/(main)/guide/`, `frontend/components/guide/`, `frontend/public/guide/` |
 | 캐치프레이즈 전광판 | `frontend/components/catchphrase-marquee.tsx` |
 | 마크다운 보기 | `frontend/components/markdown-view.tsx` |
-| 반응형·모바일 | `frontend/store/layout.ts`(대화 목록 접기·서랍), `components/chat/message-input.tsx`(3줄 자동 높이), 아이폰 안전 영역 |
+| 대화 목록 '…' 메뉴(이름 바꾸기·삭제) | `frontend/components/chat/conversation-sidebar.tsx`, `PATCH /api/conversations/{id}`. 이름을 먼저 붙인 대화는 첫 메시지로 제목을 덮어쓰지 않는다 |
+| 반응형·모바일 | `frontend/store/layout.ts`(대화 목록 접기·서랍·너비), `components/pane-resizer.tsx`(채팅·학습장이 함께 쓰는 너비 조절 손잡이), `components/chat/message-input.tsx`(3줄 자동 높이), 아이폰 안전 영역 |
 | 클립보드 복사(마크다운 + 서식) | `frontend/lib/clipboard.ts`, 버튼 `frontend/components/rich-copy-button.tsx` |
 | 아이콘 생성 스크립트 | `frontend/scripts/generate-icons.mjs` (`npm run icons`) |
 

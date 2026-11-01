@@ -65,7 +65,8 @@ test("대화를 삭제하면 목록에서 사라진다", async ({ page }) => {
     await page.getByRole("button", { name: "보내기" }).click()
     await expect(page.getByRole("button", { name: "지울 대화", exact: true })).toBeVisible()
 
-    await page.getByRole("button", { name: "지울 대화 삭제" }).click()
+    await page.getByRole("button", { name: "지울 대화 메뉴" }).click()
+    await page.getByRole("menuitem", { name: "삭제" }).click()
 
     await expect(page.getByRole("button", { name: "지울 대화", exact: true })).toHaveCount(0)
 })
@@ -176,4 +177,83 @@ test("답변의 첫 글자를 기다리는 동안 점 세 개가 움직이고, �
     release()
     await expect(savedAssistant(page)).toHaveCount(5)
     await expect(indicator).toHaveCount(0)
+})
+
+test("대화 목록의 '…' 메뉴로 제목을 바꾼다. Esc는 취소, 빈 제목은 그대로 두고, 빈 대화에 먼저 붙인 이름은 첫 메시지 뒤에도 남는다", async ({ page }) => {
+    await signUpAndOpenChat(page)
+    await sendChatMessage(page, "원래 제목")
+    const list = page.getByRole("navigation", { name: "대화 목록" })
+    const input = list.getByRole("textbox", { name: "대화 제목" })
+    async function startRenaming(title: string) {
+        await list.getByRole("button", { name: `${title} 메뉴` }).click()
+        await page.getByRole("menuitem", { name: "이름 바꾸기" }).click()
+        await expect(input).toBeFocused()
+        await expect(input).toHaveValue(title)
+    }
+
+    await startRenaming("원래 제목")
+    await input.fill("React 상태 관리")
+    await input.press("Enter")
+    await expect(input).toHaveCount(0)
+    await expect(list.getByRole("button", { name: "React 상태 관리", exact: true })).toBeFocused()
+
+    // Esc는 바꾸지 않고 닫는다.
+    await startRenaming("React 상태 관리")
+    await input.fill("취소할 제목")
+    await input.press("Escape")
+    await expect(input).toHaveCount(0)
+    await expect(list.getByRole("button", { name: "React 상태 관리", exact: true })).toBeVisible()
+
+    // 비운 채 다른 곳을 누르면 저장하지 않는다.
+    await startRenaming("React 상태 관리")
+    await input.fill("   ")
+    await page.getByLabel("메시지").click()
+    await expect(input).toHaveCount(0)
+    await expect(list.getByRole("button", { name: "React 상태 관리", exact: true })).toBeVisible()
+
+    // 빈 '새 대화'에 먼저 이름을 붙이면 첫 메시지를 보내도 그 이름이 남는다.
+    await newChatButton(page).click()
+    await startRenaming("새 대화")
+    await input.fill("미리 붙인 제목")
+    await input.press("Enter")
+    await sendChatMessage(page, "첫 질문")
+
+    await page.reload()
+    await expect(list.getByRole("button", { name: "React 상태 관리", exact: true })).toBeVisible()
+    await expect(list.getByRole("button", { name: "미리 붙인 제목", exact: true })).toBeVisible()
+    await expect(list.getByRole("button", { name: "첫 질문", exact: true })).toHaveCount(0)
+})
+
+test("넓은 화면에서는 대화 목록과 대화 사이를 끌어 목록 너비를 바꾸고, 새로고침·키보드·두 번 누르기에도 맞게 동작한다", async ({ page }) => {
+    await signUpAndOpenChat(page)
+    const sidebar = page.locator("#conversation-sidebar")
+    const handle = page.locator('[data-slot="chat-list-resizer"]')
+    const width = async () => (await sidebar.boundingBox())!.width
+    const initial = await width()
+    expect(initial).toBe(256)
+
+    const box = (await handle.boundingBox())!
+    await page.mouse.move(box.x + box.width / 2, box.y + 200)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width / 2 + 120, box.y + 200, { steps: 8 })
+    await page.mouse.up()
+    const widened = await width()
+    expect(widened).toBeGreaterThan(initial + 100)
+    await expect(handle).toHaveAttribute("aria-valuenow", String(Math.round(widened)))
+
+    await page.reload()
+    await expect(page.getByLabel("메시지")).toBeVisible()
+    await expect.poll(width).toBeCloseTo(widened, 0)
+
+    await handle.focus()
+    await page.keyboard.press("ArrowLeft")
+    await expect.poll(width).toBeCloseTo(widened - 16, 0)
+
+    await handle.dblclick()
+    await expect.poll(width).toBeCloseTo(initial, 0)
+
+    // 목록을 접으면 손잡이도 사라진다.
+    await page.getByRole("button", { name: "대화 목록 열고 닫기" }).click()
+    await expect(sidebar).toHaveCount(0)
+    await expect(handle).toHaveCount(0)
 })

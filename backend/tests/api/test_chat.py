@@ -139,6 +139,26 @@ def test_first_message_becomes_conversation_title(
     assert detail["title"] == "파이썬 데코레이터가 뭔가요?"
 
 
+def test_renamed_conversation_keeps_its_title_after_first_message(
+    api_client: TestClient, headers: dict[str, str]
+) -> None:
+    """빈 대화에 먼저 이름을 붙였으면 첫 메시지가 와도 제목을 덮어쓰지 않는다."""
+    conversation_id = create_conversation(api_client, headers, "새 대화")
+    api_client.patch(
+        f"/api/conversations/{conversation_id}", json={"title": "React 공부"}, headers=headers
+    )
+
+    api_client.post(
+        f"/api/conversations/{conversation_id}/stream",
+        json={"content": "useState가 뭐예요?"},
+        headers=headers,
+    )
+
+    detail = api_client.get(f"/api/conversations/{conversation_id}", headers=headers).json()
+    assert detail["title"] == "React 공부"
+    assert detail["messages"][0]["content"] == "useState가 뭐예요?"
+
+
 def test_conversation_detail_includes_messages(
     api_client: TestClient, headers: dict[str, str]
 ) -> None:

@@ -13,6 +13,11 @@ export async function createConversation(title = "새 대화"): Promise<Conversa
     return data
 }
 
+export async function renameConversation(id: string, title: string): Promise<Conversation> {
+    const { data } = await httpClient.patch<Conversation>(`/api/conversations/${id}`, { title })
+    return data
+}
+
 export async function getConversation(id: string): Promise<ConversationDetail> {
     const { data } = await httpClient.get<ConversationDetail>(`/api/conversations/${id}`)
     return data

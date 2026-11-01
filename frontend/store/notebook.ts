@@ -1,6 +1,7 @@
 import { create } from "zustand"
 
 import { errorMessage, notebookApi, type Notebook, type NotebookTopic, type NotebookTopicInput, type NotebookTopicSummary } from "@/lib/api"
+import { clampPaneWidth, readPaneWidth, writePaneWidth } from "@/lib/pane-width"
 
 /** 주제 입력칸. 태그는 쉼표로 구분한 문자열, 난이도는 ""(없음) 또는 "1"~"5"다. */
 export type TopicForm = {
@@ -26,30 +27,7 @@ const LIST_WIDTH_KEY = "notebook_list_width"
 /** 마지막에 보던 보기(전체/보관함)도 브라우저에 기억한다. */
 const VIEW_KEY = "notebook_view"
 
-function clampListWidth(width: number) {
-    return Math.min(LIST_WIDTH.max, Math.max(LIST_WIDTH.min, Math.round(width)))
-}
-
 /** localStorage는 시크릿 창·차단 설정에서 실패할 수 있으므로 읽고 쓰기 모두 감싼다. */
-function readStoredListWidth(): number | null {
-    try {
-        const raw = localStorage.getItem(LIST_WIDTH_KEY)
-        const width = raw === null ? Number.NaN : Number(raw)
-        return Number.isFinite(width) ? clampListWidth(width) : null
-    } catch {
-        return null
-    }
-}
-
-function writeStoredListWidth(width: number | null) {
-    try {
-        if (width === null) localStorage.removeItem(LIST_WIDTH_KEY)
-        else localStorage.setItem(LIST_WIDTH_KEY, String(width))
-    } catch {
-        // 저장하지 못해도 이번 화면에서는 동작한다.
-    }
-}
-
 function readStoredView(): NotebookView | null {
     try {
         const raw = localStorage.getItem(VIEW_KEY)
@@ -583,7 +561,7 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
     },
 
     restorePreferences: () => {
-        const width = readStoredListWidth()
+        const width = readPaneWidth(LIST_WIDTH_KEY, LIST_WIDTH)
         const view = readStoredView()
         const patch: Partial<NotebookState> = {}
         if (width !== null && width !== get().listWidth) patch.listWidth = width
@@ -592,13 +570,13 @@ export const useNotebookStore = create<NotebookState>((set, get) => ({
     },
 
     setListWidth: (width) => {
-        const next = clampListWidth(width)
+        const next = clampPaneWidth(width, LIST_WIDTH)
         if (next !== get().listWidth) set({ listWidth: next })
-        writeStoredListWidth(next)
+        writePaneWidth(LIST_WIDTH_KEY, next)
     },
 
     resetListWidth: () => {
         set({ listWidth: LIST_WIDTH.default })
-        writeStoredListWidth(null)
+        writePaneWidth(LIST_WIDTH_KEY, null)
     },
 }))

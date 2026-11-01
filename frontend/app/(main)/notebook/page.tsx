@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react"
+import { useEffect, useRef, useState, type CSSProperties } from "react"
 
 import { NotebookList } from "@/components/notebook/notebook-list"
 import { TopicDetail } from "@/components/notebook/topic-detail"
+import { PaneResizer } from "@/components/pane-resizer"
 import { cn } from "@/lib/utils"
 import { LIST_WIDTH, useNotebookStore } from "@/store/notebook"
 
@@ -42,43 +43,6 @@ export default function NotebookPage() {
         return () => window.removeEventListener("resize", measure)
     }, [])
 
-    /** 포인터 위치를 목록 너비로 바꾼다. 본문이 너무 좁아지지 않게 상한을 둔다. */
-    const resizeTo = (clientX: number) => {
-        const box = container.current?.getBoundingClientRect()
-        if (!box) return
-        setListWidth(Math.min(clientX - box.left, box.width - MIN_DETAIL_WIDTH))
-    }
-
-    const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-        if (event.button !== 0) return
-        event.preventDefault() // 끄는 동안 글자가 선택되지 않게
-        event.currentTarget.setPointerCapture(event.pointerId) // 손잡이 밖으로 나가도 move/up을 받는다
-        setDragging(true)
-    }
-
-    const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
-        if (dragging) resizeTo(event.clientX)
-    }
-
-    const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
-        if (!dragging) return
-        setDragging(false)
-        event.currentTarget.releasePointerCapture(event.pointerId)
-    }
-
-    const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-        const keys: Record<string, number> = {
-            ArrowLeft: listWidth - LIST_WIDTH.step,
-            ArrowRight: listWidth + LIST_WIDTH.step,
-            Home: LIST_WIDTH.min,
-            End: LIST_WIDTH.max,
-        }
-        const next = keys[event.key]
-        if (next === undefined) return
-        event.preventDefault()
-        setListWidth(next)
-    }
-
     return (
         <div ref={root} className="flex min-h-0 flex-1 flex-col md:h-[calc(100dvh-var(--notebook-top,0px))] md:flex-none md:overflow-hidden">
             {(error || notice) && (
@@ -106,27 +70,16 @@ export default function NotebookPage() {
                 >
                     <NotebookList />
                 </aside>
-                <div
-                    data-slot="notebook-resizer"
-                    role="separator"
-                    aria-orientation="vertical"
-                    aria-label="목록 너비 조절"
-                    aria-valuemin={LIST_WIDTH.min}
-                    aria-valuemax={LIST_WIDTH.max}
-                    aria-valuenow={listWidth}
-                    tabIndex={0}
-                    title="끌어서 너비 조절, 두 번 누르면 기본 너비"
-                    className={cn(
-                        "hidden w-2 shrink-0 cursor-col-resize touch-none border-l bg-transparent transition-colors md:block",
-                        "hover:bg-muted focus-visible:bg-muted focus-visible:outline-none",
-                        dragging && "bg-muted"
-                    )}
-                    onPointerDown={onPointerDown}
-                    onPointerMove={onPointerMove}
-                    onPointerUp={onPointerUp}
-                    onPointerCancel={onPointerUp}
-                    onDoubleClick={resetListWidth}
-                    onKeyDown={onKeyDown}
+                <PaneResizer
+                    slot="notebook-resizer"
+                    label="목록 너비 조절"
+                    container={container}
+                    width={listWidth}
+                    limits={LIST_WIDTH}
+                    minRest={MIN_DETAIL_WIDTH}
+                    onResize={setListWidth}
+                    onReset={resetListWidth}
+                    onDraggingChange={setDragging}
                 />
                 <section data-slot="topic-detail" className={cn("min-w-0 flex-1 flex-col overflow-y-auto", showDetail ? "flex" : "hidden md:flex")}>
                     <TopicDetail />
