@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { Ellipsis, Pencil, Trash2 } from "lucide-react"
 
 import type { Conversation } from "@/lib/api"
@@ -13,11 +13,14 @@ import { cn } from "@/lib/utils"
 import { useChatStore } from "@/store/chat"
 import { DESKTOP_QUERY, useLayoutStore } from "@/store/layout"
 
+/** 서비스가 '…' 메뉴 맨 위에 더하는 항목(코치: 이 대화로 일기 만들기). closeDrawer는 폰의 대화 목록 서랍을 닫는다. */
+export type ConversationMenuExtra = (conversation: Conversation, closeDrawer: () => void) => ReactNode
+
 /**
  * 대화 목록. 넓은 화면에서는 왼쪽에 붙어 있고(헤더 아이콘으로 접고 펼침, 오른쪽 손잡이로 너비 조절),
  * 모바일에서는 감춰 두었다가 아이콘을 누르면 왼쪽에서 서랍처럼 열린다.
  */
-export function ConversationSidebar() {
+export function ConversationSidebar({ menuExtra }: { menuExtra?: ConversationMenuExtra }) {
     const desktopOpen = useLayoutStore((state) => state.desktopSidebarOpen)
     const mobileOpen = useLayoutStore((state) => state.mobileSidebarOpen)
     const setMobileOpen = useLayoutStore((state) => state.setMobileSidebarOpen)
@@ -34,7 +37,7 @@ export function ConversationSidebar() {
         <>
             {desktopOpen && (
                 <aside id="conversation-sidebar" style={{ width: listWidth }} className="hidden shrink-0 flex-col md:flex">
-                    <ConversationList />
+                    <ConversationList menuExtra={menuExtra} />
                 </aside>
             )}
 
@@ -45,14 +48,14 @@ export function ConversationSidebar() {
                         <SheetDescription className="sr-only">대화를 고르거나 새로 시작합니다.</SheetDescription>
                     </SheetHeader>
                     {/* 대화를 고르면 서랍을 닫아 바로 대화를 보이게 한다. */}
-                    <ConversationList onPicked={() => setMobileOpen(false)} />
+                    <ConversationList menuExtra={menuExtra} onPicked={() => setMobileOpen(false)} />
                 </SheetContent>
             </Sheet>
         </>
     )
 }
 
-function ConversationList({ onPicked }: { onPicked?: () => void }) {
+function ConversationList({ onPicked, menuExtra }: { onPicked?: () => void; menuExtra?: ConversationMenuExtra }) {
     const conversations = useChatStore((state) => state.conversations)
     const activeId = useChatStore((state) => state.activeId)
     const startNewConversation = useChatStore((state) => state.startNewConversation)
@@ -76,7 +79,13 @@ function ConversationList({ onPicked }: { onPicked?: () => void }) {
 
                 <ul className="flex flex-col gap-1">
                     {conversations.map((conversation) => (
-                        <ConversationItem key={conversation.id} conversation={conversation} active={conversation.id === activeId} onPicked={onPicked} />
+                        <ConversationItem
+                            key={conversation.id}
+                            conversation={conversation}
+                            active={conversation.id === activeId}
+                            onPicked={onPicked}
+                            menuExtra={menuExtra}
+                        />
                     ))}
                 </ul>
             </nav>
@@ -84,8 +93,18 @@ function ConversationList({ onPicked }: { onPicked?: () => void }) {
     )
 }
 
-/** 대화 한 줄. 제목을 누르면 열고, 옆 '…' 메뉴에서 이름을 바꾸거나 지운다. */
-function ConversationItem({ conversation, active, onPicked }: { conversation: Conversation; active: boolean; onPicked?: () => void }) {
+/** 대화 한 줄. 제목을 누르면 열고, 옆 '…' 메뉴에서 이름을 바꾸거나 지운다(서비스가 더한 항목은 맨 위). */
+function ConversationItem({
+    conversation,
+    active,
+    onPicked,
+    menuExtra,
+}: {
+    conversation: Conversation
+    active: boolean
+    onPicked?: () => void
+    menuExtra?: ConversationMenuExtra
+}) {
     const openConversation = useChatStore((state) => state.openConversation)
     const renameConversation = useChatStore((state) => state.renameConversation)
     const removeConversation = useChatStore((state) => state.removeConversation)
@@ -178,7 +197,8 @@ function ConversationItem({ conversation, active, onPicked }: { conversation: Co
                     <Ellipsis />
                 </DropdownMenuTrigger>
                 {/* 이름 바꾸기를 고르면 메뉴가 닫힐 때 '…' 대신 제목 입력칸으로 포커스를 보낸다. */}
-                <DropdownMenuContent align="end" className="w-36" finalFocus={() => input.current ?? true}>
+                <DropdownMenuContent align="end" className={menuExtra ? "w-60" : "w-36"} finalFocus={() => input.current ?? true}>
+                    {menuExtra?.(conversation, () => onPicked?.())}
                     <DropdownMenuItem onClick={startRenaming}>
                         <Pencil />
                         이름 바꾸기

@@ -27,6 +27,10 @@ type DiaryState = {
     isDrafting: boolean
     error: string | null
     hasUnsavedChanges: boolean
+    /** 저장하지 않은 일기를 바꿀지 묻는 중인 채팅. 채팅 화면의 확인 창이 이 값을 본다. */
+    replaceTarget: { id: string; title: string } | null
+    /** 일기로 만들 수 있는 채팅을 다시 읽는 중(대화 목록 '…' 메뉴). */
+    isCheckingConversations: boolean
     /** 늦게 도착한 응답이 새 입력이나 다른 계정의 상태를 덮지 않도록 구분한다. */
     revision: number
     draftVersion: number
@@ -38,6 +42,13 @@ type DiaryState = {
     /** 고른 채팅으로 초안을 만든다. */
     generateDraft: () => Promise<void>
     generateDraftFromConversation: (id: string, title: string, replaceExisting?: boolean) => Promise<boolean>
+    /** 일기로 만들 수 있는 채팅만 다시 읽는다. 대화 목록 '…' 메뉴를 열 때 부른다. */
+    refreshConversations: () => Promise<void>
+    /** 채팅으로 초안을 만든다. 저장하지 않은 일기가 있으면 replaceTarget에 두고 확인을 기다린다. 초안을 만들었으면 true */
+    requestDraftFromConversation: (id: string, title: string) => Promise<boolean>
+    /** 확인 창에서 '새 초안으로 바꾸기'를 누르면 기다리던 채팅으로 초안을 만든다. */
+    confirmReplaceDraft: () => Promise<boolean>
+    dismissReplaceDraft: () => void
     reset: () => void
     /** 초안을 버리고 빈 입력칸으로 돌아간다. */
     discardDraft: () => void
@@ -46,6 +57,11 @@ type DiaryState = {
     cancelEditing: () => void
     save: () => Promise<void>
     remove: (id: string) => Promise<void>
+}
+
+/** 고른 채팅이 목록에서 빠졌으면(일기를 썼으면) 가장 최근 채팅을 고른다. */
+function keepSelected(conversations: EligibleConversation[], selected: string) {
+    return conversations.some((conversation) => conversation.id === selected) ? selected : (conversations[0]?.id ?? "")
 }
 
 export const useDiaryStore = create<DiaryState>((set, get) => ({
@@ -59,6 +75,8 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
     isDrafting: false,
     error: null,
     hasUnsavedChanges: false,
+    replaceTarget: null,
+    isCheckingConversations: false,
     revision: 0,
     draftVersion: 0,
     sessionVersion: 0,
@@ -75,6 +93,8 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
             isDrafting: false,
             error: null,
             hasUnsavedChanges: false,
+            replaceTarget: null,
+            isCheckingConversations: false,
             revision: state.revision + 1,
             draftVersion: state.draftVersion + 1,
             sessionVersion: state.sessionVersion + 1,
@@ -85,13 +105,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
         try {
             const [entries, conversations] = await Promise.all([diaryApi.listEntries(), diaryApi.listEligibleConversations()])
             if (get().sessionVersion !== sessionVersion) return
-            const selected = get().selectedConversationId
-            set({
-                entries,
-                conversations,
-                // 고른 채팅이 목록에서 빠졌으면(일기를 썼으면) 가장 최근 채팅을 고른다.
-                selectedConversationId: conversations.some((c) => c.id === selected) ? selected : (conversations[0]?.id ?? ""),
-            })
+            set({ entries, conversations, selectedConversationId: keepSelected(conversations, get().selectedConversationId) })
         } catch (caught) {
             if (get().sessionVersion === sessionVersion) set({ error: errorMessage(caught, "일기를 불러오지 못했습니다.") })
         }
@@ -141,6 +155,39 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
             if (get().draftVersion === draftVersion) set({ isDrafting: false })
         }
     },
+
+    refreshConversations: async () => {
+        const sessionVersion = get().sessionVersion
+        set({ isCheckingConversations: true })
+        try {
+            const conversations = await diaryApi.listEligibleConversations()
+            if (get().sessionVersion !== sessionVersion) return
+            set({ conversations, selectedConversationId: keepSelected(conversations, get().selectedConversationId) })
+        } catch {
+            // 확인하지 못하면 이전 목록을 쓴다. 누르면 서버가 다시 확인한다.
+        } finally {
+            if (get().sessionVersion === sessionVersion) set({ isCheckingConversations: false })
+        }
+    },
+
+    requestDraftFromConversation: async (id, title) => {
+        const { isDrafting, isSaving, hasUnsavedChanges } = get()
+        if (isDrafting || isSaving) return false
+        if (hasUnsavedChanges) {
+            set({ replaceTarget: { id, title } })
+            return false
+        }
+        return get().generateDraftFromConversation(id, title)
+    },
+
+    confirmReplaceDraft: async () => {
+        const target = get().replaceTarget
+        if (!target) return false
+        set({ replaceTarget: null })
+        return get().generateDraftFromConversation(target.id, target.title, true)
+    },
+
+    dismissReplaceDraft: () => set({ replaceTarget: null }),
 
     discardDraft: () => set((state) => ({ form: emptyForm(), source: null, error: null, hasUnsavedChanges: false, revision: state.revision + 1 })),
 

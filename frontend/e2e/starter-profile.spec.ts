@@ -25,6 +25,11 @@ test("공통 인증·대화·계정 설정을 유지하고 서비스 설정은 �
     await expect(page.getByRole("img", { name: "헤드셋을 쓰고 웃는 구름 코치" })).toHaveCount(0)
     await expect(page.getByText("무엇이든 물어보세요.", { exact: true })).toBeVisible()
     await sendChatMessage(page, "JWT는 무엇인가요?")
+    // 대화 목록 '…' 메뉴에도 일기 항목이 없다.
+    await page.getByRole("button", { name: "JWT는 무엇인가요? 메뉴" }).click()
+    await expect(page.getByRole("menuitem", { name: "이름 바꾸기" })).toBeVisible()
+    await expect(page.getByRole("menuitem", { name: /일기/ })).toHaveCount(0)
+    await page.keyboard.press("Escape")
     await openSettings(page)
     await expect(page.getByRole("heading", { name: "설정", exact: true })).toBeVisible()
     await expect(page.getByLabel("이름", { exact: true })).toHaveValue(account.displayName)

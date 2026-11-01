@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ApplicationChatHeader, ApplicationComposerMenu, applicationChatPresentation } from "@/applications/components"
+import { ApplicationChatHeader, ApplicationComposerMenu, applicationChatPresentation, applicationConversationMenuExtra } from "@/applications/components"
 
 import { AnswerLevelChooser } from "@/components/chat/answer-level-chooser"
 import { ConversationSidebar } from "@/components/chat/conversation-sidebar"
@@ -37,7 +37,7 @@ export default function ChatPage() {
 
     return (
         <div ref={row} className={cn("flex flex-1 overflow-hidden", resizing && "cursor-col-resize select-none")}>
-            <ConversationSidebar />
+            <ConversationSidebar menuExtra={applicationConversationMenuExtra()} />
             {/* 넓은 화면에서 목록을 펼쳐 둔 동안만 보인다. 끌어서(또는 화살표 키로) 목록 너비를 바꾸고, 두 번 누르면 기본 너비. */}
             {desktopSidebarOpen && (
                 <PaneResizer

@@ -349,7 +349,7 @@ test("채팅 상단(코치 소개·사용법 동영상·안내)은 빈 대화에
     await signUp(page, "coach-guide")
     const intro = page.getByText("질문은 편하게, 배움은 차곡차곡", { exact: true })
     const guide = page.getByRole("link", { name: "사용법 동영상 열기" })
-    const hint = page.getByText(/일기 초안은 입력칸 왼쪽 \+ 메뉴에서/)
+    const hint = page.getByText(/일기 초안은 입력칸 왼쪽 \+ 메뉴나 대화 목록의 ‘…’ 메뉴에서/)
     await expect(intro).toBeVisible()
     await expect(guide).toBeVisible()
     await expect(hint).toBeVisible()
@@ -421,4 +421,64 @@ test("폰에서는 서랍을 열지 않고 + 메뉴로 새 대화를 시작한�
     await expect(page.getByRole("heading", { name: /구름 코치와 풀어볼까요/ })).toBeVisible()
     await expect(page.getByRole("dialog", { name: "대화 목록" })).toHaveCount(0)
     await expect(page.getByLabel("메시지")).toBeFocused()
+})
+
+test("대화 목록 '…' 메뉴로 보고 있지 않은 대화도 일기 초안을 만들고, 일기로 만들 새 대화가 없으면 흐리다", async ({ page }) => {
+    await signUp(page, "coach-list-draft")
+    await sendChatMessage(page, "첫 번째 대화의 배움")
+    await page.locator("#conversation-sidebar").getByRole("button", { name: "새 대화", exact: true }).first().click()
+    await expect(page.locator('[data-role="user"]')).toHaveCount(0)
+    await sendChatMessage(page, "두 번째 대화의 배움")
+    const list = page.getByRole("navigation", { name: "대화 목록" })
+    const listDraft = page.getByRole("menuitem", { name: /이 대화로 일기 만들기/ })
+    const source = page.getByText("‘첫 번째 대화의 배움’ 채팅으로 만든 초안입니다.")
+
+    // 저장하지 않은 일기가 있으면 + 메뉴처럼 먼저 바꿀지 묻는다.
+    await diaryLink(page).click()
+    await page.getByLabel("오늘 배운 것").fill("직접 쓰던 일기")
+    await chatLink(page).click()
+    await list.getByRole("button", { name: "첫 번째 대화의 배움 메뉴" }).click()
+    await expect(listDraft).toBeEnabled()
+    await listDraft.click()
+    const dialog = page.getByRole("dialog", { name: "저장하지 않은 일기가 있어요" })
+    await expect(dialog).toBeVisible()
+    await dialog.getByRole("button", { name: "새 초안으로 바꾸기" }).click()
+
+    // 보고 있던 두 번째 대화가 아니라 고른 첫 번째 대화로 만든다.
+    await expect(page).toHaveURL(/\/diary$/)
+    await expect(source).toBeVisible()
+    await expect(page.getByLabel("오늘 배운 것")).not.toHaveValue("직접 쓰던 일기")
+    await page.getByRole("button", { name: "저장", exact: true }).click()
+    await expect(entryCards(page)).toHaveCount(1)
+
+    // 일기로 만든 대화는 새 대화가 생기기 전까지 흐리고, 다른 대화는 그대로 만들 수 있다.
+    await chatLink(page).click()
+    await list.getByRole("button", { name: "첫 번째 대화의 배움 메뉴" }).click()
+    await expect(listDraft).toBeDisabled()
+    await expect(listDraft).toContainText("일기로 만들 새 대화가 없어요")
+    await page.keyboard.press("Escape")
+    await expect(page.getByRole("menu")).toHaveCount(0)
+    await list.getByRole("button", { name: "두 번째 대화의 배움 메뉴" }).click()
+    await expect(listDraft).toBeEnabled()
+    await page.keyboard.press("Escape")
+    await expect(page.getByRole("menu")).toHaveCount(0)
+
+    // 빈 대화도 흐리다.
+    await page.locator("#conversation-sidebar").getByRole("button", { name: "새 대화", exact: true }).first().click()
+    await list.getByRole("button", { name: "새 대화 메뉴" }).click()
+    await expect(listDraft).toBeDisabled()
+    await expect(listDraft).toContainText("일기로 만들 새 대화가 없어요")
+})
+
+test("폰에서는 대화 목록 서랍의 '…' 메뉴로 일기를 만들면 서랍이 닫히고 일기 화면으로 간다", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await signUp(page, "coach-list-draft-phone")
+    await sendChatMessage(page, "폰에서 정리할 배움")
+    await page.getByRole("button", { name: "대화 목록 열고 닫기" }).click()
+    const drawer = page.getByRole("dialog", { name: "대화 목록" })
+    await drawer.getByRole("button", { name: "폰에서 정리할 배움 메뉴" }).click()
+    await page.getByRole("menuitem", { name: /이 대화로 일기 만들기/ }).click()
+    await expect(drawer).toBeHidden()
+    await expect(page).toHaveURL(/\/diary$/)
+    await expect(page.getByText("‘폰에서 정리할 배움’ 채팅으로 만든 초안입니다.")).toBeVisible()
 })

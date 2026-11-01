@@ -18,7 +18,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { DraftReplaceDialog } from "@/components/diary/draft-replace-dialog"
-import { errorMessage } from "@/lib/api"
+import { errorMessage, type Conversation } from "@/lib/api"
 import { DEFAULT_ANSWER_LEVEL, answerLevelLabel } from "@/lib/answer-level"
 import { application } from "@/lib/application"
 import { useMediaQuery } from "@/lib/use-media-query"
@@ -95,9 +95,22 @@ export function CoachWelcome() {
     )
 }
 
-/** "이 대화로 일기 만들기" 동작. 메뉴(+)와 상단 안내가 같은 상태를 본다. */
-function useDiaryDraftAction() {
+/**
+ * 초안이 만들어지면 일기 화면으로 간다. 기다리는 동안 다른 화면으로 떠났으면 끌고 가지 않는다.
+ * 대화 목록 '…' 메뉴는 누르면 바로 닫혀 사라지므로, 부른 컴포넌트가 아니라 지금 주소로 판단한다.
+ */
+function useOpenDraft() {
     const router = useRouter()
+    return (created: Promise<boolean>) => {
+        const from = window.location.pathname
+        void created.then((ok) => {
+            if (ok && window.location.pathname === from) router.push("/diary")
+        })
+    }
+}
+
+/** + 메뉴의 "이 대화로 일기 만들기"(지금 연 대화). 저장하지 않은 일기를 바꿀지는 CoachComposerMenu의 확인 창이 묻는다. */
+function useDiaryDraftAction() {
     const activeId = useChatStore((state) => state.activeId)
     const conversations = useChatStore((state) => state.conversations)
     const messages = useChatStore((state) => state.messages)
@@ -105,43 +118,60 @@ function useDiaryDraftAction() {
     const chatError = useChatStore((state) => state.error)
     const isDrafting = useDiaryStore((state) => state.isDrafting)
     const isSaving = useDiaryStore((state) => state.isSaving)
-    const generateDraft = useDiaryStore((state) => state.generateDraftFromConversation)
-    const [confirmSource, setConfirmSource] = useState<{ id: string; title: string } | null>(null)
-    const mounted = useRef(false)
-
-    useEffect(() => {
-        mounted.current = true
-        return () => {
-            mounted.current = false
-        }
-    }, [])
+    const requestDraftFrom = useDiaryStore((state) => state.requestDraftFromConversation)
+    const openDraft = useOpenDraft()
 
     const canDraft = !!activeId && messages.some((message) => message.role === "assistant") && !isStreaming && !chatError && !isDrafting && !isSaving
 
-    async function createDraft(source: { id: string; title: string }, replaceExisting = false) {
-        setConfirmSource(null)
-        if (await generateDraft(source.id, source.title, replaceExisting)) {
-            if (mounted.current) router.push("/diary")
-        }
-    }
-
     function requestDraft() {
         if (!canDraft || !activeId) return
-        const source = { id: activeId, title: conversations.find((conversation) => conversation.id === activeId)?.title ?? "현재 대화" }
-        if (useDiaryStore.getState().hasUnsavedChanges) setConfirmSource(source)
-        else void createDraft(source)
+        openDraft(requestDraftFrom(activeId, conversations.find((conversation) => conversation.id === activeId)?.title ?? "현재 대화"))
     }
 
-    return {
-        canDraft,
-        isDrafting,
-        requestDraft,
-        confirmSource,
-        dismissConfirm: () => setConfirmSource(null),
-        confirmReplace: () => {
-            if (confirmSource) void createDraft(confirmSource, true)
-        },
-    }
+    return { canDraft, isDrafting, requestDraft }
+}
+
+/**
+ * 대화 목록 '…' 메뉴 맨 위의 "이 대화로 일기 만들기". 지금 보고 있지 않은 대화로도 바로 초안을 만든다.
+ * 메뉴를 열 때마다 일기로 만들 새 대화가 있는 채팅인지 다시 확인해, 없으면 흐리게 하고 까닭을 보여 준다.
+ */
+export function CoachConversationMenuItems({ conversation, onStart }: { conversation: Conversation; onStart: () => void }) {
+    const refresh = useDiaryStore((state) => state.refreshConversations)
+    const checking = useDiaryStore((state) => state.isCheckingConversations)
+    const eligible = useDiaryStore((state) => state.conversations.find((item) => item.id === conversation.id))
+    const busy = useDiaryStore((state) => state.isDrafting || state.isSaving)
+    const requestDraftFrom = useDiaryStore((state) => state.requestDraftFromConversation)
+    // 이 대화의 답변을 받는 중이면 끝난 뒤에 만든다.
+    const streaming = useChatStore((state) => state.isStreaming && state.activeId === conversation.id)
+    const openDraft = useOpenDraft()
+
+    useEffect(() => {
+        void refresh()
+    }, [refresh])
+
+    const blocked = streaming ? "답변이 끝나면 만들 수 있어요" : eligible ? null : checking ? "확인하는 중…" : "일기로 만들 새 대화가 없어요"
+    // 이미 일기로 만든 채팅은 그 뒤에 이어진 대화만 정리한다(일기 화면의 채팅 고르기와 같다).
+    const note = blocked ?? (eligible && eligible.diary_count > 0 ? "이어진 대화만 정리해요" : null)
+
+    return (
+        <>
+            <DropdownMenuItem
+                disabled={!!blocked || busy}
+                className="min-h-10"
+                onClick={() => {
+                    onStart()
+                    openDraft(requestDraftFrom(conversation.id, conversation.title))
+                }}
+            >
+                <BookOpen />
+                <span className="flex flex-col">
+                    <span>이 대화로 일기 만들기</span>
+                    {note && <span className="text-xs text-muted-foreground">{note}</span>}
+                </span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+        </>
+    )
 }
 
 /**
@@ -195,7 +225,9 @@ export function CoachChatHeader() {
                 </a>
             </div>
             <p className="mt-2 text-xs leading-5 text-muted-foreground" role={isDrafting ? "status" : undefined}>
-                {isDrafting ? draftingText : "일기 초안은 입력칸 왼쪽 + 메뉴에서 만들 수 있어요. 답변이 끝난 뒤 내용을 확인하고 직접 저장해 주세요."}
+                {isDrafting
+                    ? draftingText
+                    : "일기 초안은 입력칸 왼쪽 + 메뉴나 대화 목록의 ‘…’ 메뉴에서 만들 수 있어요. 답변이 끝난 뒤 내용을 확인하고 직접 저장해 주세요."}
             </p>
             {error && (
                 <p role="alert" className="mt-2 text-sm text-destructive">
@@ -212,6 +244,10 @@ export function CoachComposerMenu() {
     const level = useAnswerLevelChoice()
     const guideVideoUrl = useGuideVideoUrl()
     const startNewConversation = useChatStore((state) => state.startNewConversation)
+    const replaceTarget = useDiaryStore((state) => state.replaceTarget)
+    const confirmReplaceDraft = useDiaryStore((state) => state.confirmReplaceDraft)
+    const dismissReplaceDraft = useDiaryStore((state) => state.dismissReplaceDraft)
+    const openDraft = useOpenDraft()
     // 이미 빈 대화면 '새 대화'를 눌러도 바뀌는 것이 없다.
     const isEmptyChat = useChatStore((state) => state.messages.length === 0 && !state.isStreaming)
     const [open, setOpen] = useState(false)
@@ -313,12 +349,13 @@ export function CoachComposerMenu() {
                     </DropdownMenuGroup>
                 </DropdownMenuContent>
             </DropdownMenu>
+            {/* + 메뉴와 대화 목록 '…' 메뉴가 함께 쓰는 확인 창. + 버튼은 채팅 화면에 늘 있어 여기에 둔다. */}
             <DraftReplaceDialog
-                open={!!draft.confirmSource}
+                open={!!replaceTarget}
                 onOpenChange={(open) => {
-                    if (!open) draft.dismissConfirm()
+                    if (!open) dismissReplaceDraft()
                 }}
-                onConfirm={draft.confirmReplace}
+                onConfirm={() => openDraft(confirmReplaceDraft())}
             />
         </>
     )
