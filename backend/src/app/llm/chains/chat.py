@@ -1,6 +1,7 @@
 """대화 체인. 서비스 계층은 이 모듈만 호출하고 LangChain 세부는 모른다."""
 
 import logging
+import re
 from collections.abc import AsyncIterator, Callable, Sequence
 from dataclasses import dataclass
 
@@ -10,6 +11,12 @@ from app.core.config import settings
 from app.core.exceptions import LLMError
 from app.llm.prompts.answer_level import with_answer_level
 from app.llm.prompts.chat import DEFAULT_SYSTEM_PROMPT, build_chat_prompt
+from app.llm.prompts.suggested_questions import (
+    CLOSE_TAG,
+    OPEN_TAG,
+    QUESTION_COUNT,
+    with_suggested_questions,
+)
 from app.llm.providers import ProviderAttempt, get_chat_model
 
 logger = logging.getLogger(__name__)
@@ -53,6 +60,68 @@ def text_of(content: object) -> str:
     return ""
 
 
+# 추천 질문 하나의 최대 길이. 형식을 어긴 긴 문단이 질문으로 저장되는 것을 막는다.
+QUESTION_MAX_LENGTH = 200
+_LIST_MARK = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s*")
+
+
+def parse_questions(text: str) -> list[str]:
+    """태그 안의 목록을 질문 문장으로 바꾼다(CHAT-04).
+
+    '- '·'1. '·'* ' 어떤 목록 표시든 떼고, 닫는 태그가 없어도 끝까지 읽는다. 많으면 앞의 3개만 쓴다.
+    """
+    body = text.split(CLOSE_TAG, 1)[0]
+    questions: list[str] = []
+    for line in body.splitlines():
+        question = _LIST_MARK.sub("", line).strip().strip("*").strip()
+        if question:
+            questions.append(question[:QUESTION_MAX_LENGTH])
+    return questions[:QUESTION_COUNT]
+
+
+class QuestionSplitter:
+    """흘러오는 답변에서 추천 질문 태그 앞까지만 내보내고, 태그부터는 모아 둔다(CHAT-04).
+
+    태그가 두 조각에 걸쳐 올 수 있어("<follow_" + "up_questions>"), 태그의 앞부분일 수 있는
+    끝 글자는 다음 조각을 볼 때까지 잡아 둔다. 그만큼(태그 길이 이내) 화면에 늦게 보인다.
+    """
+
+    def __init__(self) -> None:
+        self._held = ""
+        # 태그 뒤에 온 글. 태그를 만나기 전에는 None이다.
+        self._questions_text: list[str] | None = None
+
+    def feed(self, text: str) -> str:
+        """이번 조각에서 화면에 내보낼 글을 돌려준다."""
+        if self._questions_text is not None:
+            self._questions_text.append(text)
+            return ""
+        held = self._held + text
+        index = held.find(OPEN_TAG)
+        if index >= 0:
+            self._questions_text = [held[index + len(OPEN_TAG) :]]
+            self._held = ""
+            return held[:index]
+        keep = _partial_tag_length(held)
+        self._held = held[len(held) - keep :]
+        return held[: len(held) - keep]
+
+    def finish(self) -> tuple[str, list[str]]:
+        """잡아 둔 나머지 글과 추천 질문을 돌려준다. 태그가 없었으면 질문은 빈 목록이다."""
+        rest, self._held = self._held, ""
+        if self._questions_text is None:
+            return rest, []
+        return rest, parse_questions("".join(self._questions_text))
+
+
+def _partial_tag_length(text: str) -> int:
+    """text의 끝이 태그의 앞부분과 겹치는 길이."""
+    for length in range(min(len(OPEN_TAG) - 1, len(text)), 0, -1):
+        if OPEN_TAG.startswith(text[-length:]):
+            return length
+    return 0
+
+
 def _to_messages(history: Sequence[HistoryItem]) -> list[BaseMessage]:
     messages: list[BaseMessage] = []
     for role, content in history:
@@ -71,6 +140,7 @@ async def stream_reply(
     providers: Sequence[ProviderAttempt] = (),
     on_model: Callable[[ModelInfo], None] | None = None,
     answer_level: int | None = None,
+    on_questions: Callable[[list[str]], None] | None = None,
 ) -> AsyncIterator[str]:
     """응답을 토큰 단위로 흘려보낸다.
 
@@ -81,16 +151,19 @@ async def stream_reply(
     providers: 관리자가 "서버 설정" 화면(ADMIN-01)에서 정한 우선순위. 비어 있으면 `.env` 설정
     하나만 쓴다(기존 동작과 같다). 앞쪽 공급자가 호출 중 오류(한도 초과 등)를 내면 다음 공급자로
     자동 전환한다. 단, 이미 한 글자라도 보낸 뒤에는 전환하지 않는다(응답이 섞이는 것을 막는다).
+
+    on_questions: 주면 답변 끝에 추천 질문 3개를 함께 요청한다(CHAT-04). 질문 부분은
+    흘려보내지 않고, 답변이 끝나면 질문 목록으로 알린다(모델이 형식을 어겼으면 빈 목록).
     """
     # answer_level: 사용자가 고른 답변 수준(CHAT-03). None이면 페르소나 그대로 쓴다.
-    prompt = build_chat_prompt(
-        with_answer_level(system_prompt or DEFAULT_SYSTEM_PROMPT, answer_level)
-    )
+    system = with_answer_level(system_prompt or DEFAULT_SYSTEM_PROMPT, answer_level)
+    prompt = build_chat_prompt(with_suggested_questions(system) if on_questions else system)
     attempts: Sequence[ProviderAttempt] = providers or (ProviderAttempt(),)
 
     last_error: Exception | None = None
     for index, attempt in enumerate(attempts):
         sent_any = False
+        splitter = QuestionSplitter() if on_questions else None
         try:
             # 모델 생성도 여기서 한다. API 키 누락 같은 초기화 실패까지 LLMError로 묶기 위해서다.
             chat_model = (
@@ -123,8 +196,15 @@ async def stream_reply(
                     )
 
                 text = text_of(chunk.content)
+                if splitter:
+                    text = splitter.feed(text)
                 if text:
                     yield text
+            if splitter and on_questions:
+                rest, questions = splitter.finish()
+                if rest:
+                    yield rest
+                on_questions(questions)
             return
         except Exception as exc:  # 공급자별 예외가 제각각이라 한 곳에서 묶는다.
             last_error = exc

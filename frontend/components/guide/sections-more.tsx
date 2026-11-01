@@ -1,3 +1,4 @@
+import mChatAnswerMenu from "@/public/guide/m-chat-answer-menu.webp"
 import mChatConversation from "@/public/guide/m-chat-conversation.webp"
 import mChatDrawer from "@/public/guide/m-chat-drawer.webp"
 import mChatPlusMenu from "@/public/guide/m-chat-plus-menu.webp"
@@ -8,6 +9,7 @@ import mNotebookList from "@/public/guide/m-notebook-list.webp"
 import settingsAccount from "@/public/guide/settings-card-1.webp"
 import settingsPlanCoupon from "@/public/guide/settings-card-3.webp"
 import settingsPreferences from "@/public/guide/settings-card-4.webp"
+import settingsSuggestQuestions from "@/public/guide/settings-suggest-questions.webp"
 
 import { Callout, Figure, FigureRow, GuideSection, GuideSub, P, Steps, Table, Ui } from "@/components/guide/primitives"
 
@@ -17,7 +19,7 @@ export function SettingsSection() {
         <GuideSection
             id="settings"
             title="설정·계정·요금제"
-            lead="계정 메뉴 → 설정. 카드 네 장(계정 정보, 답변 수준, 요금제와 쿠폰, 화면 설정)으로 되어 있습니다."
+            lead="계정 메뉴 → 설정. 카드 다섯 장(계정 정보, 답변 수준, 추천 질문 함께 받기, 요금제와 쿠폰, 화면 설정)으로 되어 있습니다."
         >
             <GuideSub title="계정 정보">
                 <Table
@@ -34,6 +36,20 @@ export function SettingsSection() {
                     alt="계정 정보 카드. 이름 저장, 이메일 변경(현재 비밀번호 확인), 비밀번호 변경 입력칸"
                     size="half"
                     caption="계정 정보 카드"
+                />
+            </GuideSub>
+
+            <GuideSub title="추천 질문 함께 받기">
+                <P>
+                    켜면 답변 끝에 <b>이어서 물어볼 만한 질문 3개</b>를 함께 만듭니다. 질문은 답변 아래 수준 버튼(<Ui>3단계 기초 …</Ui>)을 누르면 메뉴 아래쪽에
+                    보이고, 누르면 바로 질문합니다. 질문을 만드는 만큼 답변이 1~2초 늦어질 수 있어 <b>처음에는 꺼져</b> 있습니다. 켜고 끄면 다음 답변부터
+                    적용되고, 화면 설정의 ‘기본값으로 되돌리기’와는 상관없습니다.
+                </P>
+                <Figure
+                    src={settingsSuggestQuestions}
+                    alt="추천 질문 함께 받기 카드. 설명 문장과 켜짐 상태의 스위치"
+                    size="half"
+                    caption="추천 질문 함께 받기 카드(답변 수준 카드 바로 아래)"
                 />
             </GuideSub>
 
@@ -121,6 +137,7 @@ export function MobileSection() {
                 <Figure src={mNotebookList} alt="폰의 학습장 목록" size="phone" caption="학습장 목록" />
                 <Figure src={mNotebookDetail} alt="폰의 학습장 주제 본문" size="phone" caption="주제 본문(뒤로 가면 목록)" />
                 <Figure src={mDiary} alt="폰의 일기 화면" size="phone" caption="일기 화면" />
+                <Figure src={mChatAnswerMenu} alt="폰에서 연 답변 수준 메뉴. 다른 수준 목록과 추천 질문 3개" size="phone" caption="답변 수준 메뉴" />
             </FigureRow>
             <Callout kind="tip" title="홈 화면에 추가하면 앱처럼">
                 <p>
@@ -162,7 +179,14 @@ export function FaqSection() {
                         "긴 노트를 올리면 ‘서버에 연결할 수 없습니다’가 떠요",
                         "아주 긴 노트는 서버 앞단에서 막히는 경우가 있습니다. 파일을 나누어 올리거나 스킬을 더 자주 실행해 노트를 짧게 유지하세요.",
                     ],
-                    ["답변 수준을 바꿨는데 답이 그대로예요", "다음 답변부터 적용됩니다. 대화 중 ‘더 쉽게 설명해 줘’처럼 직접 말하면 즉시 반영됩니다."],
+                    [
+                        "답변 수준을 바꿨는데 답이 그대로예요",
+                        "다음 답변부터 적용됩니다. 이미 받은 답변은 그 아래 수준 버튼(…)에서 다른 단계를 고르면 같은 질문을 그 수준으로 다시 받습니다. 대화 중 ‘더 쉽게 설명해 줘’처럼 직접 말해도 됩니다.",
+                    ],
+                    [
+                        "추천 질문이 안 보여요",
+                        "설정의 ‘추천 질문 함께 받기’를 켜야 하고, 켠 뒤에 받은 답변부터 나옵니다. 답변 아래 수준 버튼(…)을 누르면 메뉴 아래쪽에 있습니다. 드물게 AI가 질문을 만들지 않은 답변은 비어 있습니다.",
+                    ],
                     ["비밀번호를 잊었어요", "관리자(강사)에게 초기화를 요청하세요. 초기화된 암호로 로그인한 뒤 설정에서 새 비밀번호로 바꿉니다."],
                     ["다른 기기에서도 로그인했는데 끊겼어요", "비밀번호를 바꾸면 다른 기기의 로그인이 모두 끊깁니다. 새 비밀번호로 다시 로그인하세요."],
                     [

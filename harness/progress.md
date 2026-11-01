@@ -1180,3 +1180,31 @@ Base UI 메뉴는 이미 체크된 항목을 눌러도 `onValueChange`를 부르
 - 문서: `docs/conventions.md` SSE 이벤트 절을 실제 형식(글자 그대로의 `data`, 빈 `done`, 줄 끝 `\r\n`)으로 고침
 **검증**: `./scripts/verify.sh frontend` 통과, E2E 전체(diary-coach) 95 passed
 **운영 적용**: 마이그레이션·설정 없음. 프론트만 바뀌어 푸시하면 Vercel 자동 배포. 10-31에 찍은 시연 영상들은 고치기 전 동작(답변이 한꺼번에 나타남)이다
+
+## 2026-11-02 · 세션 45 · CHAT-04 답변 아래 수준 버튼 — 다른 수준으로 다시 묻기·추천 질문 3개
+
+**요청**: 답변 아래 모델 표시 옆에 그 답변의 수준을 버튼('3단계 기초 …')으로 보이고, 누르면 다른 수준으로 이번 한 번만 다시 답을 받거나
+추천 질문 3개를 고를 수 있게. 추천 질문은 답변 시간에 영향을 주니 설정 답변 수준 아래 옵션으로 켜게 하고 기본은 끔.
+**확인한 것(사용자 답)**: 추천 질문은 수준 버튼 메뉴 안 · 다른 수준 답변은 대화 맨 아래에 새로 · 추천 질문은 누르면 바로 보내기 ·
+배움일기 코치에만 · 옵션 이름 '추천 질문 함께 받기' · DB·API·인수 조건 설계 승인(ADR-0018)
+**한 일**
+- DB(Alembic `6eb9227c02e8`, 추가만): `messages.answer_level`(CHECK 1~5)·`messages.suggested_questions`(JSON), 새 표 `answer_preferences`
+  (켜기/끄기). 문구의 '기본값으로'가 `user_preferences` 행을 지우므로 같은 표에 두지 않았다
+- LLM: `prompts/suggested_questions.py`(답변 끝 `<follow_up_questions>` 형식 지시), `chains/chat.py`의 `QuestionSplitter`(태그부터는
+  화면으로 보내지 않고 질문 목록으로, 조각 경계에 걸친 태그도 처리)·`parse_questions`(목록 표시·닫는 태그가 달라도 읽고 3개까지).
+  fake 모델은 지시가 있으면 질문 3개를 붙여 E2E로 확인한다
+- API: 스트림 요청 `answer_level`(이번 한 번만), 메시지 응답 `answer_level`·`suggested_questions`, `GET /api/me/preferences`에
+  `suggest_questions`, `PUT /api/me/preferences/suggest-questions`. 채팅 도메인은 코치 설정을 모르고 `app.application`이
+  `suggest_questions_for`를 `app.state`로 넘긴다(starter는 None)
+- 화면: 공용 `MessageList`에 `answerFooter` 자리, 코치 `CoachAnswerMenu`(수준 5개·지금 답변 ✓, 이어서 물어보기, 꺼져 있으면 설정 안내와
+  '설정 열기'), 설정 `SuggestQuestionsCard`(shadcn `switch` 추가), 채팅 스토어 `sendMessage(content, { answerLevel })`
+- 가이드: 채팅 단원 '답변 수준 버튼' 소단원·표·+ 메뉴와 다른 점, 답변 수준 단원, 설정 단원 카드 다섯 장·'추천 질문 함께 받기',
+  폰 사진, FAQ 2개. 사진 `chat-assistant-message.webp`(다시 찍음)·`chat-answer-menu.webp`·`m-chat-answer-menu.webp`·
+  `settings-suggest-questions.webp`(로컬 빌드, 예시 대화는 브라우저 응답에만 끼워 넣음)
+- 테스트: `tests/test_suggested_questions.py`(나누기·읽기·지시·fake), `tests/api/test_suggested_questions.py`(답변별 수준·한 번만·
+  범위 밖 422·꺼짐 기본·켜면 질문 3개이고 토큰에 태그 없음), `test_preferences.py`(켜기·사용자별·문구 되돌리기와 따로),
+  E2E `coach.spec.ts` 3개(다른 수준으로 다시 묻기·설정 그대로 / 추천 질문 켜기·바로 보내기 / 폰 390px 메뉴), `starter-profile.spec.ts`(버튼·옵션 없음)
+**검증**: `./scripts/verify.sh` 통과(백엔드 330 passed, 커버리지 98.31%), E2E diary-coach 98 passed·starter 3 passed.
+로컬 5432·5433에 마이그레이션 적용 뒤 `alembic check` 차이 없음
+**운영 적용**: push → Render가 배포 전 운영 DB에 마이그레이션 적용(추가만, 기존 메시지는 NULL로 남아 '답변 수준 …'으로 보임).
+환경 변수 추가 없음. 원격 개발 DB(Supabase)는 사용자가 `make migrate`로 맞춘다

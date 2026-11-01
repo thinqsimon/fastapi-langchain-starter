@@ -154,6 +154,10 @@ export type Message = {
     /** 답한 공급자·모델. 사용자 메시지와 예전 답변은 null. */
     provider: string | null
     model: string | null
+    /** 이 답변을 만든 답변 수준 1~5(CHAT-04). 사용자 메시지와 예전 답변은 null. */
+    answer_level: number | null
+    /** 답변과 함께 받은 '이어서 물어보기' 질문(CHAT-04). 없으면 빈 목록. */
+    suggested_questions: string[]
 }
 
 export type ConversationDetail = Conversation & { messages: Message[] }
@@ -211,7 +215,12 @@ export type EligibleConversation = {
 export type Preferences = {
     catchphrase: string
     diary_footer: string
+    /** 채팅 답변에 추천 질문 3개를 함께 받는지(CHAT-04). 문구의 '기본값으로'와 상관없다. */
+    suggest_questions: boolean
 }
+
+/** 문구 저장(PUT)에 보내는 값. 추천 질문 설정은 따로 바꾼다. */
+export type PreferencesInput = Pick<Preferences, "catchphrase" | "diary_footer">
 
 export type WeeklyReview = {
     week_start: string

@@ -771,6 +771,22 @@
       ],
       "verify": "./scripts/verify.sh 및 ./scripts/e2e.sh e2e/admin.spec.ts",
       "passes": true
+    },
+    {
+      "id": "CHAT-04",
+      "phase": 9,
+      "owner": "frontend-dev",
+      "title": "답변 아래 수준 버튼 — 다른 수준으로 다시 묻기·추천 질문 3개(설정 '추천 질문 함께 받기')",
+      "requirement": "2026-11-02 사용자 요청(답변 UI 변경). 확인 결과: 배움일기 코치에만, 추천 질문은 수준 버튼 메뉴 안, 다른 수준 답변은 대화 맨 아래에 새로, 추천 질문은 누르면 바로 보내기, 설정 이름 '추천 질문 함께 받기'(기본 꺼짐)",
+      "acceptance": [
+        "코치 답변 아래 모델 표시 오른쪽에 그 답변의 수준 버튼이 보이고, 누르면 지금 수준(✓)과 나머지 4개 수준이 보인다",
+        "다른 수준을 고르면 같은 질문이 그 수준으로 한 번 더 보내져 맨 아래에 새 답변이 붙고, 설정의 기본 수준은 바뀌지 않는다",
+        "설정의 '추천 질문 함께 받기'(기본 꺼짐)를 켜면 답변마다 질문 3개가 저장되어 같은 메뉴에 보이고, 누르면 바로 보낸다. <follow_up_questions> 표시와 질문 목록은 답변 글에 섞이지 않는다",
+        "스타터킷 화면에는 수준 버튼과 추천 질문 옵션이 없다",
+        "마이그레이션(messages.answer_level·suggested_questions, answer_preferences)·API 테스트·E2E·ADR-0018을 갖추고 ./scripts/verify.sh와 E2E를 통과한다"
+      ],
+      "verify": "./scripts/verify.sh 및 ./scripts/e2e.sh e2e/coach.spec.ts (starter: e2e/starter-profile.spec.ts)",
+      "passes": true
     }
   ]
 }

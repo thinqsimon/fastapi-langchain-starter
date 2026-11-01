@@ -32,13 +32,24 @@ export async function listMessages(id: string): Promise<Message[]> {
     return data
 }
 
+export type StreamOptions = {
+    signal?: AbortSignal
+    /** 이번 질문에만 쓸 답변 수준(CHAT-04). 없으면 내 설정 수준으로 답한다. */
+    answerLevel?: number
+}
+
 /**
  * SSE로 응답 토큰을 받는다.
  *
  * axios는 스트리밍 응답을 다루지 못하고 EventSource는 헤더를 못 붙이므로 fetch를 쓴다.
  * 401이면 토큰을 한 번 재발급해 다시 시도한다(client.ts의 인터셉터와 같은 정책).
  */
-export async function streamMessage(conversationId: string, content: string, onToken: (token: string) => void, signal?: AbortSignal): Promise<void> {
+export async function streamMessage(
+    conversationId: string,
+    content: string,
+    onToken: (token: string) => void,
+    { signal, answerLevel }: StreamOptions = {}
+): Promise<void> {
     const send = (accessToken: string | null) =>
         fetch(`${BASE_URL}/api/conversations/${conversationId}/stream`, {
             method: "POST",
@@ -46,7 +57,7 @@ export async function streamMessage(conversationId: string, content: string, onT
                 "Content-Type": "application/json",
                 ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
             },
-            body: JSON.stringify({ content }),
+            body: JSON.stringify(answerLevel ? { content, answer_level: answerLevel } : { content }),
             signal,
         })
 

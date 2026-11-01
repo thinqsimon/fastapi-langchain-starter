@@ -4,7 +4,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 
-from app.domain.preferences.models import UserPreference
+from app.domain.preferences.models import AnswerPreference, UserPreference
 
 
 class PreferenceRepository:
@@ -32,3 +32,21 @@ class PreferenceRepository:
         if preference is not None:
             self.db.delete(preference)
             self.db.flush()
+
+
+class AnswerPreferenceRepository:
+    def __init__(self, db: Session) -> None:
+        self.db = db
+
+    def get(self, user_id: uuid.UUID) -> AnswerPreference | None:
+        return self.db.get(AnswerPreference, user_id)
+
+    def upsert(self, user_id: uuid.UUID, suggest_questions: bool) -> AnswerPreference:
+        preference = self.get(user_id)
+        if preference is None:
+            preference = AnswerPreference(user_id=user_id, suggest_questions=suggest_questions)
+            self.db.add(preference)
+        else:
+            preference.suggest_questions = suggest_questions
+        self.db.flush()
+        return preference

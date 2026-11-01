@@ -67,6 +67,9 @@ def test_profiles_are_independent_and_unknown_profile_is_rejected() -> None:
     assert starter.state.chat_system_prompt == resolve_application("starter").system_prompt
     assert coach.state.chat_system_prompt == resolve_application("diary-coach").system_prompt
     assert starter.state.chat_system_prompt != coach.state.chat_system_prompt
+    # 추천 질문(CHAT-04)은 배움일기 코치에서만 켤 수 있다.
+    assert starter.state.suggest_questions_for is None
+    assert coach.state.suggest_questions_for is not None
     with pytest.raises(ValidationError):
         Settings(_env_file=None, APP_PROFILE="typo")  # type: ignore[call-arg]
     with pytest.raises(ValueError, match="지원하지 않는"):

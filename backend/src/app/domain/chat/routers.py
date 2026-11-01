@@ -94,6 +94,7 @@ def list_messages(
         "- `event: token` — 생성된 조각\n"
         "- `event: done` — 완료(이 시점에 이력이 저장됩니다)\n"
         "- `event: error` — 실패 사유\n\n"
+        "`answer_level`(1~5)을 함께 보내면 이번 답변만 그 수준으로 답합니다(내 설정은 그대로).\n\n"
         "Swagger에서는 스트리밍이 잘 보이지 않으니 curl로 확인하세요."
     ),
 )
@@ -105,7 +106,11 @@ async def stream_message(
     db: DbSession,
 ) -> EventSourceResponse:
     """SSE로 응답 토큰을 흘려보낸다. 이벤트 형식은 docs/conventions.md 참고."""
-    service = ChatService(db, system_prompt=request.app.state.chat_system_prompt)
+    service = ChatService(
+        db,
+        system_prompt=request.app.state.chat_system_prompt,
+        suggest_questions_for=request.app.state.suggest_questions_for,
+    )
 
     async def events():
         try:
@@ -114,7 +119,9 @@ async def stream_message(
                 current_user.id,
                 payload.content,
                 plan=current_user.plan,
-                answer_level=effective_answer_level(current_user.answer_level),
+                # 다른 수준으로 다시 물을 때만 요청에 실려 온다(CHAT-04). 설정은 바꾸지 않는다.
+                answer_level=payload.answer_level
+                or effective_answer_level(current_user.answer_level),
             ):
                 yield {"event": "token", "data": chunk}
         except AppError as exc:

@@ -7,17 +7,45 @@
 from collections.abc import Iterator
 from typing import Any
 
+from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models import BaseChatModel
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.runnables import Runnable, RunnableLambda
 from pydantic import BaseModel
 
+from app.llm.prompts.suggested_questions import CLOSE_TAG, OPEN_TAG
+
 DEFAULT_REPLY = "안녕하세요! 테스트 응답입니다."
+FAKE_QUESTIONS = ("테스트 추천 질문 1", "테스트 추천 질문 2", "테스트 추천 질문 3")
 
 
 class FakeChatModel(GenericFakeChatModel):
     """스트리밍은 물론 `with_structured_output`도 지원하는 테스트 더미."""
+
+    def _generate(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: CallbackManagerForLLMRun | None = None,
+        **kwargs: Any,  # noqa: ANN401
+    ) -> ChatResult:
+        """추천 질문을 요청받으면(CHAT-04) 실제 모델처럼 답변 끝에 태그로 감싼 질문을 붙인다."""
+        result = super()._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
+        asked = any(
+            message.type == "system"
+            and isinstance(message.content, str)
+            and OPEN_TAG in message.content
+            for message in messages
+        )
+        if not asked:
+            return result
+        block = "\n".join([OPEN_TAG, *(f"- {question}" for question in FAKE_QUESTIONS), CLOSE_TAG])
+        reply = result.generations[0].message.content
+        return ChatResult(
+            generations=[ChatGeneration(message=AIMessage(content=f"{reply}\n\n{block}"))]
+        )
 
     def with_structured_output(self, schema: Any, **kwargs: Any) -> Runnable[Any, Any]:  # noqa: ANN401
         """스키마의 모든 문자열 필드를 채운 인스턴스를 돌려준다.

@@ -1,14 +1,16 @@
 import { create } from "zustand"
 
-import { preferencesApi, type Preferences } from "@/lib/api"
+import { preferencesApi, type Preferences, type PreferencesInput } from "@/lib/api"
 
 type PreferencesState = {
     /** 아직 불러오지 않았으면 null */
     preferences: Preferences | null
     load: () => Promise<void>
-    save: (input: Preferences) => Promise<Preferences>
+    save: (input: PreferencesInput) => Promise<Preferences>
     /** 기본값으로 되돌리고, 되돌린 값을 돌려준다(입력칸을 채우는 데 쓴다). */
     reset: () => Promise<Preferences>
+    /** 추천 질문 함께 받기 켜기/끄기(CHAT-04). 실패하면 예외를 던져 화면이 알리게 한다. */
+    setSuggestQuestions: (enabled: boolean) => Promise<Preferences>
     /** 로그아웃할 때 비운다. 다음 사람이 이전 사람의 문구를 잠깐이라도 보지 않게 한다. */
     clear: () => void
 }
@@ -32,6 +34,12 @@ export const usePreferencesStore = create<PreferencesState>((set) => ({
 
     reset: async () => {
         const preferences = await preferencesApi.resetPreferences()
+        set({ preferences })
+        return preferences
+    },
+
+    setSuggestQuestions: async (enabled) => {
+        const preferences = await preferencesApi.updateSuggestQuestions(enabled)
         set({ preferences })
         return preferences
     },

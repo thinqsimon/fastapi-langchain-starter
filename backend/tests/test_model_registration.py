@@ -71,6 +71,7 @@ def test_current_schema_is_as_expected() -> None:
         "notebook_topics",
         "document_chunks",
         "user_preferences",
+        "answer_preferences",
         "llm_providers",
         "llm_plan_routes",
         "coupons",

@@ -2,7 +2,7 @@
 
 import logging
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 
 from sqlalchemy.orm import Session
 
@@ -20,11 +20,20 @@ logger = logging.getLogger(__name__)
 HISTORY_LIMIT = 20
 TITLE_FROM_MESSAGE_LENGTH = 40
 
+# 사용자가 답변에 추천 질문을 함께 받을지 알려 주는 함수(CHAT-04). 앱 조립 지점이 넘겨준다.
+SuggestQuestionsFor = Callable[[Session, uuid.UUID], bool]
+
 
 class ChatService:
-    def __init__(self, db: Session, system_prompt: str | None = None) -> None:
+    def __init__(
+        self,
+        db: Session,
+        system_prompt: str | None = None,
+        suggest_questions_for: SuggestQuestionsFor | None = None,
+    ) -> None:
         self.db = db
         self.system_prompt = system_prompt
+        self.suggest_questions_for = suggest_questions_for
         self.conversations = ConversationRepository(db)
         self.messages = MessageRepository(db)
 
@@ -71,9 +80,14 @@ class ChatService:
         """사용자 메시지를 저장하고, LLM 응답을 토큰 단위로 흘리며, 끝나면 함께 저장한다.
 
         plan: 사용자의 요금제. 어떤 공급자·모델을 쓸지 이 값으로 고른다(ADMIN-03).
-        answer_level: 사용자가 고른 답변 수준(CHAT-03). 어휘·설명 깊이를 맞춘다.
+        answer_level: 이번 답변의 수준(CHAT-03). 어휘·설명 깊이를 맞추고, 답변과 함께 저장해
+            화면에 표시한다(CHAT-04).
         """
         conversation = self.get_conversation(conversation_id, user_id)
+        # 사용자가 켰으면 답변 끝에 이어서 물어볼 질문도 함께 받는다(CHAT-04).
+        suggest_questions = bool(
+            self.suggest_questions_for and self.suggest_questions_for(self.db, user_id)
+        )
         history = [
             (message.role, message.content)
             for message in self.messages.list_for_conversation(conversation_id)[-HISTORY_LIMIT:]
@@ -89,6 +103,7 @@ class ChatService:
         chunks: list[str] = []
         usage: TokenUsage | None = None
         answered_by: ModelInfo | None = None
+        questions: list[str] = []
 
         def record_usage(reported: TokenUsage) -> None:
             nonlocal usage
@@ -97,6 +112,9 @@ class ChatService:
         def record_model(info: ModelInfo) -> None:
             nonlocal answered_by
             answered_by = info
+
+        def record_questions(found: list[str]) -> None:
+            questions.extend(found)
 
         providers = AdminLlmSettingsService(self.db).active_provider_chain(plan)
         try:
@@ -108,25 +126,31 @@ class ChatService:
                 providers=providers,
                 on_model=record_model,
                 answer_level=answer_level,
+                on_questions=record_questions if suggest_questions else None,
             ):
                 chunks.append(chunk)
                 yield chunk
         finally:
             # 중간에 끊겨도 받은 데까지는 남긴다(새로고침 시 이력이 비지 않도록).
             if chunks:
+                answer = "".join(chunks)
                 self.messages.add(
                     conversation_id=conversation_id,
                     role="assistant",
-                    content="".join(chunks),
+                    # 추천 질문 태그 앞에 둔 빈 줄은 답변에 남기지 않는다.
+                    content=answer.rstrip() if questions else answer,
                     input_tokens=usage.input_tokens if usage else None,
                     output_tokens=usage.output_tokens if usage else None,
                     provider=answered_by.provider if answered_by else None,
                     model=answered_by.model if answered_by else None,
                     plan=plan,
+                    answer_level=answer_level,
+                    suggested_questions=questions or None,
                 )
                 self.db.commit()
                 logger.info(
-                    "assistant_message_saved conversation_id=%s length=%s",
+                    "assistant_message_saved conversation_id=%s length=%s questions=%s",
                     conversation_id,
-                    len("".join(chunks)),
+                    len(answer),
+                    len(questions),
                 )

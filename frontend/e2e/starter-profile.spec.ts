@@ -25,6 +25,8 @@ test("공통 인증·대화·계정 설정을 유지하고 서비스 설정은 �
     await expect(page.getByRole("img", { name: "헤드셋을 쓰고 웃는 구름 코치" })).toHaveCount(0)
     await expect(page.getByText("무엇이든 물어보세요.", { exact: true })).toBeVisible()
     await sendChatMessage(page, "JWT는 무엇인가요?")
+    // 답변 아래 수준 버튼·추천 질문(CHAT-04)은 배움일기 코치에만 있다.
+    await expect(page.locator('[data-slot="answer-level-button"]')).toHaveCount(0)
     // 대화 목록 '…' 메뉴에도 일기 항목이 없다.
     await page.getByRole("button", { name: "JWT는 무엇인가요? 메뉴" }).click()
     await expect(page.getByRole("menuitem", { name: "이름 바꾸기" })).toBeVisible()
@@ -34,6 +36,7 @@ test("공통 인증·대화·계정 설정을 유지하고 서비스 설정은 �
     await expect(page.getByRole("heading", { name: "설정", exact: true })).toBeVisible()
     await expect(page.getByLabel("이름", { exact: true })).toHaveValue(account.displayName)
     await expect(page.getByText("화면 설정", { exact: true })).toHaveCount(0)
+    await expect(page.getByRole("switch", { name: "추천 질문 함께 받기" })).toHaveCount(0)
     expect(serviceRequests).toEqual([])
 })
 

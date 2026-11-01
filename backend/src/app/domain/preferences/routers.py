@@ -3,7 +3,11 @@
 from fastapi import APIRouter
 
 from app.domain.auth.dependencies import CurrentUser, DbSession
-from app.domain.preferences.schemas import PreferencesRead, PreferencesUpdate
+from app.domain.preferences.schemas import (
+    PreferencesRead,
+    PreferencesUpdate,
+    SuggestQuestionsUpdate,
+)
 from app.domain.preferences.services import PreferenceService
 
 router = APIRouter(prefix="/me/preferences", tags=["preferences"])
@@ -25,5 +29,17 @@ def update_preferences(
 
 @router.delete("", response_model=PreferencesRead, summary="내 화면 설정을 기본값으로")
 def reset_preferences(current_user: CurrentUser, db: DbSession) -> PreferencesRead:
-    """저장한 값을 지우고 기본 캐치프레이즈와 푸터를 돌려줍니다."""
+    """저장한 값을 지우고 기본 캐치프레이즈와 푸터를 돌려줍니다. 추천 질문 설정은 그대로입니다."""
     return PreferenceService(db).reset(current_user.id)
+
+
+@router.put(
+    "/suggest-questions",
+    response_model=PreferencesRead,
+    summary="추천 질문 함께 받기 켜기/끄기",
+)
+def update_suggest_questions(
+    payload: SuggestQuestionsUpdate, current_user: CurrentUser, db: DbSession
+) -> PreferencesRead:
+    """켜면 다음 채팅 답변부터 끝에 이어서 물어볼 질문 3개를 함께 받아 저장합니다(기본 꺼짐)."""
+    return PreferenceService(db).set_suggest_questions(current_user.id, payload.enabled)

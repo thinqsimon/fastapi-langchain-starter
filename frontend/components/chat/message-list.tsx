@@ -10,18 +10,23 @@ import { cn } from "@/lib/utils"
 
 export type AssistantPresentation = { name: string; avatar: React.ReactNode }
 
+/** 답변 아래 모델 표시 오른쪽에 서비스가 더하는 항목. question은 그 답변 바로 앞의 사용자 질문. */
+export type AnswerFooter = (message: Message, question: string | null) => React.ReactNode
+
 export function MessageList({
     messages,
     streamingAnswer,
     isStreaming,
     emptyState,
     assistant,
+    answerFooter,
 }: {
     messages: Message[]
     streamingAnswer: string
     isStreaming: boolean
     emptyState?: React.ReactNode
     assistant?: AssistantPresentation
+    answerFooter?: AnswerFooter
 }) {
     const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -43,12 +48,13 @@ export function MessageList({
 
     return (
         <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4 sm:p-6" role="region" aria-label="대화 내용">
-            {messages.map((message) => (
+            {messages.map((message, index) => (
                 <Bubble
                     key={message.id}
                     role={message.role}
                     assistant={assistant}
                     answeredBy={message.role === "assistant" ? answeredByLabel(message.provider, message.model) : null}
+                    footer={message.role === "assistant" ? answerFooter?.(message, questionBefore(messages, index)) : null}
                 >
                     {message.role === "assistant" ? <MarkdownView>{message.content}</MarkdownView> : message.content}
                 </Bubble>
@@ -86,12 +92,21 @@ function TypingDots() {
     )
 }
 
+/** 답변 바로 앞의 사용자 질문. 다른 수준으로 다시 물을 때 이 질문을 보낸다. */
+function questionBefore(messages: Message[], index: number): string | null {
+    for (let i = index - 1; i >= 0; i -= 1) {
+        if (messages[i].role === "user") return messages[i].content
+    }
+    return null
+}
+
 function Bubble({
     role,
     pending = false,
     children,
     assistant,
     answeredBy,
+    footer,
 }: {
     role: Message["role"]
     /** 아직 서버에 저장되지 않은, 스트리밍 중인 응답 */
@@ -100,6 +115,8 @@ function Bubble({
     assistant?: AssistantPresentation
     /** 답한 공급자·모델 표기(예: "Gemini · gemini-2.5-flash"). 없으면 표시하지 않는다. */
     answeredBy?: string | null
+    /** 모델 표시 오른쪽에 붙는 서비스 항목(AnswerFooter) */
+    footer?: React.ReactNode
 }) {
     const isUser = role === "user"
     return (
@@ -119,10 +136,15 @@ function Bubble({
             >
                 {!isUser && assistant && <p className="mb-2 text-xs font-semibold text-muted-foreground">{assistant.name}</p>}
                 {children}
-                {answeredBy && (
-                    <p data-slot="message-model" className="mt-2 text-[11px] text-muted-foreground/80">
-                        {answeredBy}
-                    </p>
+                {(answeredBy || footer) && (
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        {answeredBy && (
+                            <p data-slot="message-model" className="text-[11px] text-muted-foreground/80">
+                                {answeredBy}
+                            </p>
+                        )}
+                        {footer && <div className="ml-auto">{footer}</div>}
+                    </div>
                 )}
             </div>
         </div>

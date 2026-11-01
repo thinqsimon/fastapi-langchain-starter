@@ -43,6 +43,7 @@ export type {
     PasswordResetResult,
     PlanName,
     Preferences,
+    PreferencesInput,
     TokenPair,
     UsageSummary,
     User,

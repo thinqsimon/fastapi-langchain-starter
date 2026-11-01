@@ -19,7 +19,8 @@ type ChatState = {
     /** 목록에 바로 보여 주고 저장한다. 비우거나 그대로면 저장하지 않는다. */
     renameConversation: (id: string, title: string) => Promise<void>
     removeConversation: (id: string) => Promise<void>
-    sendMessage: (content: string) => Promise<void>
+    /** answerLevel: 이번 질문에만 쓸 답변 수준(CHAT-04, 다른 수준으로 다시 묻기). 설정은 바뀌지 않는다. */
+    sendMessage: (content: string, options?: { answerLevel?: number }) => Promise<void>
 }
 
 /** 준비 중인 '새 대화'. 연달아 눌러도 이 준비를 함께 기다려 대화가 하나만 생긴다. */
@@ -127,7 +128,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }))
     },
 
-    sendMessage: async (content) => {
+    sendMessage: async (content, options) => {
         if (get().isStreaming) return
         const sessionVersion = get().sessionVersion
         set({ isStreaming: true, streamingAnswer: "", error: null })
@@ -145,12 +146,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 created_at: new Date().toISOString(),
                 provider: null,
                 model: null,
+                answer_level: null,
+                suggested_questions: [],
             }
             set((state) => ({ messages: [...state.messages, pending] }))
-            await chatApi.streamMessage(conversationId, content, (token) => {
-                if (get().sessionVersion === sessionVersion && get().activeId === conversationId)
-                    set((state) => ({ streamingAnswer: state.streamingAnswer + token }))
-            })
+            await chatApi.streamMessage(
+                conversationId,
+                content,
+                (token) => {
+                    if (get().sessionVersion === sessionVersion && get().activeId === conversationId)
+                        set((state) => ({ streamingAnswer: state.streamingAnswer + token }))
+                },
+                { answerLevel: options?.answerLevel }
+            )
             // 서버가 저장한 내용으로 맞춰 임시 메시지를 대체한다.
             const messages = await chatApi.listMessages(conversationId)
             if (get().sessionVersion !== sessionVersion) return

@@ -6,7 +6,17 @@
 import uuid
 from typing import Literal
 
-from sqlalchemy import ForeignKey, Index, String, Text, Uuid, func
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    ForeignKey,
+    Index,
+    SmallInteger,
+    String,
+    Text,
+    Uuid,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base, TimestampMixin
@@ -37,6 +47,9 @@ class Conversation(Base, TimestampMixin):
 
 class Message(Base, TimestampMixin):
     __tablename__ = "messages"
+    __table_args__ = (
+        CheckConstraint("answer_level BETWEEN 1 AND 5", name="ck_messages_answer_level_range"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         Uuid, primary_key=True, default=uuid.uuid4, server_default=func.gen_random_uuid()
@@ -55,5 +68,11 @@ class Message(Base, TimestampMixin):
     model: Mapped[str | None] = mapped_column(String(100), nullable=True)
     # 답할 때 사용자의 요금제(ADMIN-03). 요금제별 비용 분석용. 사용자 메시지·예전 답변은 NULL.
     plan: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # 이 답변을 만든 답변 수준 1~5(CHAT-04). 답변 아래에 표시하고, 다른 수준으로 다시 물을 때
+    # 기준이 된다. 사용자 메시지와 이 컬럼이 생기기 전의 답변은 NULL이다.
+    answer_level: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    # 답변과 함께 받은 '이어서 물어보기' 질문 목록(CHAT-04). 옵션을 끄고 받은 답변과
+    # 사용자 메시지는 NULL.
+    suggested_questions: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 
     conversation: Mapped["Conversation"] = relationship(back_populates="messages")

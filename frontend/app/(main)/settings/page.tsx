@@ -1,4 +1,4 @@
-import { ApplicationSettingsSection } from "@/applications/components"
+import { ApplicationAnswerSettings, ApplicationSettingsSection } from "@/applications/components"
 import { EmailForm, PasswordForm, ProfileForm } from "@/components/settings/account-forms"
 import { AnswerLevelCard } from "@/components/settings/answer-level-card"
 import { PlanCouponCard } from "@/components/settings/plan-coupon-card"
@@ -22,6 +22,8 @@ export default function SettingsPage() {
             </Card>
 
             <AnswerLevelCard />
+
+            <ApplicationAnswerSettings />
 
             <PlanCouponCard />
 

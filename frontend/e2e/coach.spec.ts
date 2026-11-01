@@ -482,3 +482,77 @@ test("폰에서는 대화 목록 서랍의 '…' 메뉴로 일기를 만들면 �
     await expect(page).toHaveURL(/\/diary$/)
     await expect(page.getByText("‘폰에서 정리할 배움’ 채팅으로 만든 초안입니다.")).toBeVisible()
 })
+
+/** 저장된 코치 답변과 그 아래 '2단계 입문 …' 같은 수준 버튼(CHAT-04) */
+const savedAnswers = (page: Page) => page.locator('[data-role="assistant"]:not([data-pending])')
+const levelButton = (answer: ReturnType<typeof savedAnswers>) => answer.locator('[data-slot="answer-level-button"]')
+
+test("답변 아래 수준 버튼으로 같은 질문을 다른 수준으로 한 번 더 묻고, 설정의 기본 수준은 그대로다", async ({ page }) => {
+    await signUp(page, "coach-level")
+    await sendChatMessage(page, "API가 뭐예요?")
+
+    // 아직 수준을 고르지 않아 2단계로 답했고, 모델 표시 오른쪽에 그 수준이 보인다.
+    const first = savedAnswers(page).first()
+    await expect(first.locator('[data-slot="message-model"]')).toBeVisible()
+    await expect(levelButton(first)).toHaveText("2단계 입문")
+    await levelButton(first).click()
+    await expect(page.getByRole("menuitem", { name: /2단계 입문/ })).toContainText("지금 답변")
+    await expect(page.getByRole("menuitem", { name: /2단계 입문/ })).toBeDisabled()
+    // 추천 질문은 꺼져 있어 켜는 곳을 알려 준다.
+    await expect(page.getByText("설정에서 ‘추천 질문 함께 받기’를 켜면 다음 답변부터 질문 3개가 여기 나와요.")).toBeVisible()
+    await page.getByRole("menuitem", { name: "1단계 왕초보" }).click()
+
+    // 같은 질문이 맨 아래에 한 번 더 가고, 새 답변은 1단계로 표시된다.
+    await expect(savedAnswers(page)).toHaveCount(2)
+    await expect(page.locator('[data-role="user"]')).toHaveText(["API가 뭐예요?", "API가 뭐예요?"])
+    await expect(levelButton(savedAnswers(page).last())).toHaveText("1단계 왕초보")
+    await expect(levelButton(first)).toHaveText("2단계 입문")
+
+    // 이번 한 번만 바꾼 것이라 설정은 아직 고르지 않은 상태 그대로다.
+    await openSettings(page)
+    await expect(page.locator('[data-slot="answer-level-unset"]')).toBeVisible()
+})
+
+test("설정에서 '추천 질문 함께 받기'를 켜면 답변 메뉴에 질문 3개가 나오고, 고르면 바로 보낸다", async ({ page }) => {
+    await signUp(page, "coach-suggest")
+    await openSettings(page)
+    const toggle = page.getByRole("switch", { name: "추천 질문 함께 받기" })
+    await expect(toggle).not.toBeChecked()
+    await toggle.click()
+    await expect(toggle).toBeChecked()
+    await expect(page.getByText("켰어요. 다음 답변부터 추천 질문이 함께 나와요.")).toBeVisible()
+    // 서버에 저장돼 새로고침해도 켜져 있다.
+    await page.reload()
+    await expect(page.getByRole("switch", { name: "추천 질문 함께 받기" })).toBeChecked()
+
+    await chatLink(page).click()
+    await sendChatMessage(page, "useEffect가 뭐예요?")
+    const answer = savedAnswers(page).last()
+    // 질문 목록과 그 표시(태그)는 답변 글에 섞이지 않는다.
+    await expect(answer).toContainText("안녕하세요! 테스트 응답입니다.")
+    await expect(answer).not.toContainText("follow_up_questions")
+    await expect(answer).not.toContainText("테스트 추천 질문")
+
+    await levelButton(answer).click()
+    const suggestions = page.getByRole("menuitem", { name: /테스트 추천 질문/ })
+    await expect(suggestions).toHaveText(["테스트 추천 질문 1", "테스트 추천 질문 2", "테스트 추천 질문 3"])
+    await suggestions.nth(1).click()
+    await expect(page.locator('[data-role="user"]').last()).toHaveText("테스트 추천 질문 2")
+    await expect(savedAnswers(page)).toHaveCount(2)
+})
+
+test("폰에서도 답변 수준 메뉴가 화면 안에 열리고 가로로 넘치지 않는다", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await signUp(page, "coach-level-mobile")
+    await sendChatMessage(page, "API를 아주 쉽게 설명해 주세요")
+
+    await levelButton(savedAnswers(page).last()).click()
+    const menu = page.getByRole("menu")
+    await expect(menu).toBeVisible()
+    const box = await menu.boundingBox()
+    expect(box && box.x >= 0 && box.x + box.width <= 390).toBe(true)
+    await expect(page.getByRole("menuitem", { name: "5단계 심화" })).toBeInViewport()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await page.keyboard.press("Escape")
+    await expect(menu).toHaveCount(0)
+})

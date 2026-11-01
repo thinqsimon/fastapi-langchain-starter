@@ -11,7 +11,9 @@
 **채팅을 골라** 그 대화로 배움일기 초안을 만들어 저장하며, 한 주를 회고합니다.
 
 ## 사용 흐름
-1. 채팅에서 코치와 오늘 배운 것을 이야기한다
+1. 채팅에서 코치와 오늘 배운 것을 이야기한다.
+   답변 아래 **수준 버튼**(`3단계 기초 …`)을 누르면 같은 질문을 다른 수준으로 한 번 더 받을 수 있다(저장된 수준은 그대로).
+   설정에서 **추천 질문 함께 받기**를 켜면 같은 메뉴에 이어서 물어볼 질문 3개가 나오고, 누르면 바로 질문한다(서비스 항목은 `answerFooter`로 끼워 넣어 starter에는 없다)
 2. 입력칸 왼쪽 **+ 메뉴**의 **이 대화로 일기 만들기**를 누르면 현재 대화가 일기 초안이 되고 작성 화면이 열린다. 같은 메뉴 맨 위 **새 대화**는 목록의 '새 대화'와 같이 빈 대화를 시작한다(폰에서 서랍을 열지 않아도 됨).
    대화 목록 **'…' 메뉴**의 **이 대화로 일기 만들기**는 보고 있지 않은 대화로도 바로 초안을 만든다. 일기로 만들 새 대화가 없는 채팅은 흐리게 보인다(서비스 항목은 `applicationConversationMenuExtra`로 끼워 넣어 starter에는 없다). 채팅 상단의 **사용법 동영상 열기**는 안내 영상(유튜브)을 새 탭으로 연다.
    자동 저장하지 않으며, 저장하지 않은 일기가 있으면 교체 여부를 확인한다.
@@ -54,18 +56,20 @@
 | 회고·복습 데이터 | `backend/src/app/domain/diary/`, Alembic `e317b6a91d42` | 계정·주별 회고 snapshot, 일기별 진행 상태. 소유권 검사, 원문 삭제 FK cascade |
 | 학습장 업로드·주제 관리 | `backend/src/app/domain/notebook/`, Alembic `37929cca196b` | `/study-notes` md를 JSON으로 올려 펜스 밖 `## 주제`로 나눠 저장(목차·코드 블록 제외, 메타 줄 → 유형·태그·난이도). 같은 프로젝트의 파일명 중복 409, 소유권 404, 학습장 삭제 시 주제 cascade |
 | 학습장 화면 | `frontend/app/(main)/notebook/`, `frontend/components/notebook/`, `frontend/store/notebook.ts`, `frontend/api/notebook.ts` | 왼쪽 학습장별 주제 목록(신규/전체/보관함 보기, 상태 필터, 선택 보관, 끌어서 너비 조절)·오른쪽 마크다운 본문, 수정(작성/미리보기)·학습 완료·보관·클립보드에 복사(`topic-paste-document.tsx`)·삭제 확인, 모바일은 한 창씩 |
+| 답변 수준 메뉴·추천 질문 | `frontend/applications/diary-coach/answer-menu.tsx`, `backend/src/app/llm/prompts/suggested_questions.py`, `backend/src/app/llm/chains/chat.py`(`QuestionSplitter`), Alembic `6eb9227c02e8` | 답변마다 수준을 기록해 표시, 이번 한 번만 다른 수준으로 다시 묻기, 답변과 같은 호출에서 받은 추천 질문 3개(태그 부분은 서버가 떼어 냄). 켜기/끄기는 `answer_preferences`, 채팅 도메인에는 `app.application`이 함수로 넘긴다 |
 | 코치 페르소나·일기 프롬프트 | `backend/src/app/llm/prompts/diary_coach.py` | 새 대화/이전 대화(맥락) 구분, 상세 작성 규칙, '내일 할 것'을 지어내지 않는 규칙 |
 | 구조화 출력 체인 | `backend/src/app/llm/chains/diary.py` | `with_structured_output`으로 일기 항목·회고 3항목을 받음. '내일 할 것'은 근거 문장이 대화에 있을 때만 남김 |
 | `DiaryEntry` 모델 | `backend/src/app/domain/diary/models.py` | 채팅 단위(`source_last_message_at`), 같은 날 여러 편(`day_sequence`), 제목·상세·푸터 |
 | 일기 서비스·API | `backend/src/app/domain/diary/` | 고를 수 있는 채팅 목록, 초안, 재발행 조건(409), 작성·수정·삭제, 주간 회고 |
-| 개인 설정 도메인 | `backend/src/app/domain/preferences/` | 캐치프레이즈·일기 푸터. 저장 전에는 기본값 |
+| 개인 설정 도메인 | `backend/src/app/domain/preferences/` | 캐치프레이즈·일기 푸터(저장 전에는 기본값), 추천 질문 함께 받기(`answer_preferences`, 기본 꺼짐. 문구의 '기본값으로'와 따로) |
 | 일기 화면 | `frontend/app/(main)/diary/`, `frontend/components/diary/` | 채팅 고르기, 초안·작성·수정(상세 미리보기), 지난 일기(마크다운), 주간 회고 |
 | 일기 상태 | `frontend/store/diary.ts` | 초안 출처 보존, 미저장 입력·지연 응답·로그아웃 보호. 새로고침하면 미저장 초안은 사라짐 |
 | 프리뷰·전체 복사 | `frontend/components/diary/diary-preview-actions.tsx`, `diary-document.tsx`, `diary-paste-document.tsx`, `frontend/lib/diary-markdown.ts` | 프리뷰는 문서 형태, 붙여 넣기용 HTML은 항목 제목 단계 통일·빈 줄 구분(플랫폼 편집기용) |
 | 로고·이름 | `frontend/public/brand/logo.svg`, `frontend/components/brand-logo.tsx` | A안 '열정 노트'. 파비콘·홈 화면 아이콘은 `npm run icons`로 생성 |
 
 설계 이유: [ADR-0006](../../docs/decisions/ADR-0006-diary-per-chat-and-preferences.md),
-[ADR-0009](../../docs/decisions/ADR-0009-saved-weekly-review-and-study.md), [ADR-0010](../../docs/decisions/ADR-0010-notebook.md)
+[ADR-0009](../../docs/decisions/ADR-0009-saved-weekly-review-and-study.md), [ADR-0010](../../docs/decisions/ADR-0010-notebook.md),
+[ADR-0018](../../docs/decisions/ADR-0018-answer-menu-and-suggested-questions.md)
 
 ### 함께 개선한 스타터킷 공통 기능
 샘플앱에만 쓰이는 것이 아니라 다른 서비스에도 그대로 쓸 수 있다.

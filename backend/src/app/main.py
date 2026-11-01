@@ -79,6 +79,7 @@ def create_app(rag_enabled: bool | None = None, app_profile: AppProfile | None =
     )
     app.state.application_profile = application.profile
     app.state.chat_system_prompt = application.system_prompt
+    app.state.suggest_questions_for = application.suggest_questions_for
 
     # 미들웨어는 등록 역순으로 실행된다. request_id를 CORS보다 먼저 잡도록 뒤에 등록한다.
     app.add_middleware(

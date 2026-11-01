@@ -54,6 +54,8 @@ class MessageRepository:
         provider: str | None = None,
         model: str | None = None,
         plan: str | None = None,
+        answer_level: int | None = None,
+        suggested_questions: list[str] | None = None,
     ) -> Message:
         message = Message(
             conversation_id=conversation_id,
@@ -64,6 +66,8 @@ class MessageRepository:
             provider=provider,
             model=model,
             plan=plan,
+            answer_level=answer_level,
+            suggested_questions=suggested_questions,
         )
         self.db.add(message)
         self.db.flush()
