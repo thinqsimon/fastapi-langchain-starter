@@ -65,12 +65,19 @@ export async function streamMessage(conversationId: string, content: string, onT
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ""
+    // SSE의 줄 끝은 \r\n·\r·\n 어느 것이든 될 수 있다(서버의 sse-starlette는 \r\n).
+    // 모두 \n으로 바꿔 두면 이벤트 경계가 언제나 빈 줄("\n\n")이 된다.
+    // \r\n이 두 조각에 걸쳐 오면 앞 조각의 \r이 이미 \n이 됐으므로 뒤 조각 첫 \n은 버린다.
+    let endedWithCr = false
 
     while (true) {
         const { done, value } = await reader.read()
         if (done) break
 
-        buffer += decoder.decode(value, { stream: true })
+        const text = decoder.decode(value, { stream: true })
+        const fresh = endedWithCr && text.startsWith("\n") ? text.slice(1) : text
+        if (text) endedWithCr = text.endsWith("\r")
+        buffer += fresh.replace(/\r\n?/g, "\n")
 
         // SSE는 빈 줄로 이벤트를 구분한다.
         const blocks = buffer.split("\n\n")

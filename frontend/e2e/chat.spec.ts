@@ -44,6 +44,64 @@ test("메시지를 보내면 답변이 화면에 나타난다", async ({ page })
     await expect(savedAssistant(page).first()).not.toBeEmpty()
 })
 
+test("답변은 스트림 조각이 도착하는 대로 이어 붙어 보이고, 저장된 목록을 다시 받기 전에 이미 다 보인다", async ({ page }) => {
+    // 서버가 보낸 SSE 본문(줄 끝 \r\n)을 1바이트씩 흘려 실제 네트워크처럼 잘게 조각나 도착하게 한다.
+    // 첫 이벤트까지만 흘리고, 나머지는 window.__releaseStream()을 부를 때까지 붙잡아 둔다.
+    await page.addInitScript(() => {
+        const realFetch = window.fetch.bind(window)
+        let release!: () => void
+        const held = new Promise<void>((resolve) => {
+            release = resolve
+        })
+        Object.assign(window, { __releaseStream: () => release() })
+        window.fetch = async (input, init) => {
+            const response = await realFetch(input, init)
+            if (!String(input).endsWith("/stream") || !response.ok) return response
+            const text = await response.text()
+            const firstEvent = /\r?\n\r?\n/.exec(text)
+            const cut = firstEvent ? firstEvent.index + firstEvent[0].length : text.length
+            const encoder = new TextEncoder()
+            const parts = [encoder.encode(text.slice(0, cut)), encoder.encode(text.slice(cut))]
+            const body = new ReadableStream<Uint8Array>({
+                async start(controller) {
+                    for (const [index, part] of parts.entries()) {
+                        if (index === 1) await held
+                        for (const byte of part) {
+                            controller.enqueue(Uint8Array.of(byte))
+                            await new Promise((resolve) => setTimeout(resolve, 0))
+                        }
+                    }
+                    controller.close()
+                },
+            })
+            return new Response(body, { status: response.status, headers: response.headers })
+        }
+    })
+    await signUpAndOpenChat(page)
+    // 스트림이 끝난 뒤 저장된 목록을 다시 받는 요청도 붙잡는다. 그동안 보이는 글자는 스트림에서 온 것뿐이다.
+    let releaseSaved!: () => void
+    const saved = new Promise<void>((resolve) => {
+        releaseSaved = resolve
+    })
+    await page.route("**/api/conversations/*/messages", async (route) => {
+        await saved
+        await route.continue()
+    })
+
+    await page.getByLabel("메시지").fill("조각조각 보여 줘")
+    await page.getByRole("button", { name: "보내기" }).click()
+
+    const streaming = page.locator('[data-role="assistant"][data-pending]')
+    await expect(streaming).toContainText("안녕하세요!")
+    await expect(streaming).not.toContainText("응답입니다")
+    await page.evaluate(() => (window as unknown as { __releaseStream: () => void }).__releaseStream())
+    await expect(streaming).toContainText("안녕하세요! 테스트 응답입니다.")
+
+    releaseSaved()
+    await expect(streaming).toHaveCount(0)
+    await expect(savedAssistant(page)).toContainText("안녕하세요! 테스트 응답입니다.")
+})
+
 test("새로고침해도 대화 이력이 남는다", async ({ page }) => {
     await signUpAndOpenChat(page)
     await page.getByLabel("메시지").fill("기억할 질문")

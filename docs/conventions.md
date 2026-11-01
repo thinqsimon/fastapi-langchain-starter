@@ -14,11 +14,15 @@
 - 인증: `Authorization: Bearer <access>`; refresh는 `POST /api/auth/refresh`
 
 ## SSE 이벤트 (CHAT-02에서 확정)
+`POST /api/conversations/{id}/stream`의 응답이다. `data`는 JSON이 아니라 글자 그대로 보낸다.
 ```
-event: token   data: {"content": "..."}
-event: done    data: {"message_id": 1, "usage": {"input_tokens": 0, "output_tokens": 0}}
-event: error   data: {"code": "LLM_ERROR", "message": "..."}
+event: token   data: 생성된 글자 조각 (여러 줄이면 data: 줄이 여러 개 → 받는 쪽에서 \n으로 잇는다)
+event: done    data: (빈 값) — 이 시점에 사용자 메시지와 답변이 이력에 저장돼 있다
+event: error   data: 실패 사유 (사용자에게 그대로 보여도 되는 문장)
 ```
+- 줄 끝은 sse-starlette 기본값인 `\r\n`이다. 받는 쪽은 SSE 표준대로 `\r\n`·`\r`·`\n`을 모두 줄 끝으로 읽어야 한다.
+  `\n\n`으로만 자르면 이벤트가 하나도 나뉘지 않아 글자가 실시간으로 보이지 않는다(2026-11-02 `frontend/lib/api/chat.ts`에서 고침)
+- `:`으로 시작하는 줄(15초마다 오는 `: ping`, 연결 유지용)은 주석이라 무시한다
 
 ## 백엔드 / 프론트엔드
 `backend/CLAUDE.md`, `frontend/CLAUDE.md` 참고.
