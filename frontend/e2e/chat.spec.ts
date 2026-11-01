@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test"
 
+import { sendChatMessage } from "./helpers"
+
 /** 스트리밍이 끝나 서버에 저장된 응답 말풍선 */
 function savedAssistant(page: Page) {
     return page.locator('[data-role="assistant"]:not([data-pending])')
@@ -13,6 +15,11 @@ function newAccount() {
         password: "e2e-secret-password",
         displayName: "E2E 대화자",
     }
+}
+
+/** 맨 위 '새 대화' 버튼. 목록에 생기는 '새 대화' 제목 버튼보다 앞에 있다. */
+function newChatButton(page: Page) {
+    return page.locator("#conversation-sidebar").getByRole("button", { name: "새 대화", exact: true }).first()
 }
 
 async function signUpAndOpenChat(page: Page) {
@@ -78,4 +85,64 @@ test("대화가 길어져도 헤더와 입력칸은 화면에 남고 메시지 �
     const header = (await page.locator("header").boundingBox())!
     expect(header.y).toBe(0)
     await expect(page.getByLabel("메시지")).toBeInViewport()
+})
+
+test("새 대화를 연달아 눌러도 빈 대화는 하나만 만들고, 다시 누르면 그 빈 대화를 쓴다", async ({ page }) => {
+    await signUpAndOpenChat(page)
+    await sendChatMessage(page, "첫 대화")
+    const created: string[] = []
+    page.on("request", (request) => {
+        if (request.method() === "POST" && new URL(request.url()).pathname === "/api/conversations") created.push(request.url())
+    })
+    const list = page.getByRole("navigation", { name: "대화 목록" })
+    const emptyChats = list.getByRole("button", { name: "새 대화", exact: true })
+    const userMessages = page.locator('[data-role="user"]')
+
+    for (let count = 0; count < 5; count++) await newChatButton(page).click()
+    await expect(emptyChats).toHaveCount(1)
+    await expect(userMessages).toHaveCount(0)
+
+    // 지난 대화를 보다가 눌러도 새로 만들지 않고 그 빈 대화로 돌아간다.
+    await list.getByRole("button", { name: "첫 대화", exact: true }).click()
+    await expect(userMessages).toHaveText(["첫 대화"])
+    await newChatButton(page).click()
+    await expect(userMessages).toHaveCount(0)
+
+    // 새로고침한 뒤에도 서버의 빈 대화는 하나이고, 첫 메시지는 그 대화로 간다.
+    await page.reload()
+    await expect(emptyChats).toHaveCount(1)
+    await newChatButton(page).click()
+    await sendChatMessage(page, "두 번째 대화")
+    await expect(list.getByRole("listitem")).toHaveCount(2)
+    await expect(emptyChats).toHaveCount(0)
+    expect(created).toHaveLength(1)
+
+    // 빈 대화를 쓰고 나면 다음 '새 대화'는 새로 만든다.
+    await newChatButton(page).click()
+    await expect(emptyChats).toHaveCount(1)
+    expect(created).toHaveLength(2)
+})
+
+test("새 대화를 준비하는 동안 보낸 메시지는 새 대화로 간다", async ({ page }) => {
+    await signUpAndOpenChat(page)
+    await sendChatMessage(page, "첫 대화")
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+        release = resolve
+    })
+    await page.route("**/api/conversations", async (route) => {
+        if (route.request().method() === "POST") await gate
+        await route.continue()
+    })
+
+    await newChatButton(page).click()
+    await page.getByLabel("메시지").fill("두 번째 대화")
+    await page.getByRole("button", { name: "보내기" }).click()
+    release()
+
+    const list = page.getByRole("navigation", { name: "대화 목록" })
+    await expect(list.getByRole("button", { name: "두 번째 대화", exact: true })).toBeVisible()
+    await expect(page.locator('[data-role="user"]')).toHaveText(["두 번째 대화"])
+    await list.getByRole("button", { name: "첫 대화", exact: true }).click()
+    await expect(page.locator('[data-role="user"]')).toHaveText(["첫 대화"])
 })

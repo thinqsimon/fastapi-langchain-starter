@@ -20,6 +20,9 @@ type ChatState = {
     sendMessage: (content: string) => Promise<void>
 }
 
+/** 준비 중인 '새 대화'. 연달아 눌러도 이 준비를 함께 기다려 대화가 하나만 생긴다. */
+let preparing: { sessionVersion: number; promise: Promise<string> } | null = null
+
 export const useChatStore = create<ChatState>((set, get) => ({
     conversations: [],
     activeId: null,
@@ -52,18 +55,47 @@ export const useChatStore = create<ChatState>((set, get) => ({
         set({ activeId: id, messages: detail.messages, streamingAnswer: "", error: null })
     },
 
-    startNewConversation: async () => {
+    startNewConversation: () => {
         const sessionVersion = get().sessionVersion
-        const conversation = await chatApi.createConversation()
-        if (get().sessionVersion !== sessionVersion) return conversation.id
-        set((state) => ({
-            conversations: [conversation, ...state.conversations],
-            activeId: conversation.id,
-            messages: [],
-            streamingAnswer: "",
-            error: null,
-        }))
-        return conversation.id
+        if (preparing?.sessionVersion === sessionVersion) return preparing.promise
+
+        const prepare = async () => {
+            const { activeId, messages, conversations } = get()
+            // 보고 있는 대화가 아직 비어 있으면 그 대화를 그대로 쓴다.
+            if (activeId && messages.length === 0) {
+                set({ error: null })
+                return activeId
+            }
+            // 맨 위(가장 최근) 대화가 비어 있으면 새로 만들지 않고 그 대화를 연다.
+            // 확인하지 못하면(다른 기기에서 지운 대화 등) 새로 만든다.
+            const latest = conversations[0]
+            if (latest && latest.id !== activeId) {
+                const isEmpty = await chatApi.getConversation(latest.id).then(
+                    (detail) => detail.messages.length === 0,
+                    () => false
+                )
+                if (isEmpty) {
+                    if (get().sessionVersion === sessionVersion) set({ activeId: latest.id, messages: [], streamingAnswer: "", error: null })
+                    return latest.id
+                }
+            }
+            const conversation = await chatApi.createConversation()
+            if (get().sessionVersion === sessionVersion)
+                set((state) => ({
+                    conversations: [conversation, ...state.conversations],
+                    activeId: conversation.id,
+                    messages: [],
+                    streamingAnswer: "",
+                    error: null,
+                }))
+            return conversation.id
+        }
+
+        const promise = prepare().finally(() => {
+            if (preparing?.promise === promise) preparing = null
+        })
+        preparing = { sessionVersion, promise }
+        return promise
     },
 
     removeConversation: async (id) => {
@@ -80,6 +112,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
         set({ isStreaming: true, streamingAnswer: "", error: null })
         let conversationId = get().activeId
         try {
+            // '새 대화'를 누르고 준비가 끝나기 전에 보낸 메시지는 그 새 대화로 보낸다.
+            if (preparing?.sessionVersion === sessionVersion) conversationId = await preparing.promise
             conversationId ??= await get().startNewConversation()
             if (get().sessionVersion !== sessionVersion) return
             // 보낸 메시지를 먼저 보여준다. 연속 클릭은 대화 생성 전부터 막는다.
