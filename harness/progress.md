@@ -1125,3 +1125,19 @@ Base UI 메뉴는 이미 체크된 항목을 눌러도 `onValueChange`를 부르
   너비 조절(끌기·새로고침·키보드·두 번 누르기·목록 접기), 메뉴로 삭제, 폰 서랍 이름 바꾸기(입력 16px·Esc에 서랍 유지), 터치 태블릿 '…' 보임
 **검증**: `./scripts/verify.sh` 통과(백엔드 311 passed, 커버리지 98.28%), E2E 전체 diary-coach 90 passed·starter 3 passed. PC·폰 화면 캡처로 메뉴·입력칸·끄는 중 모습 확인
 **운영 적용**: 마이그레이션·설정 없음. 백엔드 규칙이 바뀌어 푸시 뒤 Vercel과 백엔드(CI → Render) 배포를 함께 확인
+
+## 2026-11-01 · 세션 42 · 입력칸 '+' 메뉴에 '새 대화'
+
+**요청**: "채팅 입력창 앞 '+' 버튼 메뉴에 '새 대화' 추가하고 구현". 사용자 결정(질문 답): 메뉴 맨 위, 빈 대화에서는 흐리게 + 안내,
+누른 뒤 입력칸에 커서, 사용 안내의 '+ 메뉴' 사진 3장은 로컬에서 새로 찍기.
+**한 일**
+- `applications/diary-coach/chat-experience.tsx` `CoachComposerMenu`: 맨 위 '새 대화'(MessageSquarePlus 아이콘). 목록의 '새 대화'와 같은
+  `startNewConversation`을 불러 맨 위 빈 대화를 다시 쓰고 연달아 눌러도 하나만 만든다. 지금 대화가 비어 있으면 흐리게 하고 '지금 빈 대화예요'
+- 누르면 메시지 입력칸에 커서: 폰 키보드가 올라오도록 누른 순간 포커스를 주고, 메뉴가 닫힐 때도(Base UI `finalFocus`) 입력칸으로 보낸다.
+  입력칸은 + 버튼과 같은 폼 안에서 찾는다
+- 안내: 사용 안내 '+ 메뉴' 소단원(소개·사진 설명·항목 표 첫 줄), 채팅 요소 표 '새 대화', 폰 단원 표, 샘플 README 흐름 2번.
+  사진 `public/guide/chat-plus-menu.webp`·`chat-plus-menu-active.webp`·`m-chat-plus-menu.webp`는 로컬 빌드에서 다시 찍었다
+  (PC 1280 @2x 원래와 같은 자르기, 폰 390 @3x → 900px, WebP q88). 대화 중 화면은 예시 대화를 브라우저 응답에만 끼워 넣어 찍었다(서버 저장 없음)
+- 테스트: `e2e/coach.spec.ts` 2개(빈 대화에서 흐림·안내 / 대화 중 새 대화 시작·입력칸 커서·바로 보내면 새 대화로 / 폰에서 서랍 없이 시작)
+**검증**: `./scripts/verify.sh frontend` 통과, E2E 전체(diary-coach) 92 passed. starter에는 + 메뉴가 없어 영향 없음
+**운영 적용**: 마이그레이션·설정 없음. 프론트만 바뀌어 푸시하면 Vercel 자동 배포

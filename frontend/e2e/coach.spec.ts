@@ -379,3 +379,46 @@ test("채팅 상단(코치 소개·사용법 동영상·안내)은 빈 대화에
     await expect(intro).toHaveCount(0)
     await expect(guide).toHaveCount(0)
 })
+
+test("+ 메뉴의 '새 대화'는 빈 대화에서 흐리고, 대화 중에는 빈 대화를 시작해 입력칸에 커서를 둔다", async ({ page }) => {
+    await signUp(page, "coach-new-chat")
+    const newChat = page.getByRole("menuitem", { name: /새 대화/ })
+    const list = page.getByRole("navigation", { name: "대화 목록" })
+
+    // 빈 대화에서는 눌러도 바뀌는 것이 없어 흐리다.
+    await composerMenu(page).click()
+    await expect(newChat).toBeDisabled()
+    await expect(newChat).toContainText("지금 빈 대화예요")
+    await page.keyboard.press("Escape")
+
+    await sendChatMessage(page, "첫 번째 학습 대화")
+    await composerMenu(page).click()
+    await expect(newChat).toBeEnabled()
+    await expect(newChat).not.toContainText("지금 빈 대화예요")
+    await newChat.click()
+    await expect(page.getByRole("menu")).toHaveCount(0)
+    await expect(page.locator('[data-role="user"]')).toHaveCount(0)
+    await expect(page.getByLabel("메시지")).toBeFocused()
+    await expect(list.getByRole("button", { name: "새 대화", exact: true })).toHaveCount(1)
+
+    // 커서가 있는 입력칸에 바로 쓰면 새 대화로 간다.
+    await page.keyboard.type("두 번째 학습 대화")
+    await page.keyboard.press("Enter")
+    await expect(list.getByRole("button", { name: "두 번째 학습 대화", exact: true })).toBeVisible()
+    await expect(list.getByRole("button", { name: "첫 번째 학습 대화", exact: true })).toBeVisible()
+    await expect(page.locator('[data-role="user"]')).toHaveText(["두 번째 학습 대화"])
+})
+
+test("폰에서는 서랍을 열지 않고 + 메뉴로 새 대화를 시작한다", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await signUp(page, "coach-new-chat-phone")
+    await sendChatMessage(page, "폰에서 보낸 첫 질문")
+    await composerMenu(page).click()
+    const newChat = page.getByRole("menuitem", { name: /새 대화/ })
+    await expect(newChat).toBeInViewport()
+    await newChat.click()
+    await expect(page.locator('[data-role="user"]')).toHaveCount(0)
+    await expect(page.getByRole("heading", { name: /구름 코치와 풀어볼까요/ })).toBeVisible()
+    await expect(page.getByRole("dialog", { name: "대화 목록" })).toHaveCount(0)
+    await expect(page.getByLabel("메시지")).toBeFocused()
+})

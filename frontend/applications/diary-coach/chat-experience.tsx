@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { ArrowUpRight, BookOpen, LoaderCircle, Plus, SquarePlay } from "lucide-react"
+import { ArrowUpRight, BookOpen, LoaderCircle, MessageSquarePlus, Plus, SquarePlay } from "lucide-react"
 
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
@@ -211,7 +211,22 @@ export function CoachComposerMenu() {
     const draft = useDiaryDraftAction()
     const level = useAnswerLevelChoice()
     const guideVideoUrl = useGuideVideoUrl()
+    const startNewConversation = useChatStore((state) => state.startNewConversation)
+    // 이미 빈 대화면 '새 대화'를 눌러도 바뀌는 것이 없다.
+    const isEmptyChat = useChatStore((state) => state.messages.length === 0 && !state.isStreaming)
     const [open, setOpen] = useState(false)
+    const trigger = useRef<HTMLButtonElement>(null)
+    // '새 대화'를 골랐으면 메뉴가 닫힐 때 + 버튼 대신 메시지 입력칸에 커서를 둔다.
+    const focusComposer = useRef(false)
+    // + 버튼과 메시지 입력칸은 같은 입력 폼 안에 있다(components/chat/message-input.tsx).
+    const composerField = () => trigger.current?.closest("form")?.querySelector("textarea") ?? null
+
+    const startNew = () => {
+        focusComposer.current = true
+        // 폰에서 키보드가 올라오려면 누른 그 순간에 포커스를 줘야 한다.
+        composerField()?.focus()
+        void startNewConversation()
+    }
 
     return (
         <>
@@ -223,6 +238,7 @@ export function CoachComposerMenu() {
                 }}
             >
                 <DropdownMenuTrigger
+                    ref={trigger}
                     render={
                         <Button
                             type="button"
@@ -238,7 +254,24 @@ export function CoachComposerMenu() {
                 >
                     {draft.isDrafting ? <LoaderCircle className="size-5 animate-spin" /> : <Plus className="size-5" />}
                 </DropdownMenuTrigger>
-                <DropdownMenuContent side="top" align="start" sideOffset={8} className="w-60">
+                <DropdownMenuContent
+                    side="top"
+                    align="start"
+                    sideOffset={8}
+                    className="w-60"
+                    finalFocus={() => {
+                        if (!focusComposer.current) return true
+                        focusComposer.current = false
+                        return composerField() ?? true
+                    }}
+                >
+                    <DropdownMenuItem disabled={isEmptyChat} onClick={startNew} className="min-h-10 px-2">
+                        <MessageSquarePlus />
+                        <span className="flex flex-col">
+                            <span>새 대화</span>
+                            {isEmptyChat && <span className="text-xs text-muted-foreground">지금 빈 대화예요</span>}
+                        </span>
+                    </DropdownMenuItem>
                     <DropdownMenuItem disabled={!draft.canDraft} onClick={draft.requestDraft} className="min-h-10 px-2">
                         <BookOpen />
                         <span className="flex flex-col">
