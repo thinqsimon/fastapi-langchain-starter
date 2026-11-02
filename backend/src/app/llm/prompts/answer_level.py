@@ -70,3 +70,18 @@ def with_answer_level(system_prompt: str, level: int | None, *, for_writing: boo
         f"{instruction}\n"
         "학습자가 다른 수준으로 설명해 달라고 직접 요청하면 그 요청을 먼저 따르세요."
     )
+
+
+# 답변 아래 수준 버튼으로 같은 질문을 다른 수준으로 다시 물을 때 붙인다(CHAT-04).
+# 이 지시가 없으면 모델이 대화에 같은 질문이 있는 것을 보고 "이미 물어보셨네요"라며
+# 다시 설명하지 않는다(운영에서 확인).
+REANSWER_INSTRUCTION = (
+    "[다시 답변] 학습자가 이 대화에서 이미 한 질문을 위 수준으로 다시 설명받으려고 "
+    "같은 질문을 다시 보냈습니다. '이미 물어보셨네요'처럼 앞의 질문이나 답변을 가리키는 말은 "
+    "하지 말고, 위 수준에 맞춰 처음부터 새로 설명하세요."
+)
+
+
+def with_reanswer(system_prompt: str) -> str:
+    """같은 질문을 다른 수준으로 다시 물을 때, 단계 지시 뒤에 '처음부터 다시 설명' 지시를 붙인다."""
+    return f"{system_prompt}\n\n{REANSWER_INSTRUCTION}"

@@ -28,6 +28,7 @@
 - 채팅 도메인은 코치 전용 설정을 모른다. `app.application`이 `suggest_questions_for(db, user_id)` 함수를 `app.state`로 넘기고
   (starter는 None), `ChatService`가 답변 전에 묻는다. 채팅 시스템 프롬프트를 넘기는 방식과 같다.
 - 한 번만 다른 수준: 스트림 요청의 `answer_level`(선택). 라우터가 `payload.answer_level or effective_answer_level(...)`로 정한다.
+- 다시 답변 지시(2026-11-02 추가): 운영 모델(gemini-3.5-flash-lite)은 대화에 같은 질문이 있는 것을 보고 "방금 전 질문과 같은 내용을 다시 물어보셨네요!"라고만 답했다. 요청에 `answer_level`이 실려 왔고 같은 질문이 대화 이력에 있으면 서비스가 `reanswer`로 알리고, 체인이 단계 지시 뒤에 `REANSWER_INSTRUCTION`(앞 답변을 가리키지 말고 그 수준으로 처음부터 다시 설명)을 붙인다. 새 질문에 수준만 실어 보내거나 같은 질문을 수준 없이 다시 보내면 붙이지 않는다.
 - 테스트용 fake 모델은 시스템 지시에 태그 형식이 있으면 답변 끝에 질문 3개를 붙여, 실제 모델 없이 E2E로 확인한다.
 
 ## API

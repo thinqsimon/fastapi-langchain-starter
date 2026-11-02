@@ -94,7 +94,9 @@ def list_messages(
         "- `event: token` — 생성된 조각\n"
         "- `event: done` — 완료(이 시점에 이력이 저장됩니다)\n"
         "- `event: error` — 실패 사유\n\n"
-        "`answer_level`(1~5)을 함께 보내면 이번 답변만 그 수준으로 답합니다(내 설정은 그대로).\n\n"
+        "`answer_level`(1~5)을 함께 보내면 이번 답변만 그 수준으로 답합니다(내 설정은 그대로). "
+        "이 대화에서 이미 한 질문을 그렇게 다시 보내면, 앞 답변을 가리키지 않고 "
+        "그 수준으로 처음부터 다시 설명합니다.\n\n"
         "Swagger에서는 스트리밍이 잘 보이지 않으니 curl로 확인하세요."
     ),
 )
@@ -122,6 +124,7 @@ async def stream_message(
                 # 다른 수준으로 다시 물을 때만 요청에 실려 온다(CHAT-04). 설정은 바꾸지 않는다.
                 answer_level=payload.answer_level
                 or effective_answer_level(current_user.answer_level),
+                level_requested=payload.answer_level is not None,
             ):
                 yield {"event": "token", "data": chunk}
         except AppError as exc:

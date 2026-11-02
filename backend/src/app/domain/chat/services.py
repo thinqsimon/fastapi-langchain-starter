@@ -76,12 +76,15 @@ class ChatService:
         content: str,
         plan: str = DEFAULT_PLAN,
         answer_level: int | None = None,
+        level_requested: bool = False,
     ) -> AsyncIterator[str]:
         """사용자 메시지를 저장하고, LLM 응답을 토큰 단위로 흘리며, 끝나면 함께 저장한다.
 
         plan: 사용자의 요금제. 어떤 공급자·모델을 쓸지 이 값으로 고른다(ADMIN-03).
         answer_level: 이번 답변의 수준(CHAT-03). 어휘·설명 깊이를 맞추고, 답변과 함께 저장해
             화면에 표시한다(CHAT-04).
+        level_requested: 요청에 answer_level을 직접 실어 보냈는가. 이미 한 질문을 그렇게 다시 보내면
+            답변 아래 수준 버튼으로 다른 수준을 고른 것이다(CHAT-04).
         """
         conversation = self.get_conversation(conversation_id, user_id)
         # 사용자가 켰으면 답변 끝에 이어서 물어볼 질문도 함께 받는다(CHAT-04).
@@ -92,6 +95,12 @@ class ChatService:
             (message.role, message.content)
             for message in self.messages.list_for_conversation(conversation_id)[-HISTORY_LIMIT:]
         ]
+
+        # 같은 질문을 다른 수준으로 다시 묻는 경우. 알리지 않으면 모델이
+        # 대화에 같은 질문이 있는 것을 보고 "이미 물어보셨네요"라고만 답한다.
+        reanswer = level_requested and any(
+            role == "user" and text == content for role, text in history
+        )
 
         self.messages.add(conversation_id=conversation_id, role="user", content=content)
         # 첫 메시지를 제목으로 삼아 목록에서 알아보기 쉽게 한다.
@@ -127,6 +136,7 @@ class ChatService:
                 on_model=record_model,
                 answer_level=answer_level,
                 on_questions=record_questions if suggest_questions else None,
+                reanswer=reanswer,
             ):
                 chunks.append(chunk)
                 yield chunk

@@ -8,7 +8,12 @@ from app.core.answer_levels import (
     LEVEL_INFO,
     effective_answer_level,
 )
-from app.llm.prompts.answer_level import LEVEL_INSTRUCTIONS, with_answer_level
+from app.llm.prompts.answer_level import (
+    LEVEL_INSTRUCTIONS,
+    REANSWER_INSTRUCTION,
+    with_answer_level,
+    with_reanswer,
+)
 from app.llm.prompts.chat import DEFAULT_SYSTEM_PROMPT, build_chat_prompt
 from app.llm.prompts.diary_coach import (
     COACH_SYSTEM_PROMPT,
@@ -78,3 +83,13 @@ def test_default_chat_prompt_also_takes_a_level() -> None:
         LEVEL_INSTRUCTIONS[1]
         in build_chat_prompt(system).format_messages(input="x", history=[])[0].content
     )
+
+
+def test_reanswer_instruction_comes_after_the_level_and_formats() -> None:
+    """CHAT-04: 같은 질문을 다른 수준으로 다시 물으면 앞 답변을 가리키지 않고 새로 설명한다."""
+    system = with_reanswer(with_answer_level(COACH_SYSTEM_PROMPT, 1))
+    content = (
+        build_chat_prompt(system).format_messages(input="API가 뭐예요?", history=[])[0].content
+    )
+    assert content.index(LEVEL_INSTRUCTIONS[1]) < content.index(REANSWER_INSTRUCTION)
+    assert "이미 물어보셨네요" in REANSWER_INSTRUCTION
