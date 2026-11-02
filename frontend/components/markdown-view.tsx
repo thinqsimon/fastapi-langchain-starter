@@ -1,6 +1,7 @@
 import { cn } from "cn"
 import Markdown, { type Components } from "react-markdown"
-import remarkGfm from "remark-gfm"
+
+import { MARKDOWN_PLUGINS } from "@/lib/markdown-plugins"
 
 // 태그마다 필요한 값만 넘긴다(react-markdown이 주는 node 등 DOM에 없는 속성이 새지 않게).
 const COMPONENTS: Components = {
@@ -36,7 +37,7 @@ const COMPONENTS: Components = {
 export function MarkdownView({ children, className }: { children: string; className?: string }) {
     return (
         <div className={cn("flex min-w-0 flex-col gap-2 text-sm wrap-anywhere", className)}>
-            <Markdown remarkPlugins={[remarkGfm]} components={COMPONENTS}>
+            <Markdown remarkPlugins={MARKDOWN_PLUGINS} components={COMPONENTS}>
                 {children}
             </Markdown>
         </div>

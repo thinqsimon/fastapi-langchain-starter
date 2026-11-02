@@ -1218,6 +1218,7 @@ Base UI 메뉴는 이미 체크된 항목을 눌러도 `onValueChange`를 부르
   페이지 스크롤 0·헤더 보임 확인 추가(고치기 전 실패 확인). 커밋 af80094
 - 다른 수준으로 다시 답변(CHAT-04): 실제 모델이 같은 질문을 보고 "다시 물어보셨네요"라고만 답했다 → 요청에 `answer_level`이 있고
   같은 질문이 이력에 있으면 `REANSWER_INSTRUCTION`을 붙인다(ADR-0018 보충). 단위·API 테스트 추가(고치기 전 실패 확인)
+- 마크다운 굵은 글씨: `**자율 판단(Autonomous Decision)**이라고`처럼 괄호·따옴표 뒤에 한글이 바로 붙으면 표준 규칙상 굵게로 읽지 못해 별표가 그대로 보였다(AI 답변에 자주 나온다) → 사용자 확인 후 `remark-cjk-friendly`(MIT) 추가, 플러그인 목록을 `lib/markdown-plugins.ts` 하나로 모아 화면·복사본 4개 컴포넌트가 함께 쓴다. E2E `chat.spec.ts`·`diary-preview.spec.ts` 추가(고치기 전 실패 확인)
 **주의**: service/diary-coach에 push하면 프론트만 바뀌어도 Render 백엔드가 다시 배포된다. 운영 촬영·시드 중 push로 스트림 요청 하나가
 502로 끊겼다(시드 스크립트에 `--resume` 추가). 영상 스크립트는 `발표자료_다이어리/시연영상_제작/`(record_v2.cjs·seed_v2.py·assemble_v2.py)
 

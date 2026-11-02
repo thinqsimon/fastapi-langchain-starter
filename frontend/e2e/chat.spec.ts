@@ -315,3 +315,23 @@ test("넓은 화면에서는 대화 목록과 대화 사이를 끌어 목록 너
     await expect(sidebar).toHaveCount(0)
     await expect(handle).toHaveCount(0)
 })
+
+test("답변의 괄호 뒤에 조사가 바로 붙은 굵은 글씨도 별표 없이 굵게 보인다", async ({ page }) => {
+    await signUpAndOpenChat(page)
+    // fake 모델은 정해진 글만 답하므로, 저장된 답변을 실제 모델이 자주 쓰는 모양으로 바꿔 받는다.
+    await page.route("**/api/conversations/*/messages", async (route) => {
+        const response = await route.fetch()
+        const messages: { role: string }[] = await response.json()
+        const json = messages.map((message) =>
+            message.role === "assistant" ? { ...message, content: "이것을 **자율 판단(Autonomous Decision)**이라고 부릅니다." } : message
+        )
+        await route.fulfill({ response, json })
+    })
+
+    await page.getByLabel("메시지").fill("굵은 글씨를 보여 줘")
+    await page.getByRole("button", { name: "보내기" }).click()
+
+    const answer = page.locator('[data-role="assistant"]:not([data-pending])').first()
+    await expect(answer.locator("strong")).toHaveText("자율 판단(Autonomous Decision)")
+    await expect(answer).not.toContainText("**")
+})

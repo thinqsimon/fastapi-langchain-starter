@@ -1,5 +1,6 @@
 import Markdown, { type Components } from "react-markdown"
-import remarkGfm from "remark-gfm"
+
+import { MARKDOWN_PLUGINS } from "@/lib/markdown-plugins"
 
 // 인쇄된 문서처럼 보이게 한다. 복사할 때도 이 화면을 그대로 HTML로 옮기므로 제목 단계(h1~h3)를 지킨다.
 const COMPONENTS: Components = {
@@ -33,7 +34,7 @@ const COMPONENTS: Components = {
 export function DiaryDocument({ markdown }: { markdown: string }) {
     return (
         <article data-slot="diary-document" className="min-w-0 text-sm wrap-anywhere text-foreground">
-            <Markdown remarkPlugins={[remarkGfm]} components={COMPONENTS}>
+            <Markdown remarkPlugins={MARKDOWN_PLUGINS} components={COMPONENTS}>
                 {markdown}
             </Markdown>
         </article>

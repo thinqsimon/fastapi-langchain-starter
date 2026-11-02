@@ -138,3 +138,29 @@ test("붙여 넣기 서식: 상세의 소주제 사이에도 빈 줄이 들어�
     }, html)
     expect(before).toEqual(["배운 내용 상세", "빈 줄"])
 })
+
+test("괄호·따옴표 뒤에 조사가 바로 붙은 굵은 글씨도 별표 없이 굵게 보이고, 복사한 서식에도 굵게 들어간다", async ({ page }) => {
+    await signUp(page, "e2e-preview")
+    await fillDiary(page)
+    await page.getByLabel("배운 내용 상세").fill('이것을 **자율 판단(Autonomous Decision)**이라고 부른다. **"언제 쓰는지"**까지 적는다.')
+
+    // 작성 칸의 미리보기
+    await page.getByRole("button", { name: "미리보기", exact: true }).click()
+    await expect(page.locator("main strong", { hasText: "자율 판단(Autonomous Decision)" })).toBeVisible()
+    await expect(page.locator("main strong", { hasText: '"언제 쓰는지"' })).toBeVisible()
+    // 미리보기 중에도 숨겨진 입력칸에는 원문이 남아 있으므로, 그려진 문단만 본다.
+    await expect(page.locator("main p", { hasText: "**자율" })).toHaveCount(0)
+
+    // 프리뷰 창
+    await page.getByRole("button", { name: "작성 중인 일기 프리뷰 보기" }).click()
+    const preview = page.getByRole("dialog", { name: "일기 프리뷰" })
+    await expect(preview.locator("article strong", { hasText: "자율 판단(Autonomous Decision)" })).toBeVisible()
+    await expect(preview.locator("article")).not.toContainText("**")
+
+    // 교육 플랫폼에 붙여 넣는 서식
+    await preview.getByRole("button", { name: "프리뷰 전체 복사" }).click()
+    await expect(preview.getByRole("button", { name: "프리뷰 전체 복사" })).toContainText("복사됨")
+    const { html } = await readClipboard(page)
+    expect(html).toContain("<strong>자율 판단(Autonomous Decision)</strong>")
+    expect(html).not.toContain("**")
+})

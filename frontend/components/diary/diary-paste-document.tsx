@@ -1,8 +1,8 @@
 import { Fragment, type ReactNode } from "react"
 import Markdown, { type Components, type ExtraProps } from "react-markdown"
-import remarkGfm from "remark-gfm"
 
 import { diaryFooter, diarySections, type DiaryDocumentInput } from "@/lib/diary-markdown"
+import { MARKDOWN_PLUGINS } from "@/lib/markdown-plugins"
 
 /**
  * '전체 복사'의 서식(HTML)용 문서. 화면에 띄우지 않고 클립보드에만 넣는다.
@@ -54,7 +54,7 @@ export function DiaryPasteDocument({ diary }: { diary: DiaryDocumentInput }) {
                 <Fragment key={heading}>
                     <BlankLine />
                     <h3>{heading}</h3>
-                    <Markdown remarkPlugins={[remarkGfm]} components={BODY}>
+                    <Markdown remarkPlugins={MARKDOWN_PLUGINS} components={BODY}>
                         {body}
                     </Markdown>
                 </Fragment>
@@ -63,7 +63,7 @@ export function DiaryPasteDocument({ diary }: { diary: DiaryDocumentInput }) {
                 <>
                     <BlankLine />
                     <hr />
-                    <Markdown remarkPlugins={[remarkGfm]}>{footer}</Markdown>
+                    <Markdown remarkPlugins={MARKDOWN_PLUGINS}>{footer}</Markdown>
                 </>
             )}
         </>

@@ -1,9 +1,9 @@
 import type { ReactNode } from "react"
 import Markdown, { type Components } from "react-markdown"
-import remarkGfm from "remark-gfm"
 
 import { BlankLine, SubHeading } from "@/components/diary/diary-paste-document"
 import type { NotebookTopic } from "@/lib/api/types"
+import { MARKDOWN_PLUGINS } from "@/lib/markdown-plugins"
 
 type TopicPasteInput = Pick<NotebookTopic, "title" | "content">
 
@@ -46,7 +46,7 @@ export function TopicPasteDocument({ topic }: { topic: TopicPasteInput }) {
     return (
         <>
             <h1>{topic.title.trim()}</h1>
-            <Markdown remarkPlugins={[remarkGfm]} components={BODY}>
+            <Markdown remarkPlugins={MARKDOWN_PLUGINS} components={BODY}>
                 {topic.content}
             </Markdown>
         </>
