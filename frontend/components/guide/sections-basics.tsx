@@ -51,7 +51,8 @@ export function OverviewSection({ demoVideos }: { demoVideos: { desktop: string;
             </P>
             <Callout kind="note" title="영상으로 먼저 보기">
                 <p>
-                    3~4분짜리 시연 영상이 있습니다. 로그인 화면의 <Ui>사용법 시연</Ui> 버튼이나 채팅 화면의 <Ui>사용법 동영상 열기</Ui>로도 열립니다.
+                    음성 안내가 있는 5분 정도의 시연 영상이 있습니다. 로그인 화면의 <Ui>사용법 시연</Ui> 버튼이나 채팅 화면의 <Ui>사용법 동영상 열기</Ui>로도
+                    열립니다.
                 </p>
                 {demoVideos && (
                     <p className="flex flex-wrap gap-x-4 gap-y-1">

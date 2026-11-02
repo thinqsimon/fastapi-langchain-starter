@@ -1222,3 +1222,10 @@ Base UI 메뉴는 이미 체크된 항목을 눌러도 `onValueChange`를 부르
 **주의**: service/diary-coach에 push하면 프론트만 바뀌어도 Render 백엔드가 다시 배포된다. 운영 촬영·시드 중 push로 스트림 요청 하나가
 502로 끊겼다(시드 스크립트에 `--resume` 추가). 영상 스크립트는 `발표자료_다이어리/시연영상_제작/`(record_v2.cjs·seed_v2.py·assemble_v2.py)
 
+
+## 2026-11-02 · 세션 47 · 사용법 영상 링크를 음성 안내판으로
+
+**요청**: 유튜브에 올린 음성 안내 시연 영상(가로 https://youtu.be/FwJYMSyDkts, 세로 https://youtu.be/dx-96gM-XXU)으로 기존 링크를 수정.
+**한 일**: `lib/application.ts`의 `demoVideos`와 길이 주석(PC 4분 59초, 폰 5분 13초), E2E 기대 주소 `e2e/helpers.ts`의 `DEMO_VIDEO`를 바꿨다.
+로그인·가입의 '사용법 시연', 채팅 상단과 + 메뉴의 '사용법 동영상 열기', 사용 안내의 영상 링크가 이 값을 함께 쓴다. 사용 안내의 "3~4분짜리" 문구도 새 길이에 맞췄다.
+**검증**: 프론트 verify 통과, E2E brand·coach·guide 25 passed
