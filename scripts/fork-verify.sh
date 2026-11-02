@@ -8,6 +8,9 @@ work="$(mktemp -d)"
 # 개발용 DB(5432)와 겹치지 않게 전용 포트를 쓴다.
 export POSTGRES_PORT="${FORK_VERIFY_DB_PORT:-55432}"
 export DATABASE_URL="postgresql+psycopg://app:app@localhost:${POSTGRES_PORT}/app"
+# 테스트도 검증용 DB를 쓰게 한다. 빠뜨리면 테스트가 개발자 PC의 5432 DB에 붙어 엉뚱한 스키마로 실패하거나,
+# 5432에 아무것도 없으면 DB 테스트가 통째로 건너뛰어져 "거짓 통과"가 된다(2026-11-02 검증 기록 #8).
+export TEST_DATABASE_URL="$DATABASE_URL"
 
 cleanup() {
   if [ -d "$work/kit" ] && command -v docker > /dev/null 2>&1; then

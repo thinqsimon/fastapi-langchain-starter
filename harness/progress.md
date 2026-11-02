@@ -1237,3 +1237,20 @@ Base UI 메뉴는 이미 체크된 항목을 눌러도 `onValueChange`를 부르
 **원인**: `PaneResizer`가 `pointerup`만 끌기의 끝으로 봤다. 버튼을 놓는 신호를 페이지가 못 받으면 Chrome은 버튼 없는 다음 이동에서 `lostpointercapture`만 보내고 `pointerup`은 보내지 않아 끌기 상태가 남았다. CDP로 버튼 없는 이동을 보내 이벤트 순서와 증상을 재현했다. 실제로 신호를 놓친 계기(창 밖에서 놓기 등)는 재현하지 못한 추정이다.
 **한 일**: 끌기의 끝을 `lostpointercapture` 하나로 모으고, 버튼이 풀린 이동은 따라가지 않고 끌기를 끝낸다. 끄는 중에 손잡이가 사라져도(대화 목록 접기) 줄의 커서가 남지 않게 줄에 알리는 일을 effect로 옮겼다. 학습장과 채팅이 같은 컴포넌트를 쓴다.
 **검증**: 프론트 verify 통과, E2E chat·notebook·responsive 32 passed. 새 테스트 3개 중 손잡이 끌기 2개는 고치기 전 실패 확인, `buttons` 검사만 뺀 빌드로도 실패 확인. 손잡이 사라짐은 고치기 전 같은 단계의 임시 진단으로 커서가 남는 것을 확인했다.
+
+---
+
+## 2026-11-02 · 세션 49 · README "스타터킷은 main" 안내와 배포 문서 동기화
+
+**요청**: Fork 문서 검토(세션은 main 쪽 `2nd_Sample` 폴더에서 진행, main `harness/progress.md` 세션 17 참고) 결과 중 이 브랜치 몫.
+
+**한 일**
+- README 첫머리: 이 브랜치는 샘플앱이고 스타터킷은 `main`임을 안내(`git clone -b main`, Fork 후 기본 브랜치 바꾸기, main 문서 링크, 이 브랜치의 성격과 기본 브랜치인 이유)
+- README: "서비스 브랜치 push는 검증만" 문장을 ADR-0011(브랜치별 배포)에 맞게 수정
+- main과 동일하게 반영: `usage.md` ⑦(Vercel Production Branch, GitHub Environment 기준), `scripts/fork-verify.sh`(`TEST_DATABASE_URL` 격리), `fork-verification.md`(3차·4차 기록)
+
+**검증**
+- 문서·스크립트 변경만이라 `[skip ci]`. fork-verify 수정은 main에서 `make fork-verify` 통과로 확인(테스트 165개)
+
+**다음 할 일**
+- 없음. 기본 브랜치를 main으로 되돌릴지는 팀 결정

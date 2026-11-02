@@ -1,5 +1,16 @@
 # AX Chat Starter
 
+> **이 브랜치(`service/diary-coach`)는 스타터킷이 아니라 샘플앱입니다. 스타터킷은 [`main` 브랜치](https://github.com/thinqsimon/fastapi-langchain-starter/tree/main)입니다.**
+>
+> - **새 AI 서비스를 시작하려면 `main`을 받으세요.** Fork한 뒤 `git clone -b main <Fork한 저장소 주소>`로 받거나,
+>   Fork 저장소의 Settings → General → Default branch를 `main`으로 바꾸면 그냥 clone해도 스타터킷이 나옵니다.
+>   사용법·커스터마이징·배포는 main의 [README](https://github.com/thinqsimon/fastapi-langchain-starter/blob/main/README.md)와 [사용 및 운영 가이드](https://github.com/thinqsimon/fastapi-langchain-starter/blob/main/docs/guides/usage.md)를 보세요.
+> - **이 브랜치는** main 스타터킷으로 만든 샘플 서비스 **배움일기 코치**를 계속 발전시키는 곳입니다.
+>   관리자 화면·요금제·쿠폰·답변 수준·학습장처럼 이 서비스에만 필요한 기능이 들어 있어, 새 서비스의 출발점으로는 알맞지 않습니다.
+>   스타터킷의 공통 부분(인증·대화·LLM·CI/CD)은 main과 같습니다.
+> - 저장소의 기본 브랜치가 이 브랜치인 이유는 운영 배포(https://dc.1pk.kr)가 여기서 나가기 때문입니다.
+>   스타터킷으로 새 서비스를 만든 실제 과정은 [samples/diary-coach](samples/diary-coach/)에 있습니다.
+
 FastAPI · PostgreSQL(pgvector) · Next.js · LangChain 기반 **챗봇형 AI 서비스 스타터킷**.
 
 Fork하면 인증, 대화 이력, LLM 스트리밍, 토큰 사용량 집계, CI/CD, 브라우저 테스트가 갖춰진 상태에서
@@ -20,7 +31,7 @@ node scripts/dev.mjs starter frontend
 
 선택 지점과 빌드 환경 변수: [실행 프로필 가이드](docs/guides/application-profiles.md).
 팀원이 실제 LLM을 연결할 때는 [LLM 연동 인수인계](docs/guides/llm-handoff.md)를 기준으로 시작하세요.
-운영 배포 설정은 main 기준이며 서비스 브랜치 push는 검증만 수행합니다.
+배포는 브랜치마다 따로 나갑니다. `main`은 코치 1, 이 브랜치는 코치 2로, CI를 통과한 push만 배포됩니다([ADR-0011](docs/decisions/ADR-0011-deploy-per-branch.md)).
 
 ```
 사용자 → Next.js → FastAPI → PostgreSQL / LangChain → LLM API → SSE 스트리밍 응답

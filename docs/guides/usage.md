@@ -294,30 +294,37 @@ New → Web Service → **Public Git Repository**에 저장소 주소를 넣고 
 
 1. 저장소를 import하고 **Root Directory를 `frontend`로** 지정합니다.
 2. 환경 변수 `NEXT_PUBLIC_API_BASE_URL`에 2단계의 Render 주소를 넣습니다.
-3. 배포 후 Render의 `CORS_ORIGINS`에 Vercel 주소를 넣고 백엔드를 재배포합니다.
+3. Settings → Git → **Production Branch**를 배포 브랜치로 맞춥니다(기본은 `main`).
+   다른 브랜치를 서비스로 쓰면 그 브랜치로 바꿉니다. 그 브랜치에 push할 때마다 Vercel이 다시 배포합니다.
+4. 배포 후 Render의 `CORS_ORIGINS`에 Vercel 주소를 넣고 백엔드를 재배포합니다.
 
-#### 4단계 · GitHub Actions 연결
+#### 4단계 · GitHub Actions 연결 (Environment)
 
-Settings → Secrets and variables → Actions
+Settings → **Environments** → New environment. 이름은 `deploy.yml`의 브랜치 매핑과 같아야 합니다
+(`main` → `production`, `service/diary-coach` → `diary-coach`). 만든 Environment **안에서** 아래 값을 입력합니다.
 
 > **어느 저장소인지 확인하세요.** 변수와 시크릿은 **저장소마다 따로** 관리됩니다.
 > 비슷한 이름의 저장소가 여럿이면 엉뚱한 곳에 넣기 쉽고, 그러면 Deploy가 계속 건너뛰어집니다.
 > 주소로 바로 들어가는 편이 안전합니다:
-> `https://github.com/<소유자>/<저장소>/settings/secrets/actions`
+> `https://github.com/<소유자>/<저장소>/settings/environments`
 
 | 종류 | 이름 | 값 |
 |---|---|---|
-| Variable | `DEPLOY_TARGET` | `render` |
-| Variable | `BACKEND_URL` | `https://<서비스명>.onrender.com` |
-| Secret | `RENDER_DEPLOY_HOOK_URL` | Render → Settings → Deploy Hook 주소 |
+| Environment variable | `DEPLOY_TARGET` | `render` |
+| Environment variable | `BACKEND_URL` | `https://<서비스명>.onrender.com` |
+| Environment secret | `RENDER_DEPLOY_HOOK_URL` | Render → Settings → Deploy Hook 주소 |
+
+저장소 수준(Settings → Secrets and variables → Actions)에 넣은 값은 Environment에 같은 이름이 **없을 때만** 대신 쓰입니다.
+서비스가 하나뿐이면 거기에 넣어도 되지만, 둘 이상이면 반드시 Environment에 나눠 넣습니다.
 
 이 값들이 없으면 Deploy 워크플로는 **건너뜁니다**. 배포하지 않았는데 초록불이 켜지는 것을 막기 위함입니다.
 
 등록했는데도 계속 건너뛴다면 순서대로 확인하세요.
 
 1. 저장소가 맞는가 (위 경고 참고)
-2. `DEPLOY_TARGET`이 **Variables** 탭에 있는가 (Secrets 탭이 아님)
-3. 이름의 철자와 대소문자가 정확한가
+2. Environment 이름이 `deploy.yml`의 매핑과 같은가 (`production` / `diary-coach`)
+3. `DEPLOY_TARGET`이 Environment의 **Variables**에 있는가 (Secrets가 아님)
+4. 이름의 철자와 대소문자가 정확한가
 
 > **무료 플랜 주의**
 > - Render 백엔드는 15분간 요청이 없으면 중지되고, 다시 깨어나는 데 약 1분 걸립니다.

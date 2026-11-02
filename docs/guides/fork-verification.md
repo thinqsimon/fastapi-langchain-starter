@@ -43,10 +43,45 @@ Supabase + Render + Vercel에 배포한 뒤 운영 환경에서 직접 확인했
 | 4 | 루트 경로 404와 "No open ports detected" | 배포 플랫폼이 `/`를 확인하는데 라우트가 없었음 | 서비스 정보를 돌려주는 루트 라우트 추가 |
 | 5 | uv 버전 경고 | 빌드 도구 버전 범위를 좁게 고정 | 범위 완화 |
 
+## 2026-10-26 · 3차 (다른 사람의 컴퓨터 · Windows)
+
+팀원이 **Windows PC**에서 `service/diary-coach` 브랜치를 받아 로컬 실행까지 진행했습니다
+(AI 에이전트의 도움을 받음. 서비스 브랜치 `harness/progress.md` 세션 19).
+
+| 항목 | 내용 |
+|---|---|
+| 환경 | Windows, Docker Desktop(WSL), Python 3.13, 기본 인코딩 cp949 |
+| 결과 | **실행 성공** — DB 기동·마이그레이션·로그인·일기·회고 확인. 배포는 하지 않음 |
+
+### 이 검증으로 찾아낸 문제
+
+| # | 증상 | 원인 | 조치 |
+|---|---|---|---|
+| 6 | Alembic이 `UnicodeDecodeError: cp949`로 설정을 못 읽음 | `alembic.ini`의 한글 주석을 Windows 기본 로캘로 읽음 | 주석을 ASCII 영문으로 유지 ([트러블슈팅 9](troubleshooting.md#9-windows-로컬-실행-alembic-인코딩과-예약-포트)) |
+| 7 | 포트 8000에서 `WinError 10013` | Docker/WSL 기동 뒤 Windows가 8000 근처를 예약 | 예약 범위 밖 포트(예: 18000) 사용과 확인 명령 안내 |
+
+## 2026-11-02 · 4차 (자동 검증 재실행)
+
+| 항목 | 내용 |
+|---|---|
+| 환경 | macOS (Apple Silicon), Python 3.13.15, Node 22, Docker Desktop. 개발용 DB 컨테이너 여러 개가 떠 있는 평소 상태 |
+| 명령 | `make fork-verify` (main) |
+| 결과 | 처음 실행 **실패**(테스트 92개) → 스크립트 결함 수정 후 **통과** — 테스트 165개, 커버리지 97%, 프론트엔드 빌드 |
+
+### 이 검증으로 찾아낸 문제
+
+| # | 증상 | 원인 | 조치 |
+|---|---|---|---|
+| 8 | 테스트 92개가 `Can't locate revision identified by '…'`로 실패 | fork-verify가 `DATABASE_URL`만 검증용 포트(55432)로 바꾸고 `TEST_DATABASE_URL`은 그대로 둬, 테스트가 **개발자 PC의 5432 DB**에 붙었다. 그 DB는 다른 브랜치 스키마였다. 5432에 아무것도 없는 새 PC에서는 DB 테스트가 건너뛰어져 **거짓 통과**가 된다 | `scripts/fork-verify.sh`가 `TEST_DATABASE_URL`도 검증용 DB로 지정 |
+
+> 1차 "통과" 기록은 이 결함 때문에 DB 테스트를 건너뛴 결과였을 수 있습니다. 4차부터가 테스트까지 포함한 검증입니다.
+
 ## 남은 검증 (DOC-02)
 
-- [ ] **다른 사람의 컴퓨터**에서 README만 보고 실행 — 팀원에게 요청 예정
-- [ ] Render 배포 후 문서대로 배포가 재현되는지 (CD-01 완료 후)
+- [x] 다른 사람의 컴퓨터에서 실행 — 3차(Windows). 다만 서비스 브랜치였고 AI 도움을 받았습니다.
+      **main을 README만 보고** 실행한 기록은 아직 없습니다
+- [ ] 다른 사람이 문서만 보고 Render·Vercel을 새로 만들어 배포 재현 — 10/30 배포 게이트([ADR-0011](../decisions/ADR-0011-deploy-per-branch.md))로
+      push → 자동 배포는 확인했지만, 제3자가 ⑦ 절차만으로 처음부터 배포한 기록은 없습니다
 
 ## 다시 검증하는 방법
 
