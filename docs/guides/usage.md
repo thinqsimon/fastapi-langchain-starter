@@ -146,6 +146,22 @@ curl -s http://localhost:8000/api/usage/me -H "Authorization: Bearer $TOKEN"
 ## ⑥ 새 서비스로 커스터마이징
 
 샘플앱 [배움일기 코치](../../samples/diary-coach/)가 실제로 이 절차를 거쳐 만들어졌습니다.
+출발점은 둘 중 하나입니다.
+
+| 출발점 | 언제 | 방법 |
+|---|---|---|
+| 샘플앱을 두고 시작 | 일기 기능을 참고하거나 그 위에 얹을 때 | 0번을 건너뛰고 1번부터 |
+| 샘플앱을 걷어내고 시작 | 깨끗한 채팅 스타터에서 시작할 때 | 0번 스크립트에서 "샘플앱 제거"에 `y` |
+
+**0. 초기화 스크립트 (선택)**
+```bash
+./scripts/new-project.sh "내 서비스" my-service     # "<화면에 보일 이름>" <slug: 소문자·하이픈>
+```
+- 저장소 안의 `AX Chat Starter`·`ax-chat-starter`를 새 이름·slug로 바꾸고, `.env`가 없으면 만듭니다(`.env`는 건드리지 않음)
+- "샘플앱(배움일기 코치)을 제거할까요?"에 `y`를 주면 일기 도메인·화면·테스트·프롬프트·체인이 삭제되고,
+  **직접 정리할 참조 10곳**(`api.py`·`models.py`·`pyproject.toml` 등록, 헤더 링크, 설정 화면의 푸터 입력칸, E2E, 마이그레이션)이 출력됩니다.
+  출력을 위에서부터 그대로 처리하면 됩니다
+- 되돌릴 수 없으니 **커밋된 깨끗한 작업 트리**에서 실행하고, 끝나면 `make verify`로 확인합니다
 
 **1. 이름·로고 바꾸기**
 - 이름: `.env`의 `APP_NAME`(백엔드), `frontend/components/brand-logo.tsx`의 `APP_NAME`(화면·브라우저 탭·홈 화면 이름)
@@ -156,17 +172,34 @@ curl -s http://localhost:8000/api/usage/me -H "Authorization: Bearer $TOKEN"
 **2. 프롬프트 교체** — 성격이 바뀌는 지점입니다.
 `backend/src/app/llm/prompts/`에 새 파일을 만들고, 기존 `chat.py`와 같은 구조로 작성합니다.
 
-**3. 도메인 추가**
-```bash
-# backend/src/app/domain/<이름>/ 에 routers·services·repositories·models·schemas 생성
-# 등록 3곳: app/api.py, app/models.py, pyproject.toml의 import-linter containers
-make migration m="create <이름>"
-make migrate
+**3. 도메인 추가** — 기능 하나가 폴더 하나입니다. `domain/diary/`를 복사해 고치는 것이 가장 빠릅니다.
 ```
+backend/src/app/domain/<이름>/
+  __init__.py  routers.py  services.py  repositories.py  models.py  schemas.py
+```
+- 역할 분담: routers는 검증·인증·서비스 호출만, 비즈니스 로직은 services, DB 접근은 repositories.
+  어기면 `make verify`의 import-linter가 막습니다. 서비스는 `HTTPException` 대신 `app.core.exceptions.AppError` 하위 클래스를 던집니다
+- `models.py`: `from app.core.database import Base`를 상속, 테이블명은 복수형, `created_at`/`updated_at`(UTC)
+- 등록 3곳:
+
+  | 파일 | 추가할 것 |
+  |---|---|
+  | `backend/src/app/api.py` | `from app.domain.<이름>.routers import router as <이름>_router` 뒤 `router.include_router(<이름>_router)` |
+  | `backend/src/app/models.py` | 모델 import (Alembic이 테이블을 인식하는 곳) |
+  | `backend/pyproject.toml` | `[tool.importlinter]` layers 계약의 `containers`에 `"app.domain.<이름>"` |
+
+- 마이그레이션을 만들고 **파일을 읽어 본 뒤** 적용합니다
+  ```bash
+  make migration m="create <이름>"   # backend/alembic/versions/ 에 생성
+  make migrate
+  ```
+- 테스트는 `backend/tests/api/test_<이름>.py`에 둡니다(`test_diary.py` 참고). `LLM_PROVIDER=fake`라 키 없이 돕니다
+- LLM이 필요하면 `app.llm.providers.get_chat_model()`만 쓰고, 프롬프트는 `llm/prompts/`, 구조화 출력은 `llm/chains/diary.py`를 참고합니다
+- Claude Code를 쓰면 `/add-domain-model <이름>`이 폴더 생성·등록·마이그레이션까지 한 번에 합니다
 
 **4. 화면 추가**
-`frontend/app/(main)/<이름>/page.tsx`, API 함수는 `frontend/api/<이름>.ts`,
-상태는 `frontend/store/<이름>.ts`에 둡니다.
+`frontend/app/(main)/<이름>/page.tsx`, API 함수는 `frontend/api/<이름>.ts`(`frontend/api/index.ts`에서 내보내기),
+상태는 `frontend/store/<이름>.ts`에 둡니다(`store/diary.ts`와 같은 구조). 메뉴에 띄우려면 `frontend/components/app-header.tsx`에 링크를 더합니다.
 
 **5. 확인**
 ```bash
@@ -284,30 +317,37 @@ New → Web Service → **Public Git Repository**에 저장소 주소를 넣고 
 
 1. 저장소를 import하고 **Root Directory를 `frontend`로** 지정합니다.
 2. 환경 변수 `NEXT_PUBLIC_API_BASE_URL`에 2단계의 Render 주소를 넣습니다.
-3. 배포 후 Render의 `CORS_ORIGINS`에 Vercel 주소를 넣고 백엔드를 재배포합니다.
+3. Settings → Git → **Production Branch**를 배포 브랜치로 맞춥니다(기본은 `main`).
+   다른 브랜치를 서비스로 쓰면 그 브랜치로 바꿉니다. 그 브랜치에 push할 때마다 Vercel이 다시 배포합니다.
+4. 배포 후 Render의 `CORS_ORIGINS`에 Vercel 주소를 넣고 백엔드를 재배포합니다.
 
-#### 4단계 · GitHub Actions 연결
+#### 4단계 · GitHub Actions 연결 (Environment)
 
-Settings → Secrets and variables → Actions
+Settings → **Environments** → New environment. 이름은 `deploy.yml`의 브랜치 매핑과 같아야 합니다
+(`main` → `production`, `service/diary-coach` → `diary-coach`). 만든 Environment **안에서** 아래 값을 입력합니다.
 
 > **어느 저장소인지 확인하세요.** 변수와 시크릿은 **저장소마다 따로** 관리됩니다.
 > 비슷한 이름의 저장소가 여럿이면 엉뚱한 곳에 넣기 쉽고, 그러면 Deploy가 계속 건너뛰어집니다.
 > 주소로 바로 들어가는 편이 안전합니다:
-> `https://github.com/<소유자>/<저장소>/settings/secrets/actions`
+> `https://github.com/<소유자>/<저장소>/settings/environments`
 
 | 종류 | 이름 | 값 |
 |---|---|---|
-| Variable | `DEPLOY_TARGET` | `render` |
-| Variable | `BACKEND_URL` | `https://<서비스명>.onrender.com` |
-| Secret | `RENDER_DEPLOY_HOOK_URL` | Render → Settings → Deploy Hook 주소 |
+| Environment variable | `DEPLOY_TARGET` | `render` |
+| Environment variable | `BACKEND_URL` | `https://<서비스명>.onrender.com` |
+| Environment secret | `RENDER_DEPLOY_HOOK_URL` | Render → Settings → Deploy Hook 주소 |
+
+저장소 수준(Settings → Secrets and variables → Actions)에 넣은 값은 Environment에 같은 이름이 **없을 때만** 대신 쓰입니다.
+서비스가 하나뿐이면 거기에 넣어도 되지만, 둘 이상이면 반드시 Environment에 나눠 넣습니다.
 
 이 값들이 없으면 Deploy 워크플로는 **건너뜁니다**. 배포하지 않았는데 초록불이 켜지는 것을 막기 위함입니다.
 
 등록했는데도 계속 건너뛴다면 순서대로 확인하세요.
 
 1. 저장소가 맞는가 (위 경고 참고)
-2. `DEPLOY_TARGET`이 **Variables** 탭에 있는가 (Secrets 탭이 아님)
-3. 이름의 철자와 대소문자가 정확한가
+2. Environment 이름이 `deploy.yml`의 매핑과 같은가 (`production` / `diary-coach`)
+3. `DEPLOY_TARGET`이 Environment의 **Variables**에 있는가 (Secrets가 아님)
+4. 이름의 철자와 대소문자가 정확한가
 
 > **무료 플랜 주의**
 > - Render 백엔드는 15분간 요청이 없으면 중지되고, 다시 깨어나는 데 약 1분 걸립니다.

@@ -70,8 +70,9 @@ make verify                              # 린트·타입·테스트·빌드
 
 ## 새 서비스로 바꾸기
 
-[사용 및 운영 가이드](docs/guides/usage.md)에 단계별로 적어 두었습니다. 요약하면:
+[사용 및 운영 가이드](docs/guides/usage.md) ⑥에 단계별로 적어 두었습니다. 요약하면:
 
+0. (선택) `./scripts/new-project.sh "내 서비스" my-service` — 이름을 바꾸고, 샘플앱을 걷어낼지 고릅니다
 1. `.env`의 `APP_NAME`, `frontend/components/brand-logo.tsx`의 `APP_NAME`(화면·탭·홈 화면 이름)을 바꾸고,
    로고 원본 `frontend/public/brand/logo.svg`를 교체한 뒤 `npm run icons`로 파비콘·아이콘을 다시 만듭니다
 2. `backend/src/app/llm/prompts/`에 서비스에 맞는 프롬프트를 둡니다
