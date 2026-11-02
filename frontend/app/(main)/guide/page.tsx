@@ -15,7 +15,9 @@ export const metadata: Metadata = { title: `사용 안내 · ${application.name}
  */
 export default function GuidePage() {
     return (
-        <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col overflow-y-auto p-4 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:p-6 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-10">
+        // relative: 표의 숨김 제목(caption.sr-only, position:absolute)이 이 스크롤 칸을 기준으로 잡히게 한다.
+        // 없으면 페이지 전체 높이로 새어 나가, 목차를 누를 때 페이지까지 밀려 위쪽 메뉴가 가려진다.
+        <div className="relative mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col overflow-y-auto p-4 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:p-6 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-10">
             <GuideToc />
             <article className="flex min-w-0 flex-col gap-10">
                 <header className="flex flex-col gap-2">

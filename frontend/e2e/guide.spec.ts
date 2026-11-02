@@ -17,6 +17,9 @@ test("계정 메뉴의 '사용 안내'를 누르면 안내 화면이 열리고 �
     await toc.getByRole("link", { name: "학습장" }).click()
     await expect(page).toHaveURL(/#notebook$/)
     await expect(page.getByRole("heading", { level: 2, name: "학습장" })).toBeInViewport()
+    // 단원 이동은 안내 칸 안에서만 일어난다. 페이지 전체가 밀려 위쪽 메뉴(채팅·학습장·일기)가 가려지면 안 된다.
+    expect(await page.evaluate(() => document.documentElement.scrollTop)).toBe(0)
+    await expect(page.getByRole("link", { name: "채팅", exact: true })).toBeInViewport()
 
     // 스킬 단원에는 실제 입력 문구가 터미널 패널로 들어 있다.
     await toc.getByRole("link", { name: "/study-notes 스킬" }).click()
