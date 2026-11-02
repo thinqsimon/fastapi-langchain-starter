@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test"
+import { expect, type Locator, type Page } from "@playwright/test"
 
 /** 테스트마다 새 계정을 써서 서로 간섭하지 않게 한다. */
 export function newAccount(prefix = "e2e") {
@@ -67,6 +67,49 @@ export async function sendChatMessage(page: Page, content: string) {
     await page.getByLabel("메시지").fill(content)
     await page.getByRole("button", { name: "보내기" }).click()
     await expect(saved).toHaveCount(before + 1)
+}
+
+/**
+ * 칸 너비 손잡이를 끌다 버튼을 놓으면 끌기가 끝나는지 본다. 커서가 돌아오고, 버튼 없이 손잡이를 지나가도 너비가 그대로여야 한다.
+ * 창 밖에서 버튼을 놓으면 브라우저가 pointerup 없이 버튼 없는 이동만 받을 수 있어서 그 경우도 본다.
+ * page.mouse는 눌린 버튼을 따로 기억해 이 상황을 못 만들므로 CDP로 이동을 보낸다.
+ */
+export async function expectPaneDragEnds(page: Page, handle: Locator, pane: Locator) {
+    const cdp = await page.context().newCDPSession(page)
+    const moveWithoutButton = (x: number, y: number) => cdp.send("Input.dispatchMouseEvent", { type: "mouseMoved", x, y, button: "none", buttons: 0 })
+
+    const startDrag = async (distance: number) => {
+        const box = (await handle.boundingBox())!
+        const [x, y] = [box.x + box.width / 2, box.y + 200]
+        await page.mouse.move(x, y)
+        await page.mouse.down()
+        await page.mouse.move(x + distance, y, { steps: 4 })
+        await expect(pane).toHaveCSS("cursor", "col-resize")
+        return { x: x + distance, y }
+    }
+    const expectEnded = async ({ x, y }: { x: number; y: number }) => {
+        await expect(pane).toHaveCSS("cursor", "auto")
+        const width = await handle.getAttribute("aria-valuenow")
+        for (let step = 20; step >= -20; step -= 4) await moveWithoutButton(x + step, y)
+        await expect(pane).toHaveCSS("cursor", "auto")
+        await expect(handle).toHaveAttribute("aria-valuenow", width!)
+    }
+
+    // 평소처럼 창 안에서 버튼을 놓는다.
+    const released = await startDrag(-30)
+    await page.mouse.up()
+    await expectEnded(released)
+
+    // 창 밖에서 버튼을 놓아 pointerup을 못 받은 채 포인터가 돌아온다. Chrome은 이때 포인터 캡처만 푼다(lostpointercapture).
+    const lost = await startDrag(30)
+    await moveWithoutButton(lost.x + 200, lost.y)
+    await expectEnded(lost)
+    await page.mouse.up() // page.mouse가 기억하는 버튼만 되돌린다
+
+    // 캡처를 쥔 채 버튼 없는 이동을 손잡이로 넘겨 주는 브라우저에서도 끌기가 끝나야 한다.
+    const kept = await startDrag(-30)
+    await handle.dispatchEvent("pointermove", { pointerId: 1, buttons: 0, clientX: kept.x + 200 })
+    await expectEnded(kept)
 }
 
 /** 브라우저와 같은 기기 기준 오늘(YYYY-MM-DD). 화면이 제목 날짜로 쓰는 값과 같다. */

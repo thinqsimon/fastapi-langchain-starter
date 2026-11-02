@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
 
-import { logOut, newAccount, readClipboard, signUp } from "./helpers"
+import { expectPaneDragEnds, logOut, newAccount, readClipboard, signUp } from "./helpers"
 
 /** NOTE-01 학습장: /study-notes md 업로드와 주제별 관리 · NOTE-04 보관함(선택 보관·보관함 보기) · 주제 클립보드에 복사 */
 
@@ -556,6 +556,12 @@ test("넓은 화면에서는 목록과 본문 사이를 끌어 목록 너비를 
     await handle.dblclick()
     await expect.poll(width).toBeCloseTo(initial, 0)
     await expect(page.locator('[data-slot="topic-detail"]')).toBeVisible()
+})
+
+test("목록 너비 손잡이를 끌다 버튼을 놓으면 끌기가 끝나고, pointerup을 못 받아도 손잡이가 포인터를 따라오지 않는다", async ({ page }) => {
+    await signUp(page, "notebook-resize-end")
+    await openNotebook(page)
+    await expectPaneDragEnds(page, page.locator('[data-slot="notebook-resizer"]'), list(page))
 })
 
 test.describe("터치 폰(390px)", () => {

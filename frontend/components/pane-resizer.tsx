@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type KeyboardEvent, type PointerEvent, type RefObject } from "react"
+import { useEffect, useState, type KeyboardEvent, type PointerEvent, type RefObject } from "react"
 
 import type { PaneWidthLimits } from "@/lib/pane-width"
 import { cn } from "@/lib/utils"
@@ -36,10 +36,12 @@ export function PaneResizer({
 }) {
     const [dragging, setDragging] = useState(false)
 
-    const changeDragging = (next: boolean) => {
-        setDragging(next)
-        onDraggingChange?.(next)
-    }
+    // 끄는 동안만 줄에 알린다. 끄는 중에 손잡이가 사라져도(대화 목록 접기) 줄에 커서가 남지 않는다.
+    useEffect(() => {
+        if (!dragging) return
+        onDraggingChange?.(true)
+        return () => onDraggingChange?.(false)
+    }, [dragging, onDraggingChange])
 
     /** 포인터 위치를 왼쪽 칸 너비로 바꾼다. 오른쪽 칸이 너무 좁아지지 않게 상한을 둔다. */
     const resizeTo = (clientX: number) => {
@@ -51,19 +53,23 @@ export function PaneResizer({
     const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
         if (event.button !== 0) return
         event.preventDefault() // 끄는 동안 글자가 선택되지 않게
-        event.currentTarget.setPointerCapture(event.pointerId) // 손잡이 밖으로 나가도 move/up을 받는다
-        changeDragging(true)
+        event.currentTarget.setPointerCapture(event.pointerId) // 손잡이 밖으로 나가도 move를 받는다
+        setDragging(true)
     }
 
     const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
-        if (dragging) resizeTo(event.clientX)
+        if (!dragging) return
+        if (event.buttons & 1) {
+            resizeTo(event.clientX)
+        } else {
+            // 버튼이 이미 풀렸는데 pointerup을 못 받았다(창 밖에서 놓기 등). 더 따라가지 않고 끌기를 끝낸다.
+            setDragging(false)
+            event.currentTarget.releasePointerCapture(event.pointerId)
+        }
     }
 
-    const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
-        if (!dragging) return
-        changeDragging(false)
-        event.currentTarget.releasePointerCapture(event.pointerId)
-    }
+    /** 끌기의 끝. 버튼을 놓거나 취소돼도, pointerup을 못 받아도 포인터 캡처는 풀리므로 이 이벤트 하나로 끝낸다. */
+    const onLostPointerCapture = () => setDragging(false)
 
     const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
         const keys: Record<string, number> = {
@@ -96,8 +102,7 @@ export function PaneResizer({
             )}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
+            onLostPointerCapture={onLostPointerCapture}
             onDoubleClick={onReset}
             onKeyDown={onKeyDown}
         />

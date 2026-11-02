@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
 
-import { sendChatMessage } from "./helpers"
+import { expectPaneDragEnds, sendChatMessage } from "./helpers"
 
 /** 스트리밍이 끝나 서버에 저장된 응답 말풍선 */
 function savedAssistant(page: Page) {
@@ -314,6 +314,26 @@ test("넓은 화면에서는 대화 목록과 대화 사이를 끌어 목록 너
     await page.getByRole("button", { name: "대화 목록 열고 닫기" }).click()
     await expect(sidebar).toHaveCount(0)
     await expect(handle).toHaveCount(0)
+})
+
+test("대화 목록 너비 손잡이를 끌다 버튼을 놓으면 끌기가 끝나고, pointerup을 못 받아도 손잡이가 포인터를 따라오지 않는다", async ({ page }) => {
+    await signUpAndOpenChat(page)
+    await expectPaneDragEnds(page, page.locator('[data-slot="chat-list-resizer"]'), page.locator("#conversation-sidebar"))
+})
+
+test("끄는 중에 대화 목록을 접어 손잡이가 사라져도 좌우 조절 커서가 남지 않는다", async ({ page }) => {
+    await signUpAndOpenChat(page)
+    const handle = page.locator('[data-slot="chat-list-resizer"]')
+    const chat = page.locator("section").filter({ has: page.getByLabel("메시지") })
+
+    await page.getByRole("button", { name: "대화 목록 열고 닫기" }).focus()
+    const box = (await handle.boundingBox())!
+    await page.mouse.move(box.x + box.width / 2, box.y + 200)
+    await page.mouse.down()
+    await expect(chat).toHaveCSS("cursor", "col-resize")
+    await page.keyboard.press("Enter")
+    await expect(handle).toHaveCount(0)
+    await expect(chat).toHaveCSS("cursor", "auto")
 })
 
 test("답변의 괄호 뒤에 조사가 바로 붙은 굵은 글씨도 별표 없이 굵게 보인다", async ({ page }) => {
