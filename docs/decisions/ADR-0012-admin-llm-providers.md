@@ -105,3 +105,33 @@ SDK가 대기 시간을 늘려 가며 다시 시도해, 오류가 우리 코드�
 - 결과를 한 번에 돌려주는 AI 요청(일기 초안, 주간 회고)은 화면 제한 시간을 120초로 따로 둔다(`LLM_REQUEST_TIMEOUT_MS`).
   다른 API는 그대로 30초다. 채팅은 스트리밍이라 해당 없다.
 - 실패하는 공급자를 1순위에 둘지는 운영 판단이다. 이번에는 관리자가 Free 라우트에서 OpenAI를 1순위로 올렸다.
+
+## 후속 (2026-11-03): 크레딧·지출 한도가 다 되면 같은 공급자의 남은 라우트를 건너뛴다
+
+**배경**: 사용자 요청. Claude API 키는 크레딧이 떨어지면 오류를 돌려주는데, 1·2번 라우트가 모두 Claude면 2번도 똑같이 실패한다.
+한 칸씩 넘어가지 말고 다른 공급자로 바로 가야 한다. 다른 공급자도 함께 처리한다.
+
+**결정**
+- 공급자당 키가 하나(`llm_providers`)이므로 크레딧·지출 한도는 공급자 단위로 본다. 이런 오류가 나면 그 요청에서 같은 공급자의 남은 라우트를
+  모두 건너뛴다(바로 다음 칸이 아니어도). 채팅·일기 초안·주간 회고가 같다. 판별은 `llm/providers.is_account_exhausted`.
+- 건너뛰는 오류:
+
+| 공급자 | 오류 | 표시 | 근거 |
+|---|---|---|---|
+| Claude | 400 크레딧 소진 | `credit balance is too low` | 공식 오류 문서에는 문구가 없고 Claude Code 이슈 등의 실제 응답에서 확인 |
+| Claude | 400 직접 정한 지출 한도 | `specified (workspace) API usage limits` | 공식 Rate limits 문서 |
+| Claude | 402 결제 문제 | `billing_error` | 공식 Errors 문서 |
+| Claude | 429 등급별 월 상한 | `enforced_spend_limit_reached` | 공식 Rate limits 문서 |
+| OpenAI | 429 크레딧·지출·사용 한도 | `insufficient_quota`, `credit_balance_exhausted`, `organization_spend_limit_exceeded`, `project_spend_limit_exceeded`, `organization_usage_limit_exceeded` | 공식 Error codes 문서 |
+| Gemini | 402 선불 크레딧 소진 | `payment_required` | 공식 API errors 문서 |
+| Gemini | 429 선불 크레딧 소진·월 지출 상한 | `prepayment credits are depleted`, `monthly spending cap` | 공식 문서에 문구가 없고 Google AI 포럼의 실제 오류에서 확인. 포럼 직원 답변이 상한 초과·선불 소진의 429를 설명한다 |
+
+- **오류 글자로 판단한다.** Claude 크레딧 소진은 다른 잘못된 요청과 같은 400이고 공급자마다 예외 클래스가 달라, 본문에 실려 오는 표시 말고는 구분할 방법이 없다.
+  세 공급자 모두 LangChain을 거친 예외의 `str()`에 본문이 남는 것을 진짜 SDK와 로컬 서버로 확인했고, `tests/test_llm_account_exhausted.py`가 지킨다.
+- **그냥 429는 건너뛰지 않는다.** 잠깐 몰린 것일 수 있고, Gemini는 한도가 모델별이라("You exceeded your current quota" 포함) 다른 모델은 답할 수 있다.
+  못 알아본 오류도 예전처럼 다음 칸을 시도하므로, 공급자가 문구를 바꿔도 조금 늦어질 뿐 답은 나온다.
+- **상태를 저장하지 않는다.** 요청마다 소진된 공급자의 첫 라우트를 한 번은 시도한다. 크레딧을 충전하면 재시작이나 대기 없이 다음 요청부터 그 공급자가 답한다.
+  서버 간 상태 공유와 만료 시간을 두지 않아도 된다.
+- 400·402는 SDK가 다시 시도하지 않아 바로 넘어간다. 429형 소진은 SDK가 한 번 다시 시도한 뒤 넘어간다(로컬 서버 측정, Claude·OpenAI 약 0.5초, Gemini 약 1.3초).
+- 강제 라우트는 하나만 쓰므로 건너뛸 곳이 없고, 모든 라우트가 실패하면 기존과 같은 `LLMError`다.
+- 마지막 라우트의 실패 사유도 `llm_provider_failed`로 남긴다. 전에는 마지막 사유가 로그에 없어 크레딧 소진을 알기 어려웠다.

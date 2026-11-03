@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from app.core.exceptions import LLMError
 from app.llm.prompts.diary_coach import build_draft_prompt, build_weekly_prompt
-from app.llm.providers import ProviderAttempt, get_chat_model
+from app.llm.providers import ProviderAttempt, get_chat_model, is_account_exhausted
 
 logger = logging.getLogger(__name__)
 
@@ -86,13 +86,17 @@ async def draft_diary(
     """새로 추가된 대화로 일기 초안을 만든다. 이전 대화는 맥락으로만 넘긴다.
 
     providers: 관리자가 등록한 공급자 우선순위. 비어 있으면 `.env` 설정 하나만 쓴다.
+    크레딧·지출 한도가 다 된 오류면 그 공급자의 남은 라우트는 건너뛴다.
     """
     conversation = _format_conversation(new_messages)
     attempts: Sequence[ProviderAttempt] = providers or (ProviderAttempt(),)
 
     result: object = None
     last_error: Exception | None = None
+    exhausted: set[str] = set()
     for index, attempt in enumerate(attempts):
+        if attempt.provider in exhausted:
+            continue
         try:
             chain = build_draft_prompt(answer_level) | _build_chat_model(
                 attempt
@@ -106,9 +110,11 @@ async def draft_diary(
             break
         except Exception as exc:
             last_error = exc
+            logger.warning("llm_provider_failed provider=%s error=%s", attempt.provider, exc)
+            if is_account_exhausted(exc):
+                exhausted.add(attempt.provider)
             if index == len(attempts) - 1:
                 raise LLMError("일기 초안을 만들지 못했습니다.") from exc
-            logger.warning("llm_provider_failed provider=%s error=%s", attempt.provider, exc)
             continue
     else:
         raise LLMError("일기 초안을 만들지 못했습니다.") from last_error
@@ -127,7 +133,10 @@ async def review_week(
 
     result: object = None
     last_error: Exception | None = None
+    exhausted: set[str] = set()
     for index, attempt in enumerate(attempts):
+        if attempt.provider in exhausted:
+            continue
         try:
             chain = build_weekly_prompt(answer_level) | _build_chat_model(
                 attempt
@@ -136,9 +145,11 @@ async def review_week(
             break
         except Exception as exc:
             last_error = exc
+            logger.warning("llm_provider_failed provider=%s error=%s", attempt.provider, exc)
+            if is_account_exhausted(exc):
+                exhausted.add(attempt.provider)
             if index == len(attempts) - 1:
                 raise LLMError("주간 회고를 만들지 못했습니다.") from exc
-            logger.warning("llm_provider_failed provider=%s error=%s", attempt.provider, exc)
             continue
     else:
         raise LLMError("주간 회고를 만들지 못했습니다.") from last_error

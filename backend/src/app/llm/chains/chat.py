@@ -17,7 +17,7 @@ from app.llm.prompts.suggested_questions import (
     QUESTION_COUNT,
     with_suggested_questions,
 )
-from app.llm.providers import ProviderAttempt, get_chat_model
+from app.llm.providers import ProviderAttempt, get_chat_model, is_account_exhausted
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +151,8 @@ async def stream_reply(
 
     providers: 관리자가 "서버 설정" 화면(ADMIN-01)에서 정한 우선순위. 비어 있으면 `.env` 설정
     하나만 쓴다(기존 동작과 같다). 앞쪽 공급자가 호출 중 오류(한도 초과 등)를 내면 다음 공급자로
-    자동 전환한다. 단, 이미 한 글자라도 보낸 뒤에는 전환하지 않는다(응답이 섞이는 것을 막는다).
+    자동 전환한다. 크레딧·지출 한도가 다 된 오류면 그 공급자의 남은 라우트는 건너뛴다.
+    단, 이미 한 글자라도 보낸 뒤에는 전환하지 않는다(응답이 섞이는 것을 막는다).
 
     on_questions: 주면 답변 끝에 추천 질문 3개를 함께 요청한다(CHAT-04). 질문 부분은
     흘려보내지 않고, 답변이 끝나면 질문 목록으로 알린다(모델이 형식을 어겼으면 빈 목록).
@@ -166,7 +167,10 @@ async def stream_reply(
     attempts: Sequence[ProviderAttempt] = providers or (ProviderAttempt(),)
 
     last_error: Exception | None = None
+    exhausted: set[str] = set()
     for index, attempt in enumerate(attempts):
+        if attempt.provider in exhausted:
+            continue
         sent_any = False
         splitter = QuestionSplitter() if on_questions else None
         try:
@@ -213,15 +217,17 @@ async def stream_reply(
             return
         except Exception as exc:  # 공급자별 예외가 제각각이라 한 곳에서 묶는다.
             last_error = exc
-            if sent_any or index == len(attempts) - 1:
-                raise LLMError("LLM 응답을 받지 못했습니다.") from exc
             logger.warning(
                 "llm_provider_failed provider=%s index=%s error=%s",
                 attempt.provider or "(설정 기본값)",
                 index,
                 exc,
             )
+            if is_account_exhausted(exc):
+                exhausted.add(attempt.provider)
+            if sent_any or index == len(attempts) - 1:
+                raise LLMError("LLM 응답을 받지 못했습니다.") from exc
             continue
 
-    # attempts가 비어 있을 일은 없지만(위에서 기본값 하나를 넣는다), 타입 체커를 위해 남긴다.
+    # 남은 라우트를 모두 건너뛰면 여기로 온다.
     raise LLMError("LLM 응답을 받지 못했습니다.") from last_error

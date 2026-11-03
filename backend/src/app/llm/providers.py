@@ -40,6 +40,37 @@ _NO_SAMPLING_PROVIDERS = {"anthropic"}
 # Gemini의 max_retries는 "시도 횟수"(1이면 재시도 없음), OpenAI·Claude는 "재시도 횟수"라
 # 같은 한 번 재시도라도 값이 다르다.
 _MAX_RETRIES = {"google_genai": 2, "openai": 1, "anthropic": 1}
+# 크레딧·지출 한도가 다 됐다는 오류의 표시(소문자로 비교). 공급자당 키가 하나라서 같은 공급자의 다른
+# 모델도 똑같이 실패한다. 그냥 429는 넣지 않는다. 잠깐 몰린 것일 수 있고, Gemini는 한도가 모델별이라
+# 다른 모델은 답할 수 있다. 근거는 ADR-0012 후속.
+_ACCOUNT_EXHAUSTED_MARKERS = (
+    # Claude: 크레딧 소진(400), 직접 정한 지출 한도(400), 결제 문제(402), 등급별 월 상한(429)
+    "credit balance is too low",
+    "specified api usage limits",
+    "specified workspace api usage limits",
+    "billing_error",
+    "enforced_spend_limit_reached",
+    # OpenAI: 모두 429이고 error.type·code로 구분한다
+    "insufficient_quota",
+    "credit_balance_exhausted",
+    "organization_spend_limit_exceeded",
+    "project_spend_limit_exceeded",
+    "organization_usage_limit_exceeded",
+    # Gemini: 선불 크레딧 소진(429·402), 월 지출 상한(429)
+    "prepayment credits are depleted",
+    "payment_required",
+    "monthly spending cap",
+)
+
+
+def is_account_exhausted(error: Exception) -> bool:
+    """크레딧·지출 한도가 다 됐다는 오류인지 본다.
+
+    공급자마다 예외 클래스가 다르고 Claude 크레딧 소진은 다른 잘못된 요청과 같은 400이라,
+    오류 글자에 함께 실려 오는 표시로 판단한다. 못 알아본 오류는 다음 라우트를 그대로 시도한다.
+    """
+    text = str(error).lower()
+    return any(marker in text for marker in _ACCOUNT_EXHAUSTED_MARKERS)
 
 
 def _provider_kwargs(provider: str) -> dict[str, Any]:
