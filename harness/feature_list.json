@@ -545,7 +545,7 @@
       "passes": true
     },
     {
-      "id": "TEST-01",
+      "id": "TEST-02",
       "phase": 7,
       "owner": "backend-dev",
       "title": "테스트 계정 정리(하네스): 테스트·수동 확인용 계정이 DB에 쌓이지 않게 한다",
