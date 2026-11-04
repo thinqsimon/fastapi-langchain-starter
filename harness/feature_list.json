@@ -559,7 +559,7 @@
         "./scripts/verify.sh 통과"
       ],
       "verify": "./scripts/verify.sh 및 backend/tests/test_test_account_hygiene.py, 로컬 DB에서 dry-run→--delete 실행 확인",
-      "passes": false
+      "passes": true
     },
     {
       "id": "NOTE-01",

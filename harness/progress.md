@@ -1275,3 +1275,12 @@ Base UI 메뉴는 이미 체크된 항목을 눌러도 `onValueChange`를 부르
 
 **다음 할 일**
 - 사용자 확인 뒤 push(Render가 재배포되며 진행 중인 답변이 끊기고, preDeployCommand가 운영 DB에 마이그레이션을 적용한다)
+
+
+## 2026-11-05 · 세션 51 · TEST-01(테스트 계정 정리) 완료 표시
+
+**한 일**: `feature_list.json`에 `TEST-01`이 두 개다(phase 3 "API 테스트 커버리지"는 완료, phase 7 "테스트 계정 정리"가 미완료 표시). 뒤엣것의 인수조건을 대조해 `passes:true`로 바꿨다. 세션 21에 구현했고 표시만 남아 있었다.
+**확인**: `test_test_account_hygiene.py`(도메인·e2e 정리·원격 거부·dry-run) 포함 verify 전체 통과(세션 50과 같은 코드), 규칙은 conventions·CLAUDE.md·handoff·test-verifier·README에 있다. `--delete`는 세션 21에 512개 삭제 후 0개 확인, 이번에는 e2e.sh 종료 때 임시 DB에서 돌았다(출력 없음).
+**다음 할 일**
+- 중복 id를 나눌지 사용자 결정(phase 7 쪽을 TEST-02로). 예전 커밋의 `[TEST-01]` 표기는 그대로 남는다
+
