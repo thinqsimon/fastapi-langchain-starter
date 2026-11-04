@@ -52,6 +52,19 @@ def update_provider_key(
     return AdminLlmSettingsService(db).update_provider_key(provider, payload)
 
 
+@router.post(
+    "/llm-providers/{provider}/recharged",
+    response_model=ProviderKeyRead,
+    summary="공급자 크레딧 충전 알림",
+    description="크레딧 소진 표시를 지웁니다. 다음 요청부터 이 공급자를 다시 씁니다.",
+    responses=FORBIDDEN,
+)
+def mark_provider_recharged(
+    provider: LlmProviderName, _admin: AdminUser, db: DbSession
+) -> ProviderKeyRead:
+    return AdminLlmSettingsService(db).clear_provider_exhausted(provider)
+
+
 @router.get(
     "/llm-routes",
     response_model=list[RouteRead],

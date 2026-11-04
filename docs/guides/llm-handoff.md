@@ -119,6 +119,7 @@ Windows의 8000 포트 예약 문제를 피하기 위해 이 가이드는 18000�
 | `LLM_BASE_URL` | OpenAI 호환 게이트웨이의 API Base URL. 직접 연결이면 제공자 방식에 맞춤 |
 | `LLM_API_KEY` | 서버 전용 키. 설정하면 공급자 표준 키보다 우선함 |
 | `LLM_TEMPERATURE` | 모델이 지원하는 경우의 생성 설정 |
+| `LLM_EXHAUSTED_RECHECK_MINUTES` | 크레딧이 소진된 공급사를 몇 분 뒤에 요청 한 건으로 다시 확인할지. 기본 60 |
 
 공급자 표준 키 `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`도 지원하는 구조입니다.
 현재 의존성에는 **`langchain-openai` 어댑터만** 포함돼 있습니다. 다른 네이티브 공급자는

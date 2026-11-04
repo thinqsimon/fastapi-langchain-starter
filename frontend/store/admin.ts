@@ -11,6 +11,8 @@ type AdminState = {
     load: () => Promise<void>
     /** 키 저장. 빈 문자열이면 삭제. 실패하면 예외를 던져 폼이 메시지를 보여주게 한다. */
     saveKey: (provider: LlmProviderName, apiKey: string) => Promise<LlmProviderKey>
+    /** 크레딧 충전 알림. 소진 표시를 지운다. */
+    markRecharged: (provider: LlmProviderName) => Promise<LlmProviderKey>
     addRoute: (plan: PlanName, provider: LlmProviderName, model: string) => Promise<LlmRoute>
     updateRoute: (routeId: string, patch: LlmRoutePatch) => Promise<LlmRoute>
     removeRoute: (routeId: string) => Promise<void>
@@ -49,6 +51,12 @@ export const useAdminStore = create<AdminState>((set, get) => ({
             // 라우트의 '키 있음' 표시도 같이 맞춘다.
             routes: state.routes.map((route) => (route.provider === provider ? { ...route, has_api_key: updated.has_api_key } : route)),
         }))
+        return updated
+    },
+
+    markRecharged: async (provider) => {
+        const updated = await adminApi.markProviderRecharged(provider)
+        set((state) => ({ providers: state.providers.map((row) => (row.provider === provider ? updated : row)) }))
         return updated
     },
 

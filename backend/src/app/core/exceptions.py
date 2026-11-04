@@ -63,6 +63,16 @@ class LLMError(AppError):
     code = "LLM_ERROR"
 
 
+class LLMExhaustedError(LLMError):
+    """쓸 수 있는 공급사가 모두 크레딧·지출 한도 소진 상태다(LLM-03)."""
+
+    status_code = 503
+    code = "LLM_EXHAUSTED"
+
+    def __init__(self, message: str = "이번 달 AI 사용량이 소진되었습니다.") -> None:
+        super().__init__(message)
+
+
 class ServiceUnavailableError(AppError):
     status_code = 503
     code = "SERVICE_UNAVAILABLE"

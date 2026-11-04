@@ -125,7 +125,9 @@ class ChatService:
         def record_questions(found: list[str]) -> None:
             questions.extend(found)
 
-        providers = AdminLlmSettingsService(self.db).active_provider_chain(plan)
+        llm_settings = AdminLlmSettingsService(self.db)
+        providers = llm_settings.active_provider_chain(plan)
+        provider_states: dict[str, bool] = {}
         try:
             async for chunk in stream_reply(
                 content,
@@ -137,10 +139,12 @@ class ChatService:
                 answer_level=answer_level,
                 on_questions=record_questions if suggest_questions else None,
                 reanswer=reanswer,
+                on_provider_state=provider_states.__setitem__,
             ):
                 chunks.append(chunk)
                 yield chunk
         finally:
+            llm_settings.record_provider_states(provider_states)
             # 중간에 끊겨도 받은 데까지는 남긴다(새로고침 시 이력이 비지 않도록).
             if chunks:
                 answer = "".join(chunks)

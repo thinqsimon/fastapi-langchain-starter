@@ -69,7 +69,7 @@ export function ServerSettings() {
                     ) : (
                         <dl className="grid grid-cols-[3.5rem_1fr] gap-x-3 gap-y-2 text-sm leading-6">
                             {PLANS.map((plan) => (
-                                <PlanSummaryRow key={plan} plan={plan} routes={routes} />
+                                <PlanSummaryRow key={plan} plan={plan} routes={routes} providers={providers} />
                             ))}
                         </dl>
                     )}
@@ -96,8 +96,12 @@ export function ServerSettings() {
 }
 
 /** 한 요금제의 실제 호출 순서를 문장으로. 서버의 active_provider_chain()과 같은 규칙이다. */
-export function describePlan(plan: PlanName, routes: LlmRoute[]) {
+export function describePlan(plan: PlanName, routes: LlmRoute[], exhausted: LlmProviderName[] = []) {
     const usable = (p: PlanName) => routesOf(routes, p).filter((route) => route.enabled && route.has_api_key)
+    const describeForced = (route: LlmRoute, prefix: string) =>
+        `${prefix}강제 사용: ${providerLabel(route.provider)} (${route.model}). 우선순위와 자동 전환은 무시합니다.`
+    const available = (candidates: LlmRoute[]) => candidates.filter((route) => !exhausted.includes(route.provider))
+
     let active = usable(plan)
     let prefix = ""
     if (active.length === 0 && plan !== "free") {
@@ -105,25 +109,45 @@ export function describePlan(plan: PlanName, routes: LlmRoute[]) {
         prefix = "(free 라우트를 따름) "
     }
     const forced = active.find((route) => route.forced)
-    if (forced) return `${prefix}강제 사용: ${providerLabel(forced.provider)} (${forced.model}). 우선순위와 자동 전환은 무시합니다.`
+    if (forced) return describeForced(forced, prefix)
     if (active.length === 0) return "쓸 수 있는 라우트가 없어 서버의 .env 설정(LLM_PROVIDER, LLM_MODEL)을 그대로 씁니다."
-    const order = active.map((route, index) => `${index + 1}. ${providerLabel(route.provider)} (${route.model})`).join(" → ")
-    return `${prefix}우선순위 ${order}. 앞 공급자가 실패하면 다음으로 자동 전환합니다.`
+
+    let remaining = available(active)
+    if (remaining.length === 0 && plan !== "free") {
+        // 소진으로 라우트가 모두 빠지면 free로 내려간다.
+        const free = usable("free")
+        const freeForced = free.find((route) => route.forced)
+        if (freeForced) return describeForced(freeForced, "(소진으로 free 라우트를 따름) ")
+        remaining = available(free)
+        prefix = "(소진으로 free 라우트를 따름) "
+    }
+    if (remaining.length === 0) return "쓸 수 있는 공급자가 모두 크레딧 소진이라 사용자에게 소진 안내를 보여 줍니다."
+
+    const order = remaining.map((route, index) => `${index + 1}. ${providerLabel(route.provider)} (${route.model})`).join(" → ")
+    const skipped = [...new Set(active.filter((route) => exhausted.includes(route.provider)).map((route) => providerLabel(route.provider)))]
+    const note = skipped.length > 0 ? ` 크레딧 소진으로 제외: ${skipped.join(", ")}.` : ""
+    return `${prefix}우선순위 ${order}. 앞 공급자가 실패하면 다음으로 자동 전환합니다.${note}`
 }
 
-function PlanSummaryRow({ plan, routes }: { plan: PlanName; routes: LlmRoute[] }) {
+function PlanSummaryRow({ plan, routes, providers }: { plan: PlanName; routes: LlmRoute[]; providers: LlmProviderKey[] }) {
+    const exhausted = providers.filter((row) => row.exhausted_at).map((row) => row.provider)
     return (
         <>
             <dt className="font-medium">{planLabel(plan)}</dt>
             <dd data-slot={`llm-plan-${plan}`} className="min-w-0 wrap-anywhere text-muted-foreground">
-                {describePlan(plan, routes)}
+                {describePlan(plan, routes, exhausted)}
             </dd>
         </>
     )
 }
 
+function formatTime(value: string | null) {
+    return value ? new Date(value).toLocaleString("ko-KR") : "-"
+}
+
 function ProviderKeyForm({ info, row }: { info: (typeof PROVIDERS)[number]; row?: LlmProviderKey }) {
     const saveKey = useAdminStore((state) => state.saveKey)
+    const markRecharged = useAdminStore((state) => state.markRecharged)
     const [apiKey, setApiKey] = useState("")
     const { result, isPending, run } = useFormAction()
     const label = providerLabel(info.provider)
@@ -150,7 +174,30 @@ function ProviderKeyForm({ info, row }: { info: (typeof PROVIDERS)[number]; row?
                 </Label>
                 <span className="text-xs text-muted-foreground">{info.vendor}</span>
                 <Badge tone={hasKey ? "ok" : "muted"}>{hasKey ? "키 있음" : "키 없음"}</Badge>
+                {row?.exhausted_at && <Badge tone="warn">크레딧 소진</Badge>}
             </div>
+            {row?.exhausted_at && (
+                <div data-slot="provider-exhausted" className="flex flex-wrap items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                    <p className="min-w-0 flex-1">
+                        모든 요청에서 빠져 있습니다. 처음 감지 {formatTime(row.exhausted_at)} · 마지막 확인 {formatTime(row.exhausted_checked_at)}. 재확인
+                        간격(기본 1시간)마다 요청 한 건으로 다시 확인합니다.
+                    </p>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isPending}
+                        onClick={() =>
+                            void run(async () => {
+                                await markRecharged(info.provider)
+                                return "다음 요청부터 이 공급자를 다시 씁니다."
+                            }, "상태를 바꾸지 못했습니다.")
+                        }
+                    >
+                        충전했어요
+                    </Button>
+                </div>
+            )}
             <div className="flex gap-2">
                 <Input
                     id={id}

@@ -13,6 +13,12 @@ export async function updateProviderKey(provider: LlmProviderName, apiKey: strin
     return data
 }
 
+/** 크레딧을 충전했다고 알린다. 다음 요청부터 그 공급자를 다시 쓴다. */
+export async function markProviderRecharged(provider: LlmProviderName): Promise<LlmProviderKey> {
+    const { data } = await httpClient.post<LlmProviderKey>(`/api/admin/llm-providers/${provider}/recharged`)
+    return data
+}
+
 /** 요금제별 라우트 전체(요금제·순서 순). */
 export async function fetchRoutes(): Promise<LlmRoute[]> {
     const { data } = await httpClient.get<LlmRoute[]>("/api/admin/llm-routes")

@@ -9,8 +9,11 @@
 
 import logging
 import uuid
+from collections.abc import Mapping
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -18,6 +21,7 @@ from app.core.exceptions import (
     AppError,
     ConflictError,
     ForbiddenError,
+    LLMExhaustedError,
     NotFoundError,
     ServiceUnavailableError,
 )
@@ -71,6 +75,9 @@ class AdminLlmSettingsService:
         if row is None:
             raise NotFoundError("등록되지 않은 공급자입니다.")
         row.encrypted_api_key = encrypt_secret(payload.api_key) if payload.api_key else None
+        # 새 키는 잔액이 있을 수 있으니 소진 표시를 이어 가지 않는다.
+        row.exhausted_at = None
+        row.exhausted_checked_at = None
         self.db.commit()
         # 키 값은 로그에 남기지 않는다.
         logger.info(
@@ -79,6 +86,34 @@ class AdminLlmSettingsService:
             row.encrypted_api_key is not None,
         )
         return _to_key_read(row)
+
+    def clear_provider_exhausted(self, provider: str) -> ProviderKeyRead:
+        """관리자가 충전했다고 알린다. 다음 요청부터 이 공급자를 쓴다."""
+        row = self._ensure_providers().get(provider)
+        if row is None:
+            raise NotFoundError("등록되지 않은 공급자입니다.")
+        row.exhausted_at = None
+        row.exhausted_checked_at = None
+        self.db.commit()
+        logger.info("llm_provider_recharged provider=%s", provider)
+        return _to_key_read(row)
+
+    def record_provider_states(self, states: Mapping[str, bool]) -> None:
+        """요청에서 알게 된 소진 여부를 저장한다. 실패해도 답변을 막지 않고 로그만 남긴다."""
+        if not states:
+            return
+        now = datetime.now(UTC)
+        try:
+            for provider, exhausted in states.items():
+                if exhausted:
+                    self.providers.mark_exhausted(provider, now)
+                    logger.warning("llm_provider_exhausted provider=%s", provider)
+                elif self.providers.clear_exhausted(provider):
+                    logger.info("llm_provider_recovered provider=%s", provider)
+            self.db.commit()
+        except SQLAlchemyError:
+            self.db.rollback()
+            logger.exception("llm_provider_state_not_saved")
 
     # ----- 요금제별 라우팅 -----
 
@@ -176,19 +211,50 @@ class AdminLlmSettingsService:
         2. 강제 라우트가 있으면 그것 하나만(자동 전환 없음)
         3. 라우트가 하나도 없으면 free 요금제의 라우트로(새 요금제를 아직 설정하지 않았을 때)
         4. 그것도 없으면 빈 목록 → 호출부가 `.env`의 공급자 하나를 쓴다(설정을 건드린 적 없는 Fork)
+
+        크레딧이 소진된 공급자는 강제 라우트가 아니면 뺀다(LLM-03). 재확인 간격이 지났으면 이 요청
+        한 건만 그대로 둔다. 소진 때문에 라우트가 모두 빠지면 free 라우트로 내려가고, 그것도 없으면
+        `LLMExhaustedError`다. 이때 빈 목록을 돌려주면 `.env` 공급자로 새므로 돌려주지 않는다.
         """
         if plan not in PLANS:
             plan = DEFAULT_PLAN
-        keys = {row.provider: row.encrypted_api_key for row in self.providers.list_all()}
+        rows = {row.provider: row for row in self.providers.list_all()}
+        keys = {provider: row.encrypted_api_key for provider, row in rows.items()}
 
         def usable(candidates: list[LlmPlanRoute]) -> list[LlmPlanRoute]:
             return [r for r in candidates if r.enabled and keys.get(r.provider)]
 
+        now = datetime.now(UTC)
+        checked_before = now - timedelta(minutes=settings.LLM_EXHAUSTED_RECHECK_MINUTES)
+        available: dict[str, bool] = {}
+        claimed = False
+
+        def is_available(provider: str) -> bool:
+            nonlocal claimed
+            if provider not in available:
+                available[provider] = rows[provider].exhausted_at is None
+                if not available[provider] and self.providers.claim_recheck(
+                    provider, now, checked_before
+                ):
+                    available[provider] = claimed = True
+                    logger.info("llm_provider_recheck provider=%s", provider)
+            return available[provider]
+
+        def select_routes(candidates: list[LlmPlanRoute]) -> list[LlmPlanRoute]:
+            forced = next((r for r in candidates if r.forced), None)
+            if forced is not None:
+                return [forced]
+            return [r for r in candidates if is_available(r.provider)]
+
         routes = usable(self.routes.list_for_plan(plan))
         if not routes and plan != DEFAULT_PLAN:
             routes = usable(self.routes.list_for_plan(DEFAULT_PLAN))
-        forced = next((r for r in routes if r.forced), None)
-        ordered = [forced] if forced is not None else routes
+        ordered = select_routes(routes)
+        if routes and not ordered:
+            if plan != DEFAULT_PLAN:
+                ordered = select_routes(usable(self.routes.list_for_plan(DEFAULT_PLAN)))
+            if not ordered:
+                raise LLMExhaustedError()
 
         attempts: list[ProviderAttempt] = []
         for route in ordered:
@@ -203,6 +269,9 @@ class AdminLlmSettingsService:
             except ServiceUnavailableError:
                 # 암호화 키가 바뀌는 등으로 복호화를 못 하면 이 라우트만 건너뛴다.
                 logger.warning("llm_provider_key_decrypt_failed provider=%s", route.provider)
+        if claimed:
+            # 다른 요청이 같은 공급자를 시도하지 않도록 호출 전에 확정한다.
+            self.db.commit()
         return attempts
 
     def _key_presence(self) -> dict[str, bool]:
@@ -216,6 +285,8 @@ def _to_key_read(row: LlmProvider) -> ProviderKeyRead:
         provider=row.provider,  # type: ignore[arg-type]
         has_api_key=row.encrypted_api_key is not None,
         updated_at=row.updated_at,
+        exhausted_at=row.exhausted_at,
+        exhausted_checked_at=row.exhausted_checked_at,
     )
 
 

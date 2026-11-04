@@ -9,9 +9,11 @@
 """
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
+    DateTime,
     ForeignKey,
     Index,
     Integer,
@@ -41,6 +43,12 @@ class LlmProvider(Base, TimestampMixin):
     provider: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
     # None이면 이 공급자는 아직 키가 없어 어떤 요금제에서도 쓰이지 않는다.
     encrypted_api_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # 크레딧·지출 한도 소진을 처음 알아챈 시각. 값이 있으면 모든 사용자의 요청에서 뺀다(LLM-03).
+    exhausted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # 마지막으로 다시 시도한 시각. 재확인 간격이 지나면 요청 한 건이 이 값을 먼저 고치고 시도한다.
+    exhausted_checked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class LlmPlanRoute(Base, TimestampMixin):

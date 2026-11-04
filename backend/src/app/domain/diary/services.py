@@ -123,12 +123,19 @@ class DiaryService:
         if not newer:
             raise ConflictError("이 채팅에는 일기로 정리할 새 대화가 없습니다.")
 
-        draft = await draft_diary(
-            new_messages=[(m.role, m.content) for m in newer],
-            context_messages=[(m.role, m.content) for m in earlier],
-            providers=AdminLlmSettingsService(self.db).active_provider_chain(plan),
-            answer_level=answer_level,
-        )
+        llm_settings = AdminLlmSettingsService(self.db)
+        providers = llm_settings.active_provider_chain(plan)
+        provider_states: dict[str, bool] = {}
+        try:
+            draft = await draft_diary(
+                new_messages=[(m.role, m.content) for m in newer],
+                context_messages=[(m.role, m.content) for m in earlier],
+                providers=providers,
+                answer_level=answer_level,
+                on_provider_state=provider_states.__setitem__,
+            )
+        finally:
+            llm_settings.record_provider_states(provider_states)
 
         # 제목 날짜는 채팅 날짜와 상관없이 오늘이다.
         entry_date = entry_date or today_in_utc()
@@ -266,15 +273,22 @@ class DiaryService:
         if not entries:
             raise NotFoundError("이번 주에 작성한 일기가 없습니다.")
 
-        review = await review_week(
-            [
-                f"{entry.title}\n배운 것: {entry.learned}\n어려웠던 것: {entry.difficult}"
-                + (f"\n내일 할 것: {entry.next_plan}" if entry.next_plan else "")
-                for entry in entries
-            ],
-            providers=AdminLlmSettingsService(self.db).active_provider_chain(plan),
-            answer_level=answer_level,
-        )
+        llm_settings = AdminLlmSettingsService(self.db)
+        providers = llm_settings.active_provider_chain(plan)
+        provider_states: dict[str, bool] = {}
+        try:
+            review = await review_week(
+                [
+                    f"{entry.title}\n배운 것: {entry.learned}\n어려웠던 것: {entry.difficult}"
+                    + (f"\n내일 할 것: {entry.next_plan}" if entry.next_plan else "")
+                    for entry in entries
+                ],
+                providers=providers,
+                answer_level=answer_level,
+                on_provider_state=provider_states.__setitem__,
+            )
+        finally:
+            llm_settings.record_provider_states(provider_states)
         return WeeklyReviewResponse(
             week_start=start,
             week_end=end,

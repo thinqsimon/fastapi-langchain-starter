@@ -79,6 +79,9 @@ class ProviderKeyRead(BaseModel):
     provider: LlmProviderName
     has_api_key: bool
     updated_at: datetime
+    # 값이 있으면 크레딧·지출 한도 소진으로 모든 요청에서 빠져 있다(LLM-03).
+    exhausted_at: datetime | None = None
+    exhausted_checked_at: datetime | None = None
 
 
 class ProviderKeyUpdate(BaseModel):

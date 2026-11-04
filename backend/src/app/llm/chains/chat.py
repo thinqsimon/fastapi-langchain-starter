@@ -17,7 +17,12 @@ from app.llm.prompts.suggested_questions import (
     QUESTION_COUNT,
     with_suggested_questions,
 )
-from app.llm.providers import ProviderAttempt, get_chat_model, is_account_exhausted
+from app.llm.providers import (
+    ProviderAttempt,
+    get_chat_model,
+    is_account_exhausted,
+    no_answer_error,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +147,7 @@ async def stream_reply(
     answer_level: int | None = None,
     on_questions: Callable[[list[str]], None] | None = None,
     reanswer: bool = False,
+    on_provider_state: Callable[[str, bool], None] | None = None,
 ) -> AsyncIterator[str]:
     """응답을 토큰 단위로 흘려보낸다.
 
@@ -158,6 +164,8 @@ async def stream_reply(
     흘려보내지 않고, 답변이 끝나면 질문 목록으로 알린다(모델이 형식을 어겼으면 빈 목록).
     reanswer: 이미 한 질문을 다른 수준으로 다시 묻는 경우(CHAT-04). 앞 답변을 가리키지 말고
     처음부터 다시 설명하라는 지시를 붙인다.
+    on_provider_state: 공급자 이름과 소진 여부를 알린다(LLM-03). 첫 청크가 오면 False, 크레딧·지출
+    한도 오류면 True. 그 밖의 오류는 알리지 않는다. llm은 DB를 모르므로 저장은 호출한 쪽이 한다.
     """
     # answer_level: 사용자가 고른 답변 수준(CHAT-03). None이면 페르소나 그대로 쓴다.
     system = with_answer_level(system_prompt or DEFAULT_SYSTEM_PROMPT, answer_level)
@@ -194,6 +202,8 @@ async def stream_reply(
                             model=attempt.model or settings.LLM_MODEL,
                         )
                     )
+                if not sent_any and on_provider_state and attempt.provider:
+                    on_provider_state(attempt.provider, False)
                 sent_any = True
                 usage = getattr(chunk, "usage_metadata", None)
                 if usage and on_usage:
@@ -225,9 +235,13 @@ async def stream_reply(
             )
             if is_account_exhausted(exc):
                 exhausted.add(attempt.provider)
-            if sent_any or index == len(attempts) - 1:
+                if on_provider_state and attempt.provider:
+                    on_provider_state(attempt.provider, True)
+            if sent_any:
                 raise LLMError("LLM 응답을 받지 못했습니다.") from exc
+            if index == len(attempts) - 1:
+                raise no_answer_error(attempts, exhausted, "LLM 응답을 받지 못했습니다.") from exc
             continue
 
     # 남은 라우트를 모두 건너뛰면 여기로 온다.
-    raise LLMError("LLM 응답을 받지 못했습니다.") from last_error
+    raise no_answer_error(attempts, exhausted, "LLM 응답을 받지 못했습니다.") from last_error

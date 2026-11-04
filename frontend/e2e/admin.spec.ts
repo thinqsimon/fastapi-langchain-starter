@@ -85,6 +85,46 @@ test.describe("관리자", () => {
         await resetLlmSettings(page)
     })
 
+    test("크레딧이 소진된 공급자가 표시되고 '충전했어요'를 누르면 라우팅에 돌아온다 (LLM-03)", async ({ page }) => {
+        await signInAsAdmin(page)
+        await resetLlmSettings(page)
+        const token = await page.evaluate(() => localStorage.getItem("access_token"))
+        const headers = { Authorization: `Bearer ${token}` }
+        for (const provider of ["anthropic", "openai"]) {
+            await page.request.patch(`${API}/api/admin/llm-providers/${provider}`, { headers, data: { api_key: "e2e-test-key" } })
+        }
+        for (const [provider, model] of [
+            ["anthropic", "claude-haiku-5-5"],
+            ["openai", "gpt-4o-mini"],
+        ]) {
+            await page.request.post(`${API}/api/admin/llm-routes`, { headers, data: { plan: "free", provider, model } })
+        }
+        // 실제 소진은 공급자 없이 만들 수 없어 목록 응답만 소진으로 바꾼다. 버튼은 진짜 API를 부른다.
+        await page.route("**/api/admin/llm-providers", async (route) => {
+            if (route.request().method() !== "GET") return route.fallback()
+            const response = await route.fetch()
+            const rows = (await response.json()) as { provider: string }[]
+            const at = "2026-11-05T01:00:00Z"
+            const json = rows.map((row) => (row.provider === "anthropic" ? { ...row, exhausted_at: at, exhausted_checked_at: at } : row))
+            await route.fulfill({ response, json })
+        })
+
+        await page.goto("/admin")
+        const claude = keyForm(page, "Claude")
+        await expect(claude.getByText("크레딧 소진")).toBeVisible()
+        await expect(claude.locator('[data-slot="provider-exhausted"]')).toContainText("처음 감지")
+        await expect(keyForm(page, "OpenAI").getByText("크레딧 소진")).toHaveCount(0)
+        await expect(planLine(page, "free")).toContainText("크레딧 소진으로 제외: Claude")
+        await expect(planLine(page, "free")).toContainText("1. OpenAI")
+
+        await claude.getByRole("button", { name: "충전했어요" }).click()
+
+        await expect(claude.locator('p[role="status"]')).toHaveText("다음 요청부터 이 공급자를 다시 씁니다.")
+        await expect(claude.locator('[data-slot="provider-exhausted"]')).toHaveCount(0)
+        await expect(planLine(page, "free")).not.toContainText("제외")
+        await expect(planLine(page, "free")).toContainText("1. Claude")
+    })
+
     test("공급자 키를 넣고 요금제별 라우트를 만들면 '지금 동작'이 바뀌고, 채팅은 계속 된다", async ({ page }) => {
         await signInAsAdmin(page)
         // 마이그레이션이 기본 라우트(모델 사다리)를 넣어 두므로 빈 상태에서 시작한다.

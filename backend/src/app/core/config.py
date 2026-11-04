@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     LLM_API_KEY: str = ""
     LLM_BASE_URL: str | None = None
     LLM_TEMPERATURE: float = 0.3
+    # 크레딧이 소진된 공급사를 몇 분 뒤에 요청 한 건으로 다시 확인할지(LLM-03).
+    LLM_EXHAUSTED_RECHECK_MINUTES: int = 60
 
     # 공급자 표준 키 이름도 받아들인다. LLM_API_KEY가 비어 있으면 이 값을 쓴다.
     OPENAI_API_KEY: str = ""

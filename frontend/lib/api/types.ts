@@ -37,6 +37,10 @@ export type LlmProviderKey = {
     provider: LlmProviderName
     has_api_key: boolean
     updated_at: string
+    /** 값이 있으면 크레딧 소진으로 모든 요청에서 빠져 있다. 처음 알아챈 시각. */
+    exhausted_at: string | null
+    /** 소진 여부를 마지막으로 확인한 시각. */
+    exhausted_checked_at: string | null
 }
 
 /** 요금제별 라우트 한 줄: 이 요금제에서 이 공급자의 이 모델을 priority 순서로 쓴다. */

@@ -1,8 +1,10 @@
 """admin 도메인 - 데이터 접근 계층."""
 
 import uuid
+from datetime import datetime
+from typing import Any, cast
 
-from sqlalchemy import func, select
+from sqlalchemy import CursorResult, func, select, update
 from sqlalchemy.orm import Session
 
 from app.domain.admin.models import LlmPlanRoute, LlmProvider
@@ -25,6 +27,42 @@ class LlmProviderRepository:
         self.db.add(row)
         self.db.flush()
         return row
+
+    def claim_recheck(self, provider: str, now: datetime, checked_before: datetime) -> bool:
+        """소진된 공급사를 다시 시도할 차례를 잡는다. 조건부 UPDATE라 동시에도 한 건만 된다."""
+        result = self.db.execute(
+            update(LlmProvider)
+            .where(
+                LlmProvider.provider == provider,
+                LlmProvider.exhausted_at.is_not(None),
+                LlmProvider.exhausted_checked_at <= checked_before,
+            )
+            .values(exhausted_checked_at=now)
+            .execution_options(synchronize_session=False)
+        )
+        return cast(CursorResult[Any], result).rowcount == 1
+
+    def mark_exhausted(self, provider: str, now: datetime) -> None:
+        """처음 감지한 시각은 그대로 두고 마지막 확인 시각만 고친다."""
+        self.db.execute(
+            update(LlmProvider)
+            .where(LlmProvider.provider == provider)
+            .values(
+                exhausted_at=func.coalesce(LlmProvider.exhausted_at, now),
+                exhausted_checked_at=now,
+            )
+            .execution_options(synchronize_session=False)
+        )
+
+    def clear_exhausted(self, provider: str) -> bool:
+        """소진 표시를 지운다. 지울 것이 있었으면 True."""
+        result = self.db.execute(
+            update(LlmProvider)
+            .where(LlmProvider.provider == provider, LlmProvider.exhausted_at.is_not(None))
+            .values(exhausted_at=None, exhausted_checked_at=None)
+            .execution_options(synchronize_session=False)
+        )
+        return cast(CursorResult[Any], result).rowcount == 1
 
 
 class LlmPlanRouteRepository:

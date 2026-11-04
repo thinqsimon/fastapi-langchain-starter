@@ -6,6 +6,7 @@
 `ProviderAttempt`로 감싸 llm/chains/* 함수에 인자로 넘긴다.
 """
 
+from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -13,6 +14,7 @@ from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
 
 from app.core.config import settings
+from app.core.exceptions import LLMError, LLMExhaustedError
 from app.llm.fake import build_fake_chat_model
 
 
@@ -71,6 +73,15 @@ def is_account_exhausted(error: Exception) -> bool:
     """
     text = str(error).lower()
     return any(marker in text for marker in _ACCOUNT_EXHAUSTED_MARKERS)
+
+
+def no_answer_error(
+    attempts: Sequence[ProviderAttempt], exhausted: Collection[str], message: str
+) -> LLMError:
+    """모든 라우트가 실패했을 때의 오류. 전부 소진이면 그렇게 알린다."""
+    if attempts and all(attempt.provider in exhausted for attempt in attempts):
+        return LLMExhaustedError()
+    return LLMError(message)
 
 
 def _provider_kwargs(provider: str) -> dict[str, Any]:
