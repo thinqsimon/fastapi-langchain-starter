@@ -295,7 +295,7 @@
         "다른 사람이 문서만으로 실행·배포 성공 기록"
       ],
       "verify": "./scripts/verify.sh",
-      "passes": false
+      "passes": true
     },
     {
       "id": "DOC-03",
