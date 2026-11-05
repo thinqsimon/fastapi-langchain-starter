@@ -1289,7 +1289,7 @@ Base UI 메뉴는 이미 체크된 항목을 눌러도 `onValueChange`를 부르
 
 **요청**: 작성자가 사이드 프로젝트(우선주차 서비스)로 Fork해 완성·배포했으니 완료로 문서화.
 **한 일**: `docs/guides/fork-verification.md`에 5차 기록과 DOC-02 판정, `passes:true`.
-**확인**: `inangelyoo/ai-one-park`이 upstream과 스타터킷 커밋 이력을 가진 것, 운영 `/health`·프론트 200. `make fork-verify` 통과(테스트 383개, 커버리지 98%).
+**확인**: 사이드 프로젝트 저장소가 upstream과 스타터킷 커밋 이력을 가진 것, 운영 `/health`·프론트 200. `make fork-verify` 통과(테스트 383개, 커버리지 98%).
 **주의**: 인수조건의 "다른 사람"은 작성자 본인의 진행을 작성자 판단으로 충족 처리했다. 문서만 보고 했다는 것은 작성자 설명이고, 제3자 재현 기록은 아니다. `main`의 DOC-02는 바꾸지 않았다.
 
 **다음 할 일**
