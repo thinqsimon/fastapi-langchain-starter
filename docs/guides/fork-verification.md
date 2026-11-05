@@ -82,9 +82,9 @@ Supabase + Render + Vercel에 배포한 뒤 운영 환경에서 직접 확인했
 
 | 항목 | 내용 |
 |---|---|
-| 저장소 | [inangelyoo/ai-one-park](https://github.com/inangelyoo/ai-one-park). GitHub의 Fork 표시는 없지만 이 저장소를 `upstream`으로 두고 스타터킷의 커밋 이력을 이어받았고, README에도 Fork라고 적혀 있습니다 |
+| 저장소 | 별도 저장소(주소는 적지 않음). GitHub의 Fork 표시는 없지만 이 저장소를 `upstream`으로 두고 스타터킷의 커밋 이력을 이어받았고, README에도 Fork라고 적혀 있습니다 |
 | 규모 | 커밋 120개, 스타터킷에 없던 주차 판정·관리실 기능 추가 |
-| 배포 | Render `https://ai-one-park.onrender.com`, Vercel `https://ai-one-park-two.vercel.app` |
+| 배포 | Render·Vercel(주소는 적지 않음) |
 | 2026-11-05 확인 | 백엔드 `/health` → `{"status":"ok"}`, 프론트엔드 200 |
 
 같은 날 `make fork-verify`도 다시 통과했습니다.

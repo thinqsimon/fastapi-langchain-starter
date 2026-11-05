@@ -504,7 +504,7 @@
 ## 2026-11-05 · DOC-02·STUDY-01 완료 표시
 
 **한 일**: `feature_list.json`의 남은 두 항목을 완료로 표시하고 `docs/guides/fork-verification.md`에 5차 기록을 더했다.
-- DOC-02: 작성자가 사이드 프로젝트 `inangelyoo/ai-one-park`로 Fork해 Render·Vercel에 배포했다(운영 응답 확인). `make fork-verify`도 main 8e877be에서 통과(테스트 165개, 커버리지 97%)
+- DOC-02: 작성자가 사이드 프로젝트 별도 저장소로 Fork해 Render·Vercel에 배포했다(운영 응답 확인). `make fork-verify`도 main 8e877be에서 통과(테스트 165개, 커버리지 97%)
 - STUDY-01: `service/diary-coach`의 NOTE-01~05와 `e2e/notebook.spec.ts`로 인수조건을 충족한다. 스타터킷 main에는 학습장 코드가 없고 넣지 않는다(NOTE-01이 starter에서 404를 요구)
 
 **주의**: DOC-02의 "다른 사람"은 작성자 본인의 진행을 작성자 판단으로 충족 처리했다. 문서만 보고 했다는 것은 작성자 설명이고, 제3자 재현 기록은 아니다.
